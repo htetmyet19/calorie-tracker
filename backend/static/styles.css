@@ -602,6 +602,9 @@ button { cursor: pointer; }
 .eye { display: grid; place-items: center; width: 32px; height: 32px; margin: -6px -6px -6px 0; border: 0; border-radius: 8px; background: transparent; color: var(--gate-muted); }
 .eye svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .eye[aria-pressed="true"] { color: var(--gate-ink); }
+/* Eye while hidden, crossed-out eye while the password is shown. */
+.eye .eye-off, .eye[aria-pressed="true"] .eye-open { display: none; }
+.eye[aria-pressed="true"] .eye-off { display: block; }
 /* Status as a tinted alert with an icon; colour and icon follow data-kind. */
 .gate .status {
   --tone: 127, 151, 230;
