@@ -29,6 +29,14 @@ class Sender:
         return [c for c in self.calls if c[0] == endpoint]
 
 
+@pytest.fixture(autouse=True)
+def _vapid(monkeypatch):
+    # The sender is fake; the job only needs push to count as configured.
+    monkeypatch.setattr(config, "VAPID_PUBLIC_KEY", "it-pub")
+    monkeypatch.setattr(config, "VAPID_PRIVATE_KEY", "it-priv")
+    monkeypatch.setattr(config, "VAPID_SUBJECT", "mailto:it@example.com")
+
+
 @pytest.fixture
 def setup(make_user, service):
     def _setup(last_checkin=LAST_CHECKIN):

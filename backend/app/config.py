@@ -44,6 +44,13 @@ VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
 # A mailto: address the push services can contact, e.g. mailto:you@example.com.
 VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "")
+
+
+def push_configured() -> bool:
+    """Web push needs all three VAPID settings; with any missing it is off."""
+    return bool(VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY and VAPID_SUBJECT)
+
+
 # "Today" for check-in due dates and reminders.
 TIMEZONE = "Asia/Yangon"
 

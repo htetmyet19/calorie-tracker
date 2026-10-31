@@ -199,6 +199,7 @@ class Sender:
 def _keys(monkeypatch):
     monkeypatch.setattr(config, "SUPABASE_SERVICE_ROLE_KEY", "svc")
     monkeypatch.setattr(config, "SUPABASE_URL", "http://supa.test")
+    monkeypatch.setattr(config, "VAPID_PUBLIC_KEY", "pub")
     monkeypatch.setattr(config, "VAPID_PRIVATE_KEY", "priv")
     monkeypatch.setattr(config, "VAPID_SUBJECT", "mailto:a@example.com")
 
@@ -455,3 +456,34 @@ def test_logs_carry_ids_not_paths(caplog):
     assert any("photo_remove_failed" in m for m in msgs)
     assert not any("secret" in m or "u1/" in m for m in msgs)
     assert any("failure_id=7" in m for m in msgs) and any("meal_id=1" in m for m in msgs)
+
+
+class SettingsDownDb(FakeDb):
+    def extra(self, request, path, q):
+        if request.method == "GET" and path == "/client_settings":
+            return httpx.Response(503)
+        return super().extra(request, path, q)
+
+
+def test_reminders_failure_is_counted_and_cleanup_still_runs(caplog):
+    db = SettingsDownDb([srow("a")], [], [sub("a")],
+                        meals=[meal(1, "2026-01-01T10:00:00", "u1/a.jpg")],
+                        objects={"meal-photos": {"u1/a.jpg": "2026-01-01T00:00:00Z",
+                                                 "u1/orphan.jpg": "2026-01-01T00:00:00Z"}})
+    with caplog.at_level("WARNING"):
+        out = cron.run_daily(NOW, send=Sender(), client=db.client())
+    assert out == {"reminded": 0, "photos_removed": 2, "failures": 1}
+    assert "reminders_failed error=CronError" in caplog.text
+    assert db.objects["meal-photos"] == {}
+
+
+@pytest.mark.parametrize("name", ["VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT"])
+def test_push_not_configured_skips_reminders_but_cleans_up(monkeypatch, name):
+    monkeypatch.setattr(config, name, "")
+    db = FakeDb([srow("a")], [], [sub("a")], meals=[meal(1, "2026-01-01T10:00:00", "u1/a.jpg")],
+                objects={"meal-photos": {"u1/a.jpg": "2026-01-01T00:00:00Z"}})
+    send = Sender()
+    out = cron.run_daily(NOW, send=send, client=db.client())
+    assert out == {"reminded": 0, "photos_removed": 1, "failures": 0, "push": "not_configured"}
+    assert send.calls == []
+    assert not [c for c in db.calls if c[1] == "/client_settings"]

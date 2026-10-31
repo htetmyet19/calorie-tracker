@@ -126,3 +126,23 @@ def test_checkin_does_not_create_settings_row(api, make_user, service):
     # the one-time browser-settings move still works afterwards
     assert api.put("/api/settings", headers=auth(a), params={"only_if_empty": "1"},
                    json={"goal_kcal": 1800}).status_code == 200
+
+
+def test_same_day_checkin_is_returned_not_duplicated(api, make_user, service):
+    a = make_user()
+    h = auth(a)
+    first = api.post("/api/checkins", headers=h, json={"checked_on": DAY, "weight_kg": 70.5})
+    assert first.status_code == 201, first.text
+    cid = first.json()["id"]
+    path = _upload(api, a, cid, "front")
+    assert api.post(f"/api/checkins/{cid}/photos", headers=h,
+                    json={"pose": "front", "path": path}).status_code == 201
+    again = api.post("/api/checkins", headers=h, json={"checked_on": DAY, "weight_kg": 71})
+    assert again.status_code == 200, again.text
+    body = again.json()
+    assert body["id"] == cid and body["checked_on"] == DAY and body["weight_kg"] == 71
+    assert [p["pose"] for p in body["photos"]] == ["front"]
+    rows = service.get("/checkins", params={"user_id": f"eq.{a.id}"}).json()
+    assert len(rows) == 1
+    logs = service.get("/weight_logs", params={"user_id": f"eq.{a.id}"}).json()
+    assert [(w["logged_on"], float(w["weight_kg"])) for w in logs] == [(DAY, 71.0)]

@@ -1,4 +1,5 @@
 """Check-in routes with fake auth, Store and Storage; no network."""
+import datetime
 import logging
 
 import pytest
@@ -32,6 +33,19 @@ class FakeCheckinStore:
         self.checkins[self.next_id] = row
         self.next_id += 1
         return row
+
+    def checkin_on(self, day):
+        for r in self.list_checkins(100):
+            if r["checked_on"] == day.isoformat() and r["user_id"] == "u1":
+                return r
+        return None
+
+    def upsert_weight(self, day, kg):
+        # Like the real tables: a check-in already linked to that day's log sees the new value.
+        self.weights.append((day, kg))
+        for r in self.checkins.values():
+            if r["checked_on"] == day.isoformat() and r["weight_kg"] is not None:
+                r["weight_kg"] = kg
 
     def reset_reminders(self):
         self.reminders_reset += 1
@@ -140,6 +154,41 @@ def test_weight_out_of_range(env, kg):
 
 def test_bad_date(env):
     assert _make(env[0], day="2026-13-40").status_code == 400
+
+
+def test_same_day_returns_existing_checkin_with_photos(env):
+    client, store, storage = env
+    first = _make(client, day="2026-10-30", weight_kg=70.5)
+    assert first.status_code == 201
+    cid = first.json()["id"]
+    storage.objects.add("u1/a.jpg")
+    client.post(f"/api/checkins/{cid}/photos", json={"pose": "front", "path": "u1/a.jpg"})
+    again = _make(client, day="2026-10-30")
+    assert again.status_code == 200
+    body = again.json()
+    assert body["id"] == cid and body["checked_on"] == "2026-10-30" and body["weight_kg"] == 70.5
+    assert [(p["pose"], p["url"]) for p in body["photos"]] == [("front", "http://sb.test/sign/u1/a.jpg")]
+    assert len(store.checkins) == 1
+    assert store.weights == [(datetime.date(2026, 10, 30), 70.5)]  # no weight given: none written
+
+
+def test_same_day_with_weight_upserts_it(env):
+    client, store, _ = env
+    cid = _make(client, day="2026-10-30", weight_kg=70.5).json()["id"]
+    again = _make(client, day="2026-10-30", weight_kg=71)
+    assert again.status_code == 200
+    assert again.json()["id"] == cid and again.json()["weight_kg"] == 71
+    assert store.weights[-1] == (datetime.date(2026, 10, 30), 71)
+    assert len(store.checkins) == 1
+
+
+def test_checked_on_more_than_a_day_ahead_is_400(env):
+    client, store, _ = env
+    today = datetime.datetime.now(datetime.timezone.utc).date()
+    r = _make(client, day=(today + datetime.timedelta(days=2)).isoformat())
+    assert (r.status_code, r.json()["detail"]) == (400, "checked_on is in the future")
+    assert store.checkins == {}
+    assert _make(client, day=(today + datetime.timedelta(days=1)).isoformat()).status_code == 201
 
 
 def test_create_resets_reminders(env):

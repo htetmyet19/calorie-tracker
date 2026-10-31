@@ -74,12 +74,19 @@ def test_unsubscribe_disables_when_none_left():
     assert s.subs == {} and s.reminders_enabled is False
 
 
-def test_public_key_503_when_unset(monkeypatch):
-    monkeypatch.setattr(config, "VAPID_PUBLIC_KEY", "")
+def _vapid(monkeypatch, public="BPUB", private="priv", subject="mailto:a@example.com"):
+    monkeypatch.setattr(config, "VAPID_PUBLIC_KEY", public)
+    monkeypatch.setattr(config, "VAPID_PRIVATE_KEY", private)
+    monkeypatch.setattr(config, "VAPID_SUBJECT", subject)
+
+
+@pytest.mark.parametrize("missing", ["public", "private", "subject"])
+def test_public_key_503_unless_all_vapid_settings_set(monkeypatch, missing):
+    _vapid(monkeypatch, **{missing: ""})
     assert make_client(FakeStore()).get("/api/push/public-key").status_code == 503
 
 
 def test_public_key_returned(monkeypatch):
-    monkeypatch.setattr(config, "VAPID_PUBLIC_KEY", "BPUB")
+    _vapid(monkeypatch)
     r = make_client(FakeStore()).get("/api/push/public-key")
     assert r.status_code == 200 and r.json() == {"key": "BPUB"}

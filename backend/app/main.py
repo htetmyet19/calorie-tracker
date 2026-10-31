@@ -239,12 +239,46 @@ def remove_weight(day: str, store: Store = Depends(require_profile)):
         raise HTTPException(404, "Weight not found")
 
 
+def utc_today() -> datetime.date:
+    return datetime.datetime.now(datetime.timezone.utc).date()
+
+
+def _signed_photos(storage: Storage, photos: list[dict]) -> list[PhotoOut]:
+    out = []
+    for p in photos:
+        try:
+            url = storage.signed_url(PROGRESS_BUCKET, p["photo_path"], SIGNED_URL_SECONDS)
+        except StorageError:  # row points at a missing object: leave it out
+            continue
+        out.append(PhotoOut(id=p["id"], pose=p["pose"], url=url))
+    return out
+
+
 @app.post("/api/checkins", response_model=CheckinOut, status_code=201)
-def create_checkin(body: CheckinIn, store: Store = Depends(require_profile)):
+def create_checkin(body: CheckinIn, response: Response, store: Store = Depends(require_profile),
+                   storage: Storage = Depends(get_storage)):
+    """Create the day's check-in (201), or return the one that exists for that day (200).
+
+    A retry after a timeout must not create a second check-in. A weight sent again
+    is upserted into that day's weight log.
+    """
     day = parse_day(body.checked_on, "checked_on")
-    row = store.create_checkin(day, body.weight_kg)
+    # The browser sends its local date, at most one day ahead of UTC.
+    if day > utc_today() + datetime.timedelta(days=1):
+        raise HTTPException(400, "checked_on is in the future")
+    existing = store.checkin_on(day)
+    if existing is None:
+        row = store.create_checkin(day, body.weight_kg)
+        store.reset_reminders()
+        return CheckinOut(id=row["id"], checked_on=row["checked_on"], weight_kg=row["weight_kg"])
+    if body.weight_kg is not None:
+        store.upsert_weight(day, body.weight_kg)
+        existing = store.checkin_on(day) or existing
     store.reset_reminders()
-    return CheckinOut(id=row["id"], checked_on=row["checked_on"], weight_kg=row["weight_kg"])
+    response.status_code = 200
+    return CheckinOut(id=existing["id"], checked_on=existing["checked_on"],
+                      weight_kg=existing["weight_kg"],
+                      photos=_signed_photos(storage, existing["photos"]))
 
 
 def _own_checkin(store: Store, checkin_id: int) -> dict:
@@ -298,17 +332,8 @@ def list_checkins(today: str = Query(..., description="YYYY-MM-DD, the browser's
                   storage: Storage = Depends(get_storage)):
     today_d = parse_day(today, "today")
     rows = store.list_checkins(limit)
-    checkins = []
-    for r in rows:
-        photos = []
-        for p in r["photos"]:
-            try:
-                url = storage.signed_url(PROGRESS_BUCKET, p["photo_path"], SIGNED_URL_SECONDS)
-            except StorageError:  # row points at a missing object: leave it out
-                continue
-            photos.append(PhotoOut(id=p["id"], pose=p["pose"], url=url))
-        checkins.append(CheckinOut(id=r["id"], checked_on=r["checked_on"],
-                                   weight_kg=r["weight_kg"], photos=photos))
+    checkins = [CheckinOut(id=r["id"], checked_on=r["checked_on"], weight_kg=r["weight_kg"],
+                           photos=_signed_photos(storage, r["photos"])) for r in rows]
     last = datetime.date.fromisoformat(rows[0]["checked_on"]) if rows else None
     return CheckinList(checkins=checkins, next_due_on=next_due_on(last, today_d).isoformat(),
                        due=is_due(last, today_d))
@@ -327,13 +352,9 @@ def remove_progress_photo(photo_id: int, store: Store = Depends(require_profile)
     return Response(status_code=204)
 
 
-# Serves static/index.html and its assets at "/". API routes above are matched first.
-app.frontend("/", directory=config.STATIC_DIR)
-
-
 @app.get("/api/push/public-key")
 def push_public_key():
-    if not config.VAPID_PUBLIC_KEY:
+    if not config.push_configured():
         raise HTTPException(503, "Push is not configured")
     return {"key": config.VAPID_PUBLIC_KEY}
 
@@ -360,3 +381,8 @@ def cron_daily(request: Request):
     if not expected or not hmac.compare_digest(given.encode(), f"Bearer {expected}".encode()):
         raise HTTPException(401, "Unauthorized")
     return cron.run_daily(datetime.datetime.now(datetime.timezone.utc))
+
+
+# Serves static/index.html and its assets at "/". Registered last so that every
+# /api route above is matched before the static catch-all.
+app.frontend("/", directory=config.STATIC_DIR)

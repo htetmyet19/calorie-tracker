@@ -250,21 +250,46 @@ class Store:
             prefer="resolution=merge-duplicates,return=representation")
         self._check(resp)
         out = self._to_weight(resp.json()[0])
-        # Keep the profile weight in step. Upserting only this column leaves every
-        # other settings column (goal, reminders, goal_set_by) untouched.
-        sync = self._request(
-            "POST", "/client_settings", write=True,
-            json={"user_id": self.user.id, "weight_kg": kg},
-            params={"on_conflict": "user_id"},
-            prefer="resolution=merge-duplicates,return=minimal")
-        self._check(sync)
+        self._sync_profile_weight()
         return out
 
     def delete_weight(self, day: datetime.date) -> bool:
         resp = self._request("DELETE", "/weight_logs", write=True, params={
             "user_id": f"eq.{self.user.id}", "logged_on": f"eq.{day.isoformat()}"})
         self._check(resp)
-        return bool(resp.json()) if resp.content else False
+        deleted = bool(resp.json()) if resp.content else False
+        if deleted:
+            self._sync_profile_weight()
+        return deleted
+
+    def _sync_profile_weight(self) -> None:
+        """Make the profile weight equal the latest logged weight.
+
+        A backdated log or deleting today's log must not leave an older value in
+        settings. With no logs left, settings keep what they hold.
+        """
+        resp = self._request("GET", "/weight_logs", params={
+            "user_id": f"eq.{self.user.id}", "select": "weight_kg",
+            "order": "logged_on.desc", "limit": "1"})
+        self._check(resp)
+        rows = resp.json()
+        if not rows:
+            return
+        latest = round(float(rows[0]["weight_kg"]), 2)
+        resp = self._request("GET", "/client_settings", params={
+            "user_id": f"eq.{self.user.id}", "select": "weight_kg"})
+        self._check(resp)
+        current = resp.json()
+        if current and current[0]["weight_kg"] is not None \
+                and round(float(current[0]["weight_kg"]), 2) == latest:
+            return
+        # Upserting only this column leaves every other settings column (goal,
+        # reminders, goal_set_by) untouched.
+        self._check(self._request(
+            "POST", "/client_settings", write=True,
+            json={"user_id": self.user.id, "weight_kg": latest},
+            params={"on_conflict": "user_id"},
+            prefer="resolution=merge-duplicates,return=minimal"))
 
 
     # ---- check-ins and progress photos ----
@@ -302,23 +327,36 @@ class Store:
         rows = resp.json()
         return rows[0] if rows else None
 
+    CHECKIN_SELECT = "id,checked_on,weight_logs(weight_kg),progress_photos(id,pose,photo_path)"
+
+    @staticmethod
+    def _checkin_view(r: dict) -> dict:
+        w = r.get("weight_logs")
+        return {
+            "id": r["id"], "checked_on": r["checked_on"],
+            "weight_kg": round(float(w["weight_kg"]), 2) if w else None,
+            "photos": sorted(r.get("progress_photos") or [], key=lambda p: p["id"]),
+        }
+
     def list_checkins(self, limit: int) -> list[dict]:
         resp = self._request("GET", "/checkins", params={
             "user_id": f"eq.{self.user.id}",
-            "select": "id,checked_on,weight_logs(weight_kg),progress_photos(id,pose,photo_path)",
+            "select": self.CHECKIN_SELECT,
             "order": "checked_on.desc,id.desc",
             "limit": str(limit),
         })
         self._check(resp)
-        out = []
-        for r in resp.json():
-            w = r.get("weight_logs")
-            out.append({
-                "id": r["id"], "checked_on": r["checked_on"],
-                "weight_kg": round(float(w["weight_kg"]), 2) if w else None,
-                "photos": sorted(r.get("progress_photos") or [], key=lambda p: p["id"]),
-            })
-        return out
+        return [self._checkin_view(r) for r in resp.json()]
+
+    def checkin_on(self, day: datetime.date) -> dict | None:
+        """The caller's check-in for that date (the oldest, if older data holds two)."""
+        resp = self._request("GET", "/checkins", params={
+            "user_id": f"eq.{self.user.id}", "checked_on": f"eq.{day.isoformat()}",
+            "select": self.CHECKIN_SELECT, "order": "id.asc", "limit": "1",
+        })
+        self._check(resp)
+        rows = resp.json()
+        return self._checkin_view(rows[0]) if rows else None
 
     def photo_for_pose(self, checkin_id: int, pose: str) -> dict | None:
         resp = self._request("GET", "/progress_photos", params={

@@ -114,7 +114,10 @@ also exposes Ollama to your whole network.)
 
 Once a day (02:30 UTC, 09:00 in Myanmar) Vercel Cron calls `GET /api/cron/daily`. The job sends weekly check-in
 reminders by web push: at most two per due check-in, the second three days after the first. "Today" is computed in
-`Asia/Yangon`. It stops starting new work after 50 s and leaves the rest for the next day.
+`Asia/Yangon` (a fixed UTC+06:30 offset). It stops starting new work after 50 s and leaves the rest for the next day,
+so the function needs a time limit of at least 60 s: `backend/vercel.json` sets `maxDuration: 60` for `app/main.py`
+(the FastAPI entry Vercel detects); Fluid compute's default limit is also enough. If any of the three `VAPID_*`
+variables is empty, the job skips reminders and reports `"push": "not_configured"`.
 
 1. Generate a VAPID key pair (prints two lines, writes nothing):
    ```bash

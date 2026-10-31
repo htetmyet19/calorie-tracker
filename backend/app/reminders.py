@@ -1,16 +1,18 @@
 """Pure reminder rules for the weekly check-in push."""
 import datetime
-from zoneinfo import ZoneInfo
-
-from . import config
 
 REMINDER_GAP_DAYS = 3
 MAX_REMINDERS = 2
 
 
+# Asia/Yangon is UTC+06:30 all year (no daylight saving). A fixed offset needs no
+# tz database, which serverless Python images may not ship.
+YANGON = datetime.timezone(datetime.timedelta(hours=6, minutes=30))
+
+
 def yangon_today(now_utc: datetime.datetime) -> datetime.date:
     """The calendar date in Asia/Yangon at the given (timezone-aware) instant."""
-    return now_utc.astimezone(ZoneInfo(config.TIMEZONE)).date()
+    return now_utc.astimezone(YANGON).date()
 
 
 def should_remind(due: bool, sent: int, last_reminded_on: datetime.date | None,

@@ -94,3 +94,17 @@ def test_only_if_empty_keeps_reminders_of_a_push_subscriber(make_user):
     s.add_push_subscription(f"https://push.example/{u.id}", "p256dh-key", "auth-key")
     out = s.put_settings(SettingsIn(goal_kcal=1900), only_if_empty=True)
     assert out["goal_kcal"] == 1900 and out["reminders_enabled"] is True
+
+
+def test_backdated_weight_does_not_overwrite_profile_weight(make_user):
+    import datetime
+    s = _store(make_user())
+    today = datetime.date(2026, 10, 31)
+    s.upsert_weight(today, 80)
+    s.upsert_weight(today - datetime.timedelta(days=30), 85)
+    assert s.get_settings()["weight_kg"] == 80
+    assert s.delete_weight(today) is True
+    assert s.get_settings()["weight_kg"] == 85
+    # the last log gone: the profile weight stays as it was
+    assert s.delete_weight(today - datetime.timedelta(days=30)) is True
+    assert s.get_settings()["weight_kg"] == 85

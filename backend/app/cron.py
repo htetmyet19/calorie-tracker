@@ -304,6 +304,26 @@ def cleanup_meal_photos(client, now_utc: datetime.datetime, deadline: float,
     return len(state.removed), len(state.failed)
 
 
+def _remind_all(db: _Db, today: datetime.date, send: Callable,
+                out_of_time: Callable[[], bool], counter: list[int]) -> None:
+    """Send due reminders page by page, adding to `counter[0]` as it goes, so the
+    count survives a failure part way through."""
+    after = None
+    while not out_of_time():
+        params = {"reminders_enabled": "eq.true", "reminders_sent": "lt.2",
+                  "select": "user_id,reminders_sent,last_reminded_on",
+                  "order": "user_id.asc", "limit": str(BATCH)}
+        if after:
+            params["user_id"] = f"gt.{after}"
+        rows = db.request("GET", "/client_settings", params=params).json()
+        if not rows:
+            break
+        counter[0] += _remind_page(db, rows, today, send, out_of_time)
+        after = rows[-1]["user_id"]
+        if len(rows) < BATCH:
+            break
+
+
 def run_daily(now_utc: datetime.datetime, send: Callable = webpush, deadline_s: float = 50,
               monotonic: Callable[[], float] = time.monotonic,
               client: httpx.Client | None = None) -> dict:
@@ -319,26 +339,24 @@ def run_daily(now_utc: datetime.datetime, send: Callable = webpush, deadline_s: 
     client = client or httpx.Client(timeout=config.SUPABASE_TIMEOUT)
     try:
         db = _Db(client)
-        reminded, after = 0, None
-        while not out_of_time():
-            params = {"reminders_enabled": "eq.true", "reminders_sent": "lt.2",
-                      "select": "user_id,reminders_sent,last_reminded_on",
-                      "order": "user_id.asc", "limit": str(BATCH)}
-            if after:
-                params["user_id"] = f"gt.{after}"
-            rows = db.request("GET", "/client_settings", params=params).json()
-            if not rows:
-                break
-            reminded += _remind_page(db, rows, today, send, out_of_time)
-            after = rows[-1]["user_id"]
-            if len(rows) < BATCH:
-                break
         state = _Cleanup()
+        reminded = [0]
+        push_ready = config.push_configured()
+        if push_ready:
+            # A failed settings page must not stop the photo cleanup below.
+            try:
+                _remind_all(db, today, send, out_of_time, reminded)
+            except CronError as e:
+                log.warning("reminders_failed error=%s", type(e).__name__)
+                state.failed.add("step:reminders")
         deadline = started + deadline_s
         cleanup_meal_photos(db, now_utc, deadline, monotonic, state)
         _sweep_orphans(db, state, now_utc, out_of_time)
-        return {"reminded": reminded, "photos_removed": len(state.removed),
-                "failures": len(state.failed)}
+        out = {"reminded": reminded[0], "photos_removed": len(state.removed),
+               "failures": len(state.failed)}
+        if not push_ready:
+            out["push"] = "not_configured"
+        return out
     finally:
         if own_client:
             client.close()
