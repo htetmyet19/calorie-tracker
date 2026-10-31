@@ -55,7 +55,36 @@ async function run(fn) {
   for (const b of buttons) b.disabled = false;
 }
 
+// Glows lean toward the cursor and the ring tilts slightly. Mouse/trackpad only:
+// touch screens keep the CSS drift, and reduced-motion users get neither.
+function trackOrb() {
+  const orb = $("orb");
+  if (!orb || !matchMedia("(pointer: fine)").matches
+      || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  let frame = 0;
+  addEventListener("pointermove", (e) => {
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      const r = orb.getBoundingClientRect();
+      // -1..1 from the orb's centre, scaled by the window so far-away moves still register.
+      const dx = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / (innerWidth / 2)));
+      const dy = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2)) / (innerHeight / 2)));
+      orb.classList.add("is-tracking");
+      orb.style.setProperty("--gx", `${dx * 28}px`);
+      orb.style.setProperty("--gy", `${dy * 28}px`);
+      orb.style.setProperty("--rx", `${-dy * 12}deg`);
+      orb.style.setProperty("--ry", `${dx * 12}deg`);
+    });
+  });
+  document.documentElement.addEventListener("pointerleave", () => {
+    orb.classList.remove("is-tracking");
+    for (const v of ["--gx", "--gy", "--rx", "--ry"]) orb.style.removeProperty(v);
+  });
+}
+
 function initAuthPage() {
+  trackOrb();
   const form = document.querySelector(".auth-form");
   form.noValidate = true;
   // Clear a field's message as soon as it's fixed.

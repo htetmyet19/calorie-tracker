@@ -14,13 +14,16 @@
 <body class="immersive">
   <main class="gate">
     <!-- The Today screen's plate ring, one arc per meal colour, glowing -->
-    <svg class="gate-ring" viewBox="0 0 100 100" aria-hidden="true">
-      <circle class="track" cx="50" cy="50" r="40"/>
-      <circle style="--c: var(--breakfast)" cx="50" cy="50" r="40" stroke-dasharray="52 200" stroke-dashoffset="0"/>
-      <circle style="--c: var(--lunch)" cx="50" cy="50" r="40" stroke-dasharray="62 190" stroke-dashoffset="-58"/>
-      <circle style="--c: var(--dinner)" cx="50" cy="50" r="40" stroke-dasharray="70 182" stroke-dashoffset="-126"/>
-      <circle style="--c: var(--snack)" cx="50" cy="50" r="40" stroke-dasharray="28 224" stroke-dashoffset="-202"/>
-    </svg>
+    <div class="gate-orb" id="orb" aria-hidden="true">
+      <div class="orb-glow"></div>
+      <svg class="gate-ring" viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="track" cx="50" cy="50" r="40"/>
+        <circle style="--c: var(--breakfast)" cx="50" cy="50" r="40" stroke-dasharray="52 200" stroke-dashoffset="0"/>
+        <circle style="--c: var(--lunch)" cx="50" cy="50" r="40" stroke-dasharray="62 190" stroke-dashoffset="-58"/>
+        <circle style="--c: var(--dinner)" cx="50" cy="50" r="40" stroke-dasharray="70 182" stroke-dashoffset="-126"/>
+        <circle style="--c: var(--snack)" cx="50" cy="50" r="40" stroke-dasharray="28 224" stroke-dashoffset="-202"/>
+      </svg>
+    </div>
     <h1 class="gate-title">Welcome back.</h1>
     <p class="gate-sub">Log in to see your day.</p>
 
