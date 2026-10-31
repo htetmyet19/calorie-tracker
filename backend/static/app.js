@@ -1,14 +1,4 @@
-const $ = (id) => document.getElementById(id);
-const el = (tag, props = {}, ...children) => {
-  const node = Object.assign(document.createElement(tag), props);
-  node.append(...children);
-  return node;
-};
-const svgEl = (tag, attrs = {}) => {
-  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
-  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
-  return node;
-};
+// Today page. Needs dom.js, auth.js, energy.js, units.js, images.js and nav.js loaded first.
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
 const MEAL_LABEL = { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack" };
@@ -19,11 +9,10 @@ let items = [];          // food items for the meal being reviewed
 let selectedFile = null;
 let justSavedId = null;  // the segment to draw in after a save
 let loadError = null;    // the message loadDay last showed, if any
+const DEFAULT_GOAL = 2000;
+let savedGoal = DEFAULT_GOAL; // the goal the server last confirmed
 
-const pad = (n) => String(n).padStart(2, "0");
-const isoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const localDateTime = (d) => `${isoDate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-const parseDate = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
 const fmt = (n) => Math.round(n).toLocaleString("en-IN");
 const round1 = (x) => Math.round(x * 10) / 10;
 
@@ -75,29 +64,65 @@ $("day-name").addEventListener("click", () => {
 });
 $("log-date").addEventListener("change", (e) => e.target.value && setDate(e.target.value));
 
-$("goal").addEventListener("change", () => {
-  const goal = Math.min(9000, Math.max(500, parseFloat($("goal").value) || 2000));
+// Saves the goal (plus any calculator details) to the server; on failure the
+// field goes back to the saved goal.
+async function saveGoal(goal, extra = {}) {
   $("goal").value = goal;
-  localStorage.setItem("goal", goal);
   loadDay();
+  try {
+    await saveSettings({ ...extra, goal_kcal: goal });
+  } catch (err) {
+    setStatus(err.message, true);
+    $("goal").value = savedGoal;
+    loadDay();
+    return;
+  }
+  savedGoal = goal;
+}
+
+$("goal").addEventListener("change", () => {
+  const goal = Math.round(Math.min(9000, Math.max(500, parseFloat($("goal").value) || DEFAULT_GOAL)));
+  saveGoal(goal);
 });
 
 // ---------- Goal calculator ----------
 
-const CALC_FIELDS = { heightCm: "c-height", weightKg: "c-weight", age: "c-age" };
+// The calculator shows weight in the unit chosen in Settings; the server keeps kg.
+let calcUnit = "kg";
 
-function readProfile() {
-  const p = {
-    sex: document.querySelector('input[name="c-sex"]:checked').value,
-    goal: document.querySelector('input[name="c-goal"]:checked').value,
-    activity: parseFloat($("c-activity").value),
-  };
-  for (const [key, id] of Object.entries(CALC_FIELDS)) {
-    if (!$(id).checkValidity() || $(id).value === "") return null;
-    p[key] = parseFloat($(id).value);
-  }
-  return p;
+function setCalcUnit(unit) {
+  if (unit === calcUnit) return;
+  const input = $("c-weight");
+  const old = parseFloat(input.value);
+  if (!Number.isNaN(old)) input.value = inputWeight(toKg(old, calcUnit), unit);
+  calcUnit = unit;
+  const range = weightRange(unit);
+  input.min = range.min;
+  input.max = range.max;
+  $("c-weight-unit").textContent = unit;
+  renderCalc();
 }
+
+// Calculator values in the settings' field names, or null while incomplete.
+function readProfile() {
+  for (const id of ["c-height", "c-weight", "c-age"]) {
+    if (!$(id).checkValidity() || $(id).value === "") return null;
+  }
+  return {
+    height_cm: parseFloat($("c-height").value),
+    weight_kg: toKg(parseFloat($("c-weight").value), calcUnit), // weightRange keeps it in 30-300 kg
+    age: parseInt($("c-age").value, 10),
+    sex: document.querySelector('input[name="c-sex"]:checked').value,
+    activity: parseFloat($("c-activity").value),
+    weight_goal: document.querySelector('input[name="c-goal"]:checked').value,
+  };
+}
+
+// energy.js takes the calculator's own field names.
+const energyProfile = (s) => ({
+  heightCm: s.height_cm, weightKg: s.weight_kg, age: s.age, sex: s.sex,
+  activity: s.activity, goal: s.weight_goal,
+});
 
 function renderCalc() {
   const p = readProfile();
@@ -105,30 +130,37 @@ function renderCalc() {
   $("calc-use").disabled = !p;
   $("r-floor").hidden = true;
   if (!p) return;
-  const b = bmi(p.weightKg, p.heightCm);
-  const suggestion = suggestedGoal(p);
+  const e = energyProfile(p);
+  const b = bmi(e.weightKg, e.heightCm);
+  const suggestion = suggestedGoal(e);
   $("r-bmi").textContent = b.toFixed(1);
   $("r-bmi-cat").textContent = bmiCategory(b);
-  $("r-tdee").textContent = fmt(tdee(p));
+  $("r-tdee").textContent = fmt(tdee(e));
   $("r-goal").textContent = fmt(suggestion.kcal);
   $("r-floor").hidden = !suggestion.floored;
-  try { localStorage.setItem("profile", JSON.stringify(p)); } catch {}
 }
 
-function restoreProfile() {
-  let p;
-  try { p = JSON.parse(localStorage.getItem("profile")); } catch {}
-  if (!p) return;
-  for (const [key, id] of Object.entries(CALC_FIELDS)) $(id).value = p[key];
-  $("c-activity").value = String(p.activity);
-  for (const name of ["sex", "goal"]) {
-    const radio = document.querySelector(`input[name="c-${name}"][value="${p[name]}"]`);
+function restoreProfile(s) {
+  setCalcUnit(s.weight_unit || "kg");
+  if (s.height_cm != null) $("c-height").value = s.height_cm;
+  if (s.weight_kg != null) $("c-weight").value = inputWeight(s.weight_kg, calcUnit);
+  if (s.age != null) $("c-age").value = s.age;
+  if (s.activity != null) $("c-activity").value = String(s.activity);
+  for (const [name, value] of [["sex", s.sex], ["goal", s.weight_goal]]) {
+    const radio = value && document.querySelector(`input[name="c-${name}"][value="${value}"]`);
     if (radio) radio.checked = true;
   }
 }
 
-$("calc-open").addEventListener("click", () => {
-  restoreProfile();
+$("calc-open").addEventListener("click", async () => {
+  let s;
+  try {
+    s = await loadSettings();
+  } catch (err) {
+    setStatus(err.message, true);
+    return;
+  }
+  restoreProfile(s);
   renderCalc();
   $("calc").returnValue = ""; // Escape keeps the previous value, which may be "use"
   $("calc").showModal();
@@ -137,9 +169,10 @@ $("calc-form").addEventListener("input", renderCalc);
 $("calc").addEventListener("close", () => {
   const p = $("calc").returnValue === "use" && readProfile();
   if (!p) return;
-  $("goal").value = suggestedGoal(p).kcal;
-  $("goal").dispatchEvent(new Event("change")); // same clamp, save and redraw as a typed goal
+  saveGoal(suggestedGoal(energyProfile(p)).kcal, p); // one save: details and goal together
 });
+
+document.addEventListener("settingschange", (e) => setCalcUnit(e.detail.weight_unit));
 
 // ---------- The plate ----------
 
@@ -232,7 +265,144 @@ function renderLegend(day) {
   }));
 }
 
+// ---------- Meal photos ----------
+
+const ANALYSIS_SIDE = 1600, ANALYSIS_QUALITY = 0.85; // sent to /api/analyze only
+const STORED_SIDE = 800, STORED_QUALITY = 0.7;       // kept with the meal
+const MAX_STORED_BYTES = 300 * 1024;                 // the server's meal-photo limit
+
+const failedUploads = new Map(); // mealId -> Blob whose upload failed; memory only
+const uploadingIds = new Set();  // meals whose photo is uploading now
+const photoBlobs = new Map();    // mealId -> Blob already here (uploaded or fetched)
+const photoFetches = new Map();  // mealId -> in-flight Promise<Blob|null>
+let thumbUrls = [];              // object URLs of the rendered rows
+let thumbObserver = null;
+
+// The ~800 px copy kept with the meal, under the server's 300 KB limit.
+// null when this browser can't decode the photo.
+async function storedCopy(file) {
+  try {
+    let blob = await resizeImage(file, STORED_SIDE, STORED_QUALITY);
+    if (blob.size > MAX_STORED_BYTES) blob = await resizeImage(file, STORED_SIDE, 0.5);
+    if (blob.size > MAX_STORED_BYTES) blob = await resizeImage(file, 600, 0.5);
+    return blob.size <= MAX_STORED_BYTES ? blob : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// PUT the photo; on any failure keep the blob so the row can offer a retry.
+async function uploadMealPhoto(id, blob) {
+  const form = new FormData();
+  form.append("photo", blob, "meal.jpg");
+  let res = null;
+  try {
+    res = await api(`/api/meals/${id}/photo`, { method: "PUT", body: form });
+  } catch (e) { /* offline: res stays null */ }
+  if (res && res.ok) {
+    failedUploads.delete(id);
+    photoBlobs.set(id, blob); // no need to download what we just sent
+    return true;
+  }
+  if (res && res.status === 404) failedUploads.delete(id); // the meal is gone
+  else failedUploads.set(id, blob);
+  return false;
+}
+
+// The meal's photo as a Blob, downloaded once per page. null when there is none.
+function mealPhoto(id) {
+  if (photoBlobs.has(id)) return Promise.resolve(photoBlobs.get(id));
+  if (!photoFetches.has(id)) {
+    // api() sends the token; fetch follows the 307 to the short-lived signed URL.
+    const p = api(`/api/meals/${id}/photo`)
+      .then((res) => (res.ok ? res.blob() : null))
+      .catch(() => null)
+      .then((blob) => {
+        photoFetches.delete(id);
+        if (blob) photoBlobs.set(id, blob);
+        return blob;
+      });
+    photoFetches.set(id, p);
+  }
+  return photoFetches.get(id);
+}
+
+function resetThumbs() {
+  if (thumbObserver) thumbObserver.disconnect();
+  for (const url of thumbUrls) URL.revokeObjectURL(url);
+  thumbUrls = [];
+  thumbObserver = "IntersectionObserver" in window
+    ? new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        thumbObserver.unobserve(entry.target);
+        showThumb(entry.target);
+      }
+    }, { rootMargin: "100px" })
+    : null;
+}
+
+// Thumbnails are fetched only when their row scrolls into view: mobile data is dear.
+async function showThumb(button) {
+  const id = Number(button.dataset.mealId);
+  const blob = await mealPhoto(id);
+  if (!button.isConnected) return; // the day re-rendered meanwhile
+  if (!blob) { // gone since the list loaded (e.g. the 90-day cleanup)
+    button.closest("li").classList.remove("has-thumb");
+    button.remove();
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  thumbUrls.push(url);
+  button.querySelector("img").src = url;
+}
+
+function mealThumb(m, time) {
+  if (!m.has_photo) return null;
+  const label = MEAL_LABEL[m.meal_type];
+  const img = el("img", { alt: `Photo of ${label.toLowerCase()}`, loading: "lazy", width: 40, height: 40 });
+  const button = el("button", { className: "thumb", type: "button" }, img);
+  button.dataset.mealId = m.id;
+  button.addEventListener("click", () => openPhoto(m.id, `${label} at ${time}`));
+  if (thumbObserver) thumbObserver.observe(button); else showThumb(button);
+  return button;
+}
+
+async function openPhoto(id, title) {
+  const blob = await mealPhoto(id);
+  if (!blob) { setStatus("Couldn't load the photo. Check your connection.", true); return; }
+  const img = $("photo-view-img");
+  if (img.src) URL.revokeObjectURL(img.src);
+  img.src = URL.createObjectURL(blob);
+  img.alt = `Photo of ${title.toLowerCase()}`;
+  $("photo-view-title").textContent = title;
+  $("photo-view").showModal();
+}
+$("photo-view-close").addEventListener("click", () => $("photo-view").close());
+
+// Under the meal's text: uploading, upload failed (retry), or removed after 90 days.
+function photoNote(m) {
+  if (m.has_photo) return null;
+  if (uploadingIds.has(m.id)) return el("p", { className: "photo-note", textContent: "Uploading photo…" });
+  if (failedUploads.has(m.id)) {
+    const retry = el("button", { className: "btn btn-quiet photo-retry", type: "button",
+      textContent: "Photo not uploaded – retry" });
+    retry.addEventListener("click", async () => {
+      retry.disabled = true;
+      retry.textContent = "Uploading photo…";
+      await uploadMealPhoto(m.id, failedUploads.get(m.id));
+      loadDay();
+    });
+    return retry;
+  }
+  if (m.photo_removed) { // set by the daily job when it removes a photo after 90 days
+    return el("p", { className: "photo-note", textContent: "Photo removed after 90 days" });
+  }
+  return null;
+}
+
 function renderMeals(day) {
+  resetThumbs();
   $("meals-empty").hidden = day.meals.length > 0;
   $("meals").replaceChildren(...day.meals.map((m) => {
     const sw = el("span", { className: "swatch" });
@@ -242,16 +412,30 @@ function renderMeals(day) {
     del.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
     del.addEventListener("click", async () => {
       if (!confirm(`Delete ${MEAL_LABEL[m.meal_type].toLowerCase()} at ${time}?`)) return;
-      await api(`/api/meals/${m.id}`, { method: "DELETE" });
+      let res = null;
+      try {
+        res = await api(`/api/meals/${m.id}`, { method: "DELETE" });
+      } catch (err) { /* network down: res stays null */ }
+      // 404: already gone (another tab or device), so treat it like a delete.
+      if (!res || (!res.ok && res.status !== 404)) {
+        setStatus("Couldn't delete the meal. Check your connection and try again.", true);
+        return; // the meal and any photo kept for a retry stay as they are
+      }
+      failedUploads.delete(m.id);
+      photoBlobs.delete(m.id);
       loadDay();
     });
-    return el("li", {},
-      sw,
-      el("div", {},
-        el("p", { className: "when" }, MEAL_LABEL[m.meal_type], el("time", { dateTime: m.eaten_at, textContent: time })),
-        el("p", { className: "what", textContent: m.items.map((i) => `${i.name} (${Math.round(i.grams)} g)`).join(", ") })),
+    const text = el("div", {},
+      el("p", { className: "when" }, MEAL_LABEL[m.meal_type], el("time", { dateTime: m.eaten_at, textContent: time })),
+      el("p", { className: "what", textContent: m.items.map((i) => `${i.name} (${Math.round(i.grams)} g)`).join(", ") }));
+    const note = photoNote(m);
+    if (note) text.append(note);
+    const thumb = mealThumb(m, time);
+    const li = el("li", {}, sw, ...(thumb ? [thumb] : []), text,
       el("span", { className: "kcal", textContent: `${fmt(m.total_calories)} kcal` }),
       del);
+    li.classList.toggle("has-thumb", !!thumb);
+    return li;
   }));
 }
 
@@ -303,9 +487,12 @@ $("analyze").addEventListener("click", async () => {
   $("analyze").textContent = "Estimating…";
   $("drop").classList.add("is-busy");
   setStatus("");
-  const form = new FormData();
-  form.append("photo", selectedFile);
   try {
+    // A 1600 px copy is plenty for the estimate and far less mobile data than
+    // the camera original. If this browser can't decode it, send the original.
+    const copy = await resizeImage(selectedFile, ANALYSIS_SIDE, ANALYSIS_QUALITY).catch(() => null);
+    const form = new FormData();
+    if (copy) form.append("photo", copy, "meal.jpg"); else form.append("photo", selectedFile);
     const res = await api("/api/analyze", { method: "POST", body: form });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || `The estimate failed (${res.status}). Try again.`);
@@ -411,22 +598,33 @@ $("save").addEventListener("click", async () => {
   // Meals logged onto a past day get midday as their time.
   const eaten_at = date === isoDate(now) ? localDateTime(now) : `${date}T12:00`;
   const meal_type = $("meal-type").querySelector("input:checked").value;
+  const photo = selectedFile; // resetLogger clears selectedFile
+  let data;
   try {
     const res = await api("/api/meals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ eaten_at, meal_type, items: items.map((i) => ({ ...i, confidence: i.confidence || "high" })) }),
     });
-    const data = await res.json();
+    data = await res.json();
     if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Couldn't save the meal. Check the numbers and try again.");
     justSavedId = data.id;
     resetLogger();
     setStatus(`Saved ${MEAL_LABEL[meal_type].toLowerCase()}, ${fmt(data.total_calories)} kcal.`);
-    loadDay();
   } catch (err) {
     setStatus(err.message, true);
     $("save").disabled = false;
+    return;
   }
+  // The meal is saved; the photo follows and never blocks it.
+  if (photo) uploadingIds.add(data.id);
+  loadDay();
+  if (!photo) return;
+  const stored = await storedCopy(photo);
+  if (stored) await uploadMealPhoto(data.id, stored);
+  else setStatus("Saved without the photo: this browser can't read it.");
+  uploadingIds.delete(data.id);
+  loadDay();
 });
 
 // ---------- Start ----------
@@ -453,13 +651,15 @@ async function start() {
     setStatus(err.message, true);
     return;
   }
-  $("goal").value = localStorage.getItem("goal") || 2000;
+  try {
+    // Also moves old browser settings to the server, once.
+    savedGoal = (await loadSettings()).goal_kcal || DEFAULT_GOAL;
+  } catch (err) {
+    setStatus(err.message, true); // the day still loads, against the default goal
+  }
+  $("goal").value = savedGoal;
   setDate(isoDate(new Date()));
 }
 
-$("logout").addEventListener("click", async () => {
-  try { await logout(); } catch (e) { /* logout clears what it can; leave either way */ }
-  location = "/login.html";
-});
-
+initNav("today");
 start();

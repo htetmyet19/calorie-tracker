@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Tracker: weekly check-in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="masthead">
+    <p class="wordmark">Tracker</p>
+    <a class="btn btn-quiet" href="/progress.html">Cancel</a>
+  </header>
+
+  <main class="checkin">
+    <p class="status is-error" id="page-status" role="alert"></p>
+
+    <div class="checkin-top">
+      <button class="btn btn-quiet checkin-back" type="button" id="ci-back" hidden>← Back</button>
+      <div class="dots" id="ci-dots" role="img" aria-label="Step 1 of 5">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <!-- 1 Weight: skippable; the check-in row is created when leaving this step -->
+    <section class="card checkin-step" id="step-weight" aria-labelledby="weight-title">
+      <p class="step-count">Step 1 of 5</p>
+      <h1 class="step-title" id="weight-title" tabindex="-1">Your weight</h1>
+      <form id="ci-weight-form" novalidate>
+        <label class="form-label" for="ci-weight">Weight (<span id="ci-unit-label">kg</span>)</label>
+        <span class="field field-wide"><input type="number" id="ci-weight" step="0.1" inputmode="decimal"><span class="unit" id="ci-unit">kg</span></span>
+        <fieldset class="meal-type ci-unit-pick">
+          <legend class="visually-hidden">Weight unit</legend>
+          <div class="meal-type-options">
+            <label><input type="radio" name="ci-unit" value="kg" checked>kg</label>
+            <label><input type="radio" name="ci-unit" value="lb">lb</label>
+          </div>
+        </fieldset>
+        <p class="hint" id="ci-weight-hint"></p>
+        <p class="status" id="ci-weight-status" role="status" aria-live="polite"></p>
+        <div class="step-actions">
+          <button class="btn btn-quiet" type="button" id="ci-weight-skip">Skip</button>
+          <button class="btn btn-primary" type="submit" id="ci-weight-next">Next</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 2-4 Front, Side, Back: filled from the template below -->
+    <div id="photo-steps"></div>
+
+    <!-- 5 Done -->
+    <section class="card checkin-step checkin-done" id="step-done" aria-labelledby="done-title" hidden>
+      <p class="step-count">Step 5 of 5</p>
+      <h1 class="step-title" id="done-title" tabindex="-1">Done</h1>
+      <div class="done-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>
+      </div>
+      <p class="done-saved">Check-in saved</p>
+      <p class="done-summary" id="done-summary" aria-live="polite"></p>
+      <ul class="done-retry" id="done-retry"></ul>
+
+      <div class="remind" id="remind" hidden>
+        <p class="remind-title">Remind me next week?</p>
+        <div class="remind-actions">
+          <button class="btn btn-primary" type="button" id="remind-yes">Yes</button>
+          <button class="btn btn-outline" type="button" id="remind-no">Not now</button>
+        </div>
+      </div>
+      <p class="status" id="remind-status" role="status" aria-live="polite"></p>
+
+      <a class="btn btn-quiet done-back" href="/progress.html">Back to Progress</a>
+    </section>
+  </main>
+
+  <template id="photo-step-template">
+    <section class="card checkin-step" hidden>
+      <p class="step-count"></p>
+      <h1 class="step-title" tabindex="-1"></h1>
+      <label class="drop photo-drop">
+        <input type="file" accept="image/*" capture="environment" class="visually-hidden">
+        <img class="photo-preview" alt="" hidden>
+        <span class="drop-empty">
+          <svg viewBox="0 0 48 48" aria-hidden="true">
+            <circle cx="24" cy="26" r="13"/><circle cx="24" cy="26" r="7"/><path d="M6 14h7l3-5h16l3 5h7v26H6z"/>
+          </svg>
+          <span class="drop-title"></span>
+        </span>
+        <span class="drop-busy" aria-hidden="true">Uploading…</span>
+      </label>
+      <p class="hint photo-tip">Same spot, same light, every week</p>
+      <p class="status photo-status" role="status" aria-live="polite"></p>
+      <div class="step-actions">
+        <button class="btn btn-quiet photo-skip" type="button">Skip</button>
+        <button class="btn btn-primary photo-main" type="button">Take photo</button>
+      </div>
+    </section>
+  </template>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" integrity="sha384-GFr3yTh5lJznCbZfpTtXnwboFsxqtTQoeTZCRHhE0579KrRmlCzen5AA8ohaB5ug" crossorigin="anonymous"></script>
+  <script src="/dom.js"></script>
+  <script src="/auth.js"></script>
+  <script src="/units.js"></script>
+  <script src="/images.js"></script>
+  <script src="/push.js"></script>
+  <script src="/nav.js"></script>
+  <script src="/checkin.js"></script>
+</body>
+</html>

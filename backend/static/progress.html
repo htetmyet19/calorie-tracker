@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Tracker: progress</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="masthead">
+    <p class="wordmark">Tracker</p>
+    <!-- nav.js adds the Settings button here, the Settings panel and the bottom bar -->
+  </header>
+
+  <main class="progress">
+    <h1 class="visually-hidden">Progress</h1>
+    <p class="status is-error" id="page-status" role="alert"></p>
+
+    <!-- Weekly check-in: due now, or how long until the next one -->
+    <section class="card checkin-card" aria-labelledby="checkin-title" aria-busy="true">
+      <h2 class="section-title" id="checkin-title">Weekly check-in</h2>
+      <p class="checkin-when" id="checkin-when"></p>
+      <a class="btn btn-primary" id="checkin-start" href="/checkin.html" hidden>Start check-in</a>
+      <p class="status is-error" id="checkin-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <!-- Weight: last 12 weeks in the unit from Settings -->
+    <section class="card" aria-labelledby="weight-title" aria-busy="true" id="weight-section">
+      <div class="card-head">
+        <h2 class="section-title" id="weight-title">Weight</h2>
+        <button class="btn btn-outline btn-small" type="button" id="weight-log" aria-haspopup="dialog">+ Log weight</button>
+      </div>
+      <p class="card-sub">Last 12 weeks</p>
+      <div class="weight-summary" id="weight-summary" hidden>
+        <p class="weight-latest" id="weight-latest"></p>
+        <p class="weight-change" id="weight-change"></p>
+      </div>
+      <svg class="chart chart-line" id="weight-chart" viewBox="0 0 320 150" role="img" aria-label="" hidden></svg>
+      <p class="empty" id="weight-empty" hidden>Log your first weight to see the chart</p>
+      <p class="status is-error" id="weight-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <!-- Calories vs goal: last 7 days -->
+    <section class="card" aria-labelledby="cal-title" aria-busy="true">
+      <h2 class="section-title" id="cal-title">Calories vs goal</h2>
+      <p class="card-sub">Last 7 days</p>
+      <svg class="chart chart-bars" id="cal-chart" viewBox="0 0 320 170" role="img" aria-label="" hidden></svg>
+      <p class="status is-error" id="cal-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <!-- Check-in timeline: newest first, front/side/back thumbnails -->
+    <section class="card" aria-labelledby="timeline-title" aria-busy="true">
+      <div class="card-head">
+        <h2 class="section-title" id="timeline-title">Check-ins</h2>
+        <button class="btn btn-outline btn-small" type="button" id="compare-open" aria-haspopup="dialog" hidden>Compare</button>
+      </div>
+      <ol class="timeline" id="timeline"></ol>
+      <p class="empty" id="timeline-empty" hidden>Your check-in photos will appear here</p>
+      <p class="status is-error" id="timeline-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <p class="private-note">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+      Visible only to you
+    </p>
+  </main>
+
+  <!-- Log a weight -->
+  <dialog class="calc" id="weight-dialog" aria-labelledby="weight-dialog-title">
+    <form id="weight-form" novalidate>
+      <h2 id="weight-dialog-title" class="section-title">Log weight</h2>
+      <div class="form-rows">
+        <div>
+          <label class="form-label" for="w-date">Date</label>
+          <span class="field field-wide"><input type="date" id="w-date" required></span>
+        </div>
+        <div>
+          <label class="form-label" for="w-value">Weight</label>
+          <span class="field field-wide"><input type="number" id="w-value" step="0.1" inputmode="decimal" required><span class="unit" id="w-unit">kg</span></span>
+        </div>
+      </div>
+      <p class="status" id="weight-form-status" role="status" aria-live="polite"></p>
+      <div class="save-row">
+        <button class="btn btn-quiet" type="button" id="weight-cancel">Cancel</button>
+        <button class="btn btn-primary" type="submit" id="weight-save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Compare two check-ins by pose -->
+  <dialog class="calc compare" id="compare" aria-labelledby="compare-title">
+    <div class="settings-head">
+      <h2 id="compare-title" class="section-title">Compare</h2>
+      <button class="btn btn-quiet" type="button" id="compare-close">Close</button>
+    </div>
+    <div class="compare-pick">
+      <label class="calc-select">First date <select id="compare-a"></select></label>
+      <label class="calc-select">Second date <select id="compare-b"></select></label>
+    </div>
+    <fieldset class="meal-type">
+      <legend>Pose</legend>
+      <div class="meal-type-options">
+        <label><input type="radio" name="compare-pose" value="front" checked>Front</label>
+        <label><input type="radio" name="compare-pose" value="side">Side</label>
+        <label><input type="radio" name="compare-pose" value="back">Back</label>
+      </div>
+    </fieldset>
+    <div class="compare-pair" id="compare-pair" aria-live="polite"></div>
+  </dialog>
+
+  <!-- One check-in photo, full size, with delete -->
+  <dialog class="calc photo-view" id="photo-dialog" aria-labelledby="photo-dialog-title">
+    <div class="settings-head">
+      <h2 id="photo-dialog-title" class="section-title"></h2>
+      <button class="btn btn-quiet" type="button" id="photo-dialog-close">Close</button>
+    </div>
+    <img id="photo-dialog-img" alt="">
+    <p class="status is-error" id="photo-dialog-status" role="status" aria-live="polite"></p>
+    <button class="btn btn-outline photo-delete" type="button" id="photo-delete">Delete photo</button>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" integrity="sha384-GFr3yTh5lJznCbZfpTtXnwboFsxqtTQoeTZCRHhE0579KrRmlCzen5AA8ohaB5ug" crossorigin="anonymous"></script>
+  <script src="/dom.js"></script>
+  <script src="/auth.js"></script>
+  <script src="/units.js"></script>
+  <script src="/charts.js"></script>
+  <script src="/push.js"></script>
+  <script src="/nav.js"></script>
+  <script src="/progress.js"></script>
+</body>
+</html>

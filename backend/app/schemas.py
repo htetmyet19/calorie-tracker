@@ -1,7 +1,7 @@
 import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 class FoodItem(BaseModel):
@@ -47,6 +47,8 @@ class MealIn(BaseModel):
 class MealOut(MealIn):
     id: int
     total_calories: float
+    has_photo: bool = False
+    photo_removed: bool = False  # the daily job removed the photo after 90 days
 
 
 class DayLog(BaseModel):
@@ -75,3 +77,89 @@ class ProfileOut(BaseModel):
     id: str
     role: str
     display_name: str
+
+
+class SettingsIn(BaseModel):
+    height_cm: float | None = Field(default=None, ge=120, le=230)
+    weight_kg: float | None = Field(default=None, ge=30, le=300)
+    age: int | None = Field(default=None, ge=18, le=100)
+    sex: Literal["male", "female", "unspecified"] | None = None
+    activity: Literal[1.2, 1.375, 1.55, 1.725, 1.9] | None = None
+    weight_goal: Literal["lose", "maintain", "gain"] | None = None
+    goal_kcal: int | None = Field(default=None, ge=500, le=9000)
+    weight_unit: Literal["kg", "lb"] = "kg"
+    reminders_enabled: bool = False
+
+
+class SettingsOut(SettingsIn):
+    goal_set_by: str | None = None
+
+
+class WeightIn(BaseModel):
+    weight_kg: float = Field(ge=30, le=300)
+
+
+class DailyTotal(BaseModel):
+    date: str
+    total_calories: float
+
+
+class WeightOut(BaseModel):
+    logged_on: str
+    weight_kg: float
+
+
+class CheckinIn(BaseModel):
+    checked_on: str = Field(description="YYYY-MM-DD")
+    weight_kg: float | None = Field(default=None, ge=30, le=300)
+
+
+class PhotoUploadIn(BaseModel):
+    pose: Literal["front", "side", "back"]
+
+
+class PhotoRecordIn(BaseModel):
+    pose: Literal["front", "side", "back"]
+    path: str
+
+
+class PhotoOut(BaseModel):
+    id: int
+    pose: Literal["front", "side", "back"]
+    url: str
+
+
+class CheckinOut(BaseModel):
+    id: int
+    checked_on: str
+    weight_kg: float | None = None
+    photos: list[PhotoOut] = []
+
+
+class CheckinList(BaseModel):
+    checkins: list[CheckinOut]
+    next_due_on: str
+    due: bool
+
+
+class PushKeys(BaseModel):
+    p256dh: str = Field(min_length=1, max_length=512)
+    auth: str = Field(min_length=1, max_length=512)
+
+
+class PushSubscriptionIn(BaseModel):
+    endpoint: HttpUrl
+    keys: PushKeys
+
+    @field_validator("endpoint")
+    @classmethod
+    def _https_only(cls, v):
+        if v.scheme != "https":
+            raise ValueError("endpoint must be https")
+        if len(str(v)) > 2048:
+            raise ValueError("endpoint too long")
+        return v
+
+
+class PushEndpointIn(BaseModel):
+    endpoint: HttpUrl

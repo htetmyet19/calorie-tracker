@@ -1,8 +1,7 @@
 // Shared behaviour for login.html and signup.html: status line, busy state,
 // password eye toggle, Google button and the "already logged in" skip.
-// Needs auth.js loaded first.
+// Needs dom.js and auth.js loaded first.
 
-const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const next = safeNext(params.get("next"));
 
@@ -16,23 +15,6 @@ const FIELD_MESSAGES = {
   email: { valueMissing: "Enter your email.", typeMismatch: "That doesn't look like an email address." },
   password: { valueMissing: "Enter your password.", tooShort: "Use at least 6 characters." },
 };
-
-function fieldError(input, msg) {
-  const id = input.id + "-error";
-  let el = $(id);
-  if (!el) {
-    el = document.createElement("p");
-    el.className = "field-error";
-    el.id = id;
-    input.closest(".field").after(el);
-    input.setAttribute("aria-describedby", ((input.getAttribute("aria-describedby") || "") + " " + id).trim());
-  }
-  el.textContent = msg;
-  el.hidden = !msg;
-  // aria-invalid="" reads as false to screen readers, so set "true" explicitly.
-  if (msg) input.setAttribute("aria-invalid", "true");
-  else input.removeAttribute("aria-invalid");
-}
 
 // Replaces the browser's validation bubbles with messages under each field.
 // Returns true when the form can be sent; focuses the first bad field otherwise.

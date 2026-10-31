@@ -1,3 +1,5 @@
 {
-  "regions": ["sin1"]
+  "regions": ["sin1"],
+  "functions": { "app/main.py": { "maxDuration": 60 } },
+  "crons": [{ "path": "/api/cron/daily", "schedule": "30 2 * * *" }]
 }

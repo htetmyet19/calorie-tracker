@@ -1,7 +1,7 @@
 # M2: client tracking: design
 
 Date: 2026-10-31
-Status: approved in conversation, awaiting written-spec review
+Status: implemented (M2)
 Parent spec: `2026-10-31-trainer-platform-design.md` (M2 row of Section 11). Where this document is more specific, it wins; where it is silent, the parent applies.
 
 ## 1. Goal
