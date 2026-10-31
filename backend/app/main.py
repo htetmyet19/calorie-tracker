@@ -7,8 +7,8 @@ from fastapi.responses import JSONResponse
 from . import config
 from .analysis import AnalysisError, analyze_meal
 from .auth import User, current_user
-from .schemas import AnalyzeResponse, DayLog, MealIn, MealOut, ProfileOut, RoleIn
-from .store import ProfileExists, Store, StoreUnavailable, get_store
+from .schemas import AnalyzeResponse, DayLog, MealIn, MealOut, ProfileOut, RoleIn, SettingsIn, SettingsOut
+from .store import ProfileExists, SettingsExist, Store, StoreUnavailable, get_store
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -106,6 +106,20 @@ def list_meals(date: str = Query(..., description="YYYY-MM-DD"), store: Store = 
 def remove_meal(meal_id: int, store: Store = Depends(require_profile)):
     if not store.delete_meal(meal_id):
         raise HTTPException(404, "Meal not found")
+
+
+@app.get("/api/settings", response_model=SettingsOut)
+def get_settings(store: Store = Depends(require_profile)):
+    return store.get_settings() or SettingsOut()
+
+
+@app.put("/api/settings", response_model=SettingsOut)
+def put_settings(body: SettingsIn, only_if_empty: str = Query("0"),
+                 store: Store = Depends(require_profile)):
+    try:
+        return store.put_settings(body, only_if_empty=only_if_empty.lower() in ("1", "true"))
+    except SettingsExist:
+        raise HTTPException(409, "settings_exist")
 
 
 # Serves static/index.html and its assets at "/". API routes above are matched first.

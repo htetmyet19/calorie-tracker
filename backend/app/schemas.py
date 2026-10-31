@@ -75,3 +75,19 @@ class ProfileOut(BaseModel):
     id: str
     role: str
     display_name: str
+
+
+class SettingsIn(BaseModel):
+    height_cm: float | None = Field(default=None, ge=120, le=230)
+    weight_kg: float | None = Field(default=None, ge=30, le=300)
+    age: int | None = Field(default=None, ge=18, le=100)
+    sex: Literal["male", "female", "unspecified"] | None = None
+    activity: Literal[1.2, 1.375, 1.55, 1.725, 1.9] | None = None
+    weight_goal: Literal["lose", "maintain", "gain"] | None = None
+    goal_kcal: int | None = Field(default=None, ge=500, le=9000)
+    weight_unit: Literal["kg", "lb"] = "kg"
+    reminders_enabled: bool = False
+
+
+class SettingsOut(SettingsIn):
+    goal_set_by: str | None = None

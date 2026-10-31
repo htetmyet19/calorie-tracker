@@ -4,6 +4,7 @@ Every request carries the user's own JWT, so Row Level Security applies to
 all queries. Errors never include response bodies or credentials.
 """
 import datetime
+import http.cookiejar
 import threading
 
 import httpx
@@ -11,7 +12,7 @@ from fastapi import Depends
 
 from . import config
 from .auth import User, current_user
-from .schemas import FoodItem, MealIn, MealOut
+from .schemas import FoodItem, MealIn, MealOut, SettingsIn
 
 
 # One pooled client per process, so warm serverless invocations reuse open TLS
@@ -25,7 +26,11 @@ def _client() -> httpx.Client:
     if _http is None:
         with _http_lock:
             if _http is None:
-                _http = httpx.Client(timeout=config.SUPABASE_TIMEOUT)
+                # Empty allowed_domains: no cookie is ever stored or replayed between users.
+                _http = httpx.Client(
+                    timeout=config.SUPABASE_TIMEOUT,
+                    cookies=http.cookiejar.CookieJar(
+                        policy=http.cookiejar.DefaultCookiePolicy(allowed_domains=[])))
     return _http
 
 
@@ -37,18 +42,22 @@ class ProfileExists(Exception):
     """A profile already exists for this user."""
 
 
+class SettingsExist(Exception):
+    """A settings row already exists for this user."""
+
+
 class Store:
     def __init__(self, user: User):
         self.user = user
 
     def _request(self, method: str, path: str, *, params=None, json=None,
-                 write: bool = False) -> httpx.Response:
+                 write: bool = False, prefer: str | None = None) -> httpx.Response:
         headers = {
             "apikey": config.SUPABASE_PUBLISHABLE_KEY,
             "Authorization": f"Bearer {self.user.token}",
         }
         if write:
-            headers["Prefer"] = "return=representation"
+            headers["Prefer"] = prefer or "return=representation"
         url = f"{config.SUPABASE_URL.rstrip('/')}/rest/v1{path}"
         try:
             resp = _client().request(method, url, params=params, json=json, headers=headers)
@@ -117,6 +126,41 @@ class Store:
         self._check(resp)
         # RLS-filtered deletes succeed with an empty body; only a returned row counts.
         return bool(resp.json()) if resp.content else False
+
+    @staticmethod
+    def _settings_row(row: dict) -> dict:
+        row = dict(row)
+        if row.get("activity") is not None:
+            row["activity"] = round(float(row["activity"]), 3)
+        return row
+
+    def get_settings(self) -> dict | None:
+        resp = self._request("GET", "/client_settings", params={"user_id": f"eq.{self.user.id}"})
+        self._check(resp)
+        rows = resp.json()
+        return self._settings_row(rows[0]) if rows else None
+
+    def put_settings(self, s: SettingsIn, only_if_empty: bool = False) -> dict:
+        # Only user-editable fields: reminders_sent / last_reminded_on belong to the daily job.
+        body = {"user_id": self.user.id, **s.model_dump(),
+                "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+        if only_if_empty:
+            if s.goal_kcal is not None:
+                body["goal_set_by"] = self.user.id
+            resp = self._request("POST", "/client_settings", write=True, json=body)
+            if resp.status_code == 409:
+                raise SettingsExist()
+        else:
+            current = self.get_settings()
+            old_goal = current["goal_kcal"] if current else None
+            if s.goal_kcal != old_goal:
+                body["goal_set_by"] = self.user.id
+            resp = self._request(
+                "POST", "/client_settings", write=True, json=body,
+                params={"on_conflict": "user_id"},
+                prefer="resolution=merge-duplicates,return=representation")
+        self._check(resp)
+        return self._settings_row(resp.json()[0])
 
 
 def get_store(user: User = Depends(current_user)) -> Store:
