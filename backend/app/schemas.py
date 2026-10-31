@@ -1,6 +1,7 @@
+import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class FoodItem(BaseModel):
@@ -31,6 +32,15 @@ class MealIn(BaseModel):
     meal_type: Literal["breakfast", "lunch", "dinner", "snack"] = "snack"
     items: list[FoodItem] = Field(min_length=1)
 
+    @field_validator("eaten_at")
+    @classmethod
+    def _real_datetime(cls, v: str) -> str:
+        try:
+            datetime.datetime.strptime(v, "%Y-%m-%dT%H:%M")
+        except ValueError:
+            raise ValueError("eaten_at must be a real datetime like 2026-10-31T08:00")
+        return v
+
 
 class MealOut(MealIn):
     id: int
@@ -44,3 +54,22 @@ class DayLog(BaseModel):
     protein_g: float
     carbs_g: float
     fat_g: float
+
+
+class RoleIn(BaseModel):
+    role: Literal["client", "trainer"]
+    display_name: str
+
+    @field_validator("display_name")
+    @classmethod
+    def _name_length(cls, v: str) -> str:
+        v = v.strip()
+        if not 1 <= len(v) <= 80:
+            raise ValueError("display_name must be 1-80 characters")
+        return v
+
+
+class ProfileOut(BaseModel):
+    id: str
+    role: str
+    display_name: str
