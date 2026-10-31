@@ -412,7 +412,15 @@ function renderMeals(day) {
     del.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
     del.addEventListener("click", async () => {
       if (!confirm(`Delete ${MEAL_LABEL[m.meal_type].toLowerCase()} at ${time}?`)) return;
-      await api(`/api/meals/${m.id}`, { method: "DELETE" });
+      let res = null;
+      try {
+        res = await api(`/api/meals/${m.id}`, { method: "DELETE" });
+      } catch (err) { /* network down: res stays null */ }
+      // 404: already gone (another tab or device), so treat it like a delete.
+      if (!res || (!res.ok && res.status !== 404)) {
+        setStatus("Couldn't delete the meal. Check your connection and try again.", true);
+        return; // the meal and any photo kept for a retry stay as they are
+      }
       failedUploads.delete(m.id);
       photoBlobs.delete(m.id);
       loadDay();
@@ -614,6 +622,7 @@ $("save").addEventListener("click", async () => {
   if (!photo) return;
   const stored = await storedCopy(photo);
   if (stored) await uploadMealPhoto(data.id, stored);
+  else setStatus("Saved without the photo: this browser can't read it.");
   uploadingIds.delete(data.id);
   loadDay();
 });

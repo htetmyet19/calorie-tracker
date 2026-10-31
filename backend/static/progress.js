@@ -60,6 +60,16 @@ function missingPhotoText(pose, date) {
   return `No ${pose} photo on ${shortDate(date)}`;
 }
 
+const photoViewTitle = (pose, date) => `${POSE_LABEL[pose]} photo, ${shortDate(date)}`;
+
+const DELETE_PHOTO_CONFIRM = "Delete this photo? This can't be undone.";
+
+// status: the DELETE response status, null when the request itself failed.
+// 404 means it is already gone (another tab or device), which is what was wanted.
+function photoDeleteError(status) {
+  return status === 204 || status === 404 ? "" : "Couldn't delete the photo. Check your connection and try again.";
+}
+
 
 // ---------- Browser only below ----------
 
@@ -132,8 +142,11 @@ function thumb(checkin, pose) {
       img.setAttribute(k, v);
     }
     img.src = p.url;
-    img.addEventListener("error", () => img.replaceWith(el("span", { className: "thumb-missing" }, "Couldn't load")), { once: true });
-    fig.append(img);
+    // Tapping opens the photo full size, where it can be deleted.
+    const open = el("button", { className: "thumb-open", type: "button", ariaLabel: `Open ${label} photo` }, img);
+    open.addEventListener("click", () => openPhoto(checkin, p));
+    img.addEventListener("error", () => open.replaceWith(el("span", { className: "thumb-missing" }, "Couldn't load")), { once: true });
+    fig.append(open);
   } else {
     fig.append(el("span", { className: "thumb-missing" }, "No photo"));
   }
@@ -153,6 +166,41 @@ function renderTimeline() {
     if (c.weight_kg != null) head.append(el("span", { className: "timeline-weight" }, formatWeight(c.weight_kg, unit)));
     list.append(el("li", {}, head, el("div", { className: "timeline-photos" }, ...POSES.map((p) => thumb(c, p)))));
   }
+}
+
+// ---------- One photo, full size, with delete ----------
+
+let viewing = null; // the photo open in the viewer
+
+function openPhoto(checkin, photo) {
+  viewing = photo;
+  const title = photoViewTitle(photo.pose, checkin.checked_on);
+  $("photo-dialog-title").textContent = title;
+  const img = $("photo-dialog-img");
+  img.hidden = false;
+  img.alt = title;
+  img.src = photo.url;
+  setMsg("photo-dialog-status", "");
+  $("photo-delete").disabled = false;
+  $("photo-dialog").showModal();
+}
+
+async function deleteViewedPhoto() {
+  if (!viewing || !confirm(DELETE_PHOTO_CONFIRM)) return;
+  const btn = $("photo-delete");
+  btn.disabled = true;
+  let status = null;
+  try {
+    status = (await api(`/api/progress-photos/${viewing.id}`, { method: "DELETE" })).status;
+  } catch (e) { /* network down: status stays null */ }
+  const err = photoDeleteError(status);
+  if (err) {
+    setMsg("photo-dialog-status", err);
+    btn.disabled = false;
+    return;
+  }
+  $("photo-dialog").close();
+  await loadCheckins();
 }
 
 // ---------- Compare ----------
@@ -376,6 +424,15 @@ function wire() {
   $("w-value").addEventListener("input", (e) => { if (!weightError(e.target.value, unit)) fieldError(e.target, ""); });
   $("w-date").addEventListener("input", (e) => { if (!dateError(e.target.value, today())) fieldError(e.target, ""); });
 
+  $("photo-dialog-close").addEventListener("click", () => $("photo-dialog").close());
+  $("photo-dialog").addEventListener("close", () => { viewing = null; $("photo-dialog-img").removeAttribute("src"); });
+  $("photo-dialog-img").addEventListener("error", (e) => {
+    if (!e.target.getAttribute("src")) return;
+    e.target.hidden = true;
+    setMsg("photo-dialog-status", "Couldn't load this photo. Close it and reload the page to try again.");
+  });
+  $("photo-delete").addEventListener("click", deleteViewedPhoto);
+
   $("compare-open").addEventListener("click", openCompare);
   $("compare-close").addEventListener("click", () => $("compare").close());
   $("compare-a").addEventListener("change", renderCompare);
@@ -423,7 +480,8 @@ async function start() {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { checkinText, weightSummary, weightLabel, caloriesLabel, weightError, dateError, photoFor, missingPhotoText };
+  module.exports = { checkinText, weightSummary, weightLabel, caloriesLabel, weightError, dateError, photoFor, missingPhotoText,
+    photoViewTitle, DELETE_PHOTO_CONFIRM, photoDeleteError };
 } else {
   initNav("progress");
   wire();

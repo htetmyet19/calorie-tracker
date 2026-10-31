@@ -21,6 +21,9 @@ function offerReminders(settings, permission, pushOk) {
   return !!settings && settings.reminders_enabled === false && permission === "default" && pushOk;
 }
 
+// POST /api/checkins: 201 created, 200 today's check-in already existed (a retry).
+const checkinSaved = (status) => status === 201 || status === 200;
+
 
 // ---------- Browser only below ----------
 
@@ -121,7 +124,7 @@ async function leaveWeight(withWeight) {
     } catch (e) {
       throw new Error(CHECKIN_ERROR);
     }
-    if (res.status !== 201) {
+    if (!checkinSaved(res.status)) {
       const body = await res.json().catch(() => ({}));
       throw new Error(typeof body.detail === "string" && res.status < 500 ? body.detail : CHECKIN_ERROR);
     }
@@ -184,7 +187,10 @@ function renderPhoto(pose) {
   }[p.state] || "";
   status.textContent = text;
   status.classList.toggle("is-error", p.state === "failed" || p.state === "unreadable");
-  main.disabled = p.state === "uploading" || p.state === "preparing";
+  const busy = p.state === "uploading" || p.state === "preparing";
+  main.disabled = busy;
+  // No new file while one is being prepared or sent.
+  node.querySelector("input[type=file]").disabled = busy;
   main.textContent = { uploading: "Uploading…", preparing: "Uploading…", done: "Next", failed: "Retry" }[p.state] || "Take photo";
   node.querySelector(".photo-skip").hidden = p.state === "done";
 }
@@ -218,6 +224,8 @@ function uploadPhoto(pose) {
   const p = photos[pose];
   if (!p.blob || !checkin) return Promise.resolve();
   const seq = ++p.seq;
+  // This upload sends this blob, even if a newer photo replaces p.blob meanwhile.
+  const blob = p.blob;
   p.state = "uploading";
   renderPhoto(pose);
   const run = (async () => {
@@ -226,7 +234,7 @@ function uploadPhoto(pose) {
     const r1 = await api(`${base}/upload-url`, { method: "POST", headers: json, body: JSON.stringify({ pose }) });
     if (!r1.ok) throw new Error("upload-url");
     const { upload_url, path } = await r1.json();
-    const put = await fetch(upload_url, { method: "PUT", headers: { "content-type": "image/jpeg" }, body: p.blob });
+    const put = await fetch(upload_url, { method: "PUT", headers: { "content-type": "image/jpeg" }, body: blob });
     if (!put.ok) throw new Error("put");
     const r2 = await api(base, { method: "POST", headers: json, body: JSON.stringify({ pose, path }) });
     if (r2.status !== 201) throw new Error("record");
@@ -348,7 +356,7 @@ async function start() {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { STEPS, stepLabel, doneSummary, offerReminders };
+  module.exports = { STEPS, stepLabel, doneSummary, offerReminders, checkinSaved };
 } else {
   wire();
   start();

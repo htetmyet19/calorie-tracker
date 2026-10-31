@@ -133,6 +133,28 @@ async function disableReminders() {
   if (settings.reminders_enabled) await saveSettings({ reminders_enabled: false });
 }
 
+// On logout: this browser stops getting the account's reminders. Unlike
+// disableReminders it never saves reminders_enabled, so the account's other
+// devices keep theirs. Never throws, and gives up on the server after timeoutMs
+// so a slow or stuck request cannot hold up the logout.
+async function forgetThisDevice(timeoutMs = 3000) {
+  try {
+    const sub = await currentSubscription();
+    if (!sub) return;
+    const removed = api("/api/push/subscribe", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint: sub.endpoint }),
+    }).catch(() => {});
+    let timer;
+    await Promise.race([removed, new Promise((r) => { timer = setTimeout(r, timeoutMs); })]);
+    clearTimeout(timer);
+    // Unsubscribe even if the server call failed: the push service then answers 410
+    // and the daily job deletes the row.
+    await sub.unsubscribe().catch(() => {});
+  } catch (e) { /* logout goes ahead regardless */ }
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { urlBase64ToUint8Array };
+  module.exports = { urlBase64ToUint8Array, forgetThisDevice };
 }

@@ -847,6 +847,8 @@ body.has-tabbar { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
   background: var(--field);
 }
 .thumb-missing { display: grid; place-items: center; color: var(--muted); font-size: var(--step--1); }
+.thumb-open { display: block; width: 100%; padding: 0; border: 0; border-radius: 8px; background: none; cursor: pointer; }
+.photo-delete { width: 100%; margin-top: 4px; color: var(--chili); }
 .thumb-pose figcaption { margin-top: 2px; color: var(--muted); font-size: var(--step--1); text-align: center; }
 
 .private-note { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-size: var(--step--1); }

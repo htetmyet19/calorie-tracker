@@ -267,6 +267,8 @@ function renderSettingsPanel() {
     });
   });
   dialog.querySelector("#logout").addEventListener("click", async () => {
+    // While still logged in: stop this browser's reminders (account setting untouched).
+    if (typeof forgetThisDevice === "function") await forgetThisDevice();
     try { await logout(); } catch (e) { /* logout clears what it can; leave either way */ }
     location = "/login.html";
   });

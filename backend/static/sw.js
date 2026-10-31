@@ -13,7 +13,10 @@ function safeUrl(raw, origin) {
   try {
     const u = new URL(raw, origin);
     if (u.origin !== origin) return FALLBACK_URL;
-    return u.pathname + u.search + u.hash;
+    const path = u.pathname + u.search + u.hash;
+    // Dot segments can collapse "/..//x" to "//x", which a browser reads as another host.
+    if (path.startsWith("//")) return FALLBACK_URL;
+    return path;
   } catch (e) {
     return FALLBACK_URL;
   }

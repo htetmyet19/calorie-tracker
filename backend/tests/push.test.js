@@ -36,7 +36,7 @@ test("safeUrl keeps same-origin relative paths", () => {
 test("safeUrl falls back to /progress.html for anything else", () => {
   for (const bad of [undefined, null, 5, "", "progress.html", "https://evil.example/",
     "//evil.example/x", "/\\evil.example", "/\t/evil.example", "javascript:alert(1)",
-    `${ORIGIN}/progress.html`]) {
+    `${ORIGIN}/progress.html`, "/..//evil.example", "/.//evil", "/a/../..//evil.example/x"]) {
     assert.equal(safeUrl(bad, ORIGIN), "/progress.html", String(bad));
   }
 });
@@ -56,4 +56,55 @@ test("notificationFrom falls back on a missing or broken payload", () => {
     assert.equal(n.options.data.url, "/progress.html", String(raw));
     assert.equal(n.options.body, "Tap to start your check-in");
   }
+});
+
+// ---- forgetThisDevice (logout) with stubbed browser globals ----
+
+function fakeBrowser(sub) {
+  const calls = [];
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: {
+    serviceWorker: { getRegistration: async () => ({ pushManager: { getSubscription: async () => sub } }) },
+  } });
+  globalThis.window = { PushManager: function () {}, Notification: function () {} };
+  globalThis.saveSettings = async (patch) => { calls.push(["saveSettings", patch]); };
+  return calls;
+}
+
+function fakeSub() {
+  const sub = { endpoint: "https://push.example/me", unsubscribed: false };
+  sub.unsubscribe = async () => { sub.unsubscribed = true; return true; };
+  return sub;
+}
+
+test("forgetThisDevice removes this browser's subscription without turning reminders off", async () => {
+  const { forgetThisDevice } = require("../static/push.js");
+  const sub = fakeSub();
+  const calls = fakeBrowser(sub);
+  globalThis.api = async (path, opts) => { calls.push([path, opts.method, JSON.parse(opts.body)]); return { ok: true, status: 204 }; };
+  await forgetThisDevice();
+  assert.deepEqual(calls, [["/api/push/subscribe", "DELETE", { endpoint: "https://push.example/me" }]]);
+  assert.equal(sub.unsubscribed, true);
+});
+
+test("forgetThisDevice never throws or hangs: server down, request stuck, no subscription", async () => {
+  const { forgetThisDevice } = require("../static/push.js");
+  let sub = fakeSub();
+  fakeBrowser(sub);
+  globalThis.api = async () => { throw new TypeError("Failed to fetch"); };
+  await forgetThisDevice();
+  assert.equal(sub.unsubscribed, true);
+
+  sub = fakeSub();
+  fakeBrowser(sub);
+  globalThis.api = () => new Promise(() => {}); // api() never settles while it redirects to login
+  await forgetThisDevice(20);
+  assert.equal(sub.unsubscribed, true);
+
+  const calls = fakeBrowser(null);
+  globalThis.api = async () => { calls.push("api"); return { ok: true }; };
+  await forgetThisDevice();
+  assert.deepEqual(calls, []);
+
+  delete globalThis.window; // no push support at all
+  await forgetThisDevice();
 });

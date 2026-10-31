@@ -70,3 +70,19 @@ test("compare picks a pose per check-in or says it is missing", () => {
   assert.equal(P.photoFor(c, "side"), null);
   assert.equal(P.missingPhotoText("side", "2026-10-24"), "No side photo on 24 Oct");
 });
+
+test("photo viewer title names the pose and date", () => {
+  assert.equal(P.photoViewTitle("side", "2026-10-31"), "Side photo, 31 Oct");
+});
+
+test("deleting a photo asks the agreed question", () => {
+  assert.equal(P.DELETE_PHOTO_CONFIRM, "Delete this photo? This can't be undone.");
+});
+
+test("photoDeleteError: 204 and 404 (already gone) succeed, anything else explains", () => {
+  assert.equal(P.photoDeleteError(204), "");
+  assert.equal(P.photoDeleteError(404), "");
+  for (const s of [null, 500, 503, 409]) {
+    assert.equal(P.photoDeleteError(s), "Couldn't delete the photo. Check your connection and try again.", String(s));
+  }
+});

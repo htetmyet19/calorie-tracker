@@ -27,3 +27,9 @@ test("reminder offer only the first time, with push available and not yet asked"
   assert.equal(C.offerReminders(off, "default", false), false);
   assert.equal(C.offerReminders(null, "default", true), false); // settings didn't load
 });
+
+test("checkinSaved: 201 (new) and 200 (today's existing check-in) both count", () => {
+  assert.equal(C.checkinSaved(201), true);
+  assert.equal(C.checkinSaved(200), true);
+  for (const s of [400, 404, 409, 422, 500, 503]) assert.equal(C.checkinSaved(s), false, String(s));
+});
