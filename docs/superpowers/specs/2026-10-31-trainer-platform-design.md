@@ -18,7 +18,7 @@ Turn the single-user calorie tracker into a platform where **clients** log meals
 - Burmese UI (English only; text kept simple so translation can be added later).
 - Android app changes (it stays single-user; web is mobile-first instead).
 - Live chat, payments, multiple trainers per client, Facebook login, phone/SMS login.
-- Real-time push; pub/sub (see Section 8).
+- Real-time push; pub/sub (see Section 8). Exception: weekly check-in reminders by web push, from M2.
 
 ## 2. Context and constraints
 
@@ -79,6 +79,8 @@ video_assignments   video_id, client_id, assigned_at, watched_at
 deletion_failures   id, kind ('storage'|'stream'), ref, attempts, last_error, created_at
 ```
 
+M2 adds `checkins`, `push_subscriptions`, unit and reminder columns on `client_settings`, and makes `meals.photo_path` null after 90 days; see `2026-10-31-m2-client-tracking-design.md` Section 3.
+
 Storage buckets (all private): `meal-photos`, `progress-photos`, `trainer-certs`.
 
 Rules:
@@ -137,7 +139,7 @@ The existing goal calculator (shipped 2026-10-31, `static/energy.js`) moves its 
 
 ## 8. Updates and notifications
 
-No pub/sub. Unread counts (notes, requests, new photos/videos) are computed by query on page load and refreshed every 60 seconds. Revisit only if live chat is added (prefer Server-Sent Events or a managed realtime service).
+No pub/sub. A daily Vercel Cron job sends weekly check-in reminders by web push and removes meal photos older than 90 days (M2 spec Section 6). Unread counts (notes, requests, new photos/videos) are computed by query on page load and refreshed every 60 seconds. Revisit only if live chat is added (prefer Server-Sent Events or a managed realtime service).
 
 ## 9. Error handling
 
@@ -173,6 +175,7 @@ After M5: usability test with 2 trainers and 3 clients in Myanmar using the Sect
 ## 12. Operations
 
 - Supabase paid tier before real users (no project pausing, backups); check current pricing.
+- The service-role key is on Vercel for the daily job only (M2 spec Section 2).
 - Secrets (Supabase service-role key, Gemini key, Cloudflare API token, webhook secret) live only in Vercel environment variables.
 - Only the Supabase publishable key is sent to the browser.
 
