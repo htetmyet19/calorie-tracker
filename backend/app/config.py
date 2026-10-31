@@ -38,10 +38,6 @@ SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 # Seconds to wait on Supabase HTTP calls.
 SUPABASE_TIMEOUT = float(os.getenv("SUPABASE_TIMEOUT", "10"))
 
-# Vercel's filesystem is read-only except /tmp, which is wiped between instances:
-# meals logged there are lost unpredictably (demo use only).
-_DEFAULT_DB = Path("/tmp/calories.db") if os.getenv("VERCEL") else BASE_DIR / "data" / "calories.db"
-DB_PATH = Path(os.getenv("DB_PATH", _DEFAULT_DB))
 STATIC_DIR = BASE_DIR / "static"
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024

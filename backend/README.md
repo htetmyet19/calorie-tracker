@@ -7,10 +7,48 @@ Upload a meal photo → a vision model (local Ollama by default, or Gemini) iden
 ```bash
 cd backend
 .venv/bin/pip install -r requirements.txt
+npx supabase@2 start        # local Supabase stack (needs Docker); applies supabase/migrations
 .venv/bin/uvicorn app.main:app --reload
 ```
 
 Open http://localhost:8000. `GET /api/health` tells you whether the model is reachable.
+
+Meals and profiles live in Supabase Postgres, per user. Copy `.env.example` to `.env` and fill in the Supabase values
+(`npx supabase@2 status` prints the local ones).
+
+### Supabase settings (`.env`)
+
+| Variable | |
+|---|---|
+| `SUPABASE_URL` | Project URL (local: `http://127.0.0.1:54321`) |
+| `SUPABASE_PUBLISHABLE_KEY` | Publishable (anon) key; also served to the web page via `/api/public-config` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Bypasses Row Level Security. Used only by the import script and test setup; keep it secret |
+| `SUPABASE_JWT_SECRET` | Only if the project still signs tokens with the legacy HS256 secret; leave empty for asymmetric keys |
+| `SUPABASE_TIMEOUT` | Seconds to wait on Supabase calls (default `10`) |
+
+**Google sign-in is not set up yet.** It is a pending step: create a Google OAuth client and enable the provider in the
+Supabase dashboard (Authentication > Providers), and for the local stack in `supabase/config.toml`.
+
+### Tests
+
+```bash
+cd backend
+.venv/bin/pytest                      # unit tests, no stack needed
+.venv/bin/pytest -m integration       # needs the local Supabase stack running
+node --test "tests/*.test.js"         # frontend helper tests
+```
+
+### Importing the old SQLite meals
+
+Earlier versions stored meals in `data/calories.db`. To copy them to a Supabase user (the user must have signed in
+and chosen a role, so a profile exists):
+
+```bash
+.venv/bin/python scripts/import_sqlite.py --db data/calories.db --owner <auth user uuid> [--force]
+```
+
+It uses the service-role key, imports everything in one request, and prints `Imported N meals`. It refuses if the
+owner already has meals unless you pass `--force`. The SQLite file is left untouched.
 
 ### Model settings (`.env`)
 
@@ -44,11 +82,18 @@ also exposes Ollama to your whole network.)
 | `app/analysis.py` | Resizes the image, picks the provider, sanity-checks the returned numbers |
 | `app/ollama_client.py`, `app/gemini_client.py` | Send the image and prompt, ask for JSON matching `MealAnalysis` |
 | `app/schemas.py` | Pydantic models, also used as the model's response schema |
-| `app/db.py` | SQLite storage (`data/calories.db`) |
-| `app/main.py` | FastAPI routes: `POST /api/analyze`, `GET/POST /api/meals`, `DELETE /api/meals/{id}` |
+| `app/auth.py` | Verifies the Supabase JWT on each request and returns the current user |
+| `app/access.py` | Role and coaching-link rules (who may see whose data) |
+| `app/store.py` | Per-user profile and meal storage in Supabase Postgres, called with the user's own JWT so Row Level Security applies |
+| `app/main.py` | FastAPI routes: `/api/me`, `POST /api/analyze`, `GET/POST /api/meals`, `DELETE /api/meals/{id}` |
+| `supabase/migrations/` | Postgres schema and RLS policies |
+| `scripts/import_sqlite.py` | One-off import of the old SQLite meals |
 | `static/` | Plain HTML/CSS/JS frontend |
 
 ## Using it from the Android app
+
+> **The Android app no longer works against this backend.** The API now requires a Supabase login and the app in
+> `../mobile` has none yet; it will not work until it gains login.
 
 The app in `../mobile` talks to this server over your Wi-Fi; the model (or Gemini key) stays here.
 
@@ -72,4 +117,4 @@ The app in `../mobile` talks to this server over your Wi-Fi; the model (or Gemin
    ```
 3. Find your PC's Wi-Fi address (`ipconfig` in Windows, the "IPv4 Address" of the Wi-Fi adapter) and enter `http://<that IP>:8000` in the app's settings, then tap "Test connection".
 
-The server has no login, so only run it like this on a network you trust.
+Meal endpoints now require a Supabase login, but `/api/health` and the static page are still open, so only expose the server on a network you trust.

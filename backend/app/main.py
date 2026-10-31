@@ -1,11 +1,10 @@
 import datetime
 import re
-from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse
 
-from . import config, db
+from . import config
 from .analysis import AnalysisError, analyze_meal
 from .auth import User, current_user
 from .schemas import AnalyzeResponse, DayLog, MealIn, MealOut, ProfileOut, RoleIn
@@ -14,13 +13,7 @@ from .store import ProfileExists, Store, StoreUnavailable, get_store
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    db.init_db()
-    yield
-
-
-app = FastAPI(title="Calorie Tracker", lifespan=lifespan)
+app = FastAPI(title="Calorie Tracker")
 
 
 @app.exception_handler(StoreUnavailable)
