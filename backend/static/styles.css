@@ -23,6 +23,12 @@
   --steel-3: #c4cbd0;
   --track: #e3e8eb;
 
+  /* Login hero: stays dark in both themes */
+  --hero-bg: #18262e;
+  --hero-ink: #f6f8f9;
+  --hero-muted: #b4c0c6;
+  --hero-track: #2b3a42;
+
   --font: "Familjen Grotesk", "Segoe UI", system-ui, sans-serif;
   --step--1: 0.8125rem;
   --step-0: 1rem;
@@ -53,6 +59,9 @@
     --steel-2: #3c484f;
     --steel-3: #232c31;
     --track: #2a3439;
+
+    --hero-bg: #0b1114;
+    --hero-track: #1f2a30;
   }
 }
 
@@ -541,6 +550,54 @@ button { cursor: pointer; }
 .auth-or { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: var(--step--1); }
 .auth-or::before, .auth-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 .auth-page .btn-quiet { justify-self: center; }
+
+/* Login: dark brand hero, form card overlapping it; side by side on wide screens. */
+.login { min-height: 100vh; min-height: 100dvh; }
+.login-hero {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 48px 24px 72px;
+  background: var(--hero-bg);
+  color: var(--hero-ink);
+  text-align: center;
+}
+.login-hero h1 { font-size: var(--step-hero); font-weight: 700; letter-spacing: -0.03em; line-height: 1; margin-top: 10px; }
+.login-hero p { max-width: 24ch; color: var(--hero-muted); }
+.login-ring { width: 88px; height: 88px; transform: rotate(-90deg); }
+.login-ring circle { fill: none; stroke: var(--c); stroke-width: 10; }
+.login-ring .track { stroke: var(--hero-track); }
+
+.login-card {
+  display: grid;
+  gap: 14px;
+  width: min(100% - 32px, 400px);
+  margin: -40px auto 32px;
+  padding: 24px 20px;
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(24, 38, 46, 0.06), 0 12px 32px rgba(24, 38, 46, 0.12);
+}
+.login-card .auth-form { margin-top: 0; gap: 14px; }
+.login-card .btn { width: 100%; }
+.login-card .status { margin-top: 0; min-height: 0; }
+.login-card .status:empty { display: none; }
+.btn-google { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.btn-google svg { width: 18px; height: 18px; }
+.auth-label { display: block; margin-bottom: 6px; font-size: var(--step--1); font-weight: 600; color: var(--ink-2); }
+.auth-form .field { align-items: center; }
+.eye { display: grid; place-items: center; width: 32px; height: 32px; margin: -6px -6px -6px 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
+.eye svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.eye[aria-pressed="true"] { color: var(--ink); }
+.login-switch { text-align: center; color: var(--muted); font-size: var(--step--1); }
+.login-switch .btn-quiet { width: auto; padding: 0; font-size: inherit; color: var(--ink); }
+
+@media (min-width: 800px) {
+  .login { display: grid; grid-template-columns: 1fr 1fr; align-items: center; }
+  .login-hero { align-self: stretch; align-content: center; padding: 48px; }
+  .login-ring { width: 120px; height: 120px; }
+  .login-card { margin: 32px auto; padding: 32px 28px; }
+}
 
 .role-options { display: grid; gap: 10px; margin-top: 8px; }
 .role-options label {
