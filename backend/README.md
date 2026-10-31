@@ -6,7 +6,7 @@ Upload a meal photo → a vision model (local Ollama by default, or Gemini) iden
 
 ```bash
 cd backend
-.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -r requirements-dev.txt   # app + test tools; requirements.txt alone is enough to run
 npx supabase@2 start        # local Supabase stack (needs Docker); applies supabase/migrations
 .venv/bin/uvicorn app.main:app --reload
 ```
@@ -22,12 +22,25 @@ Meals and profiles live in Supabase Postgres, per user. Copy `.env.example` to `
 |---|---|
 | `SUPABASE_URL` | Project URL (local: `http://127.0.0.1:54321`) |
 | `SUPABASE_PUBLISHABLE_KEY` | Publishable (anon) key; also served to the web page via `/api/public-config` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Bypasses Row Level Security. Used only by the import script and test setup; keep it secret |
+| `SUPABASE_SERVICE_ROLE_KEY` | Bypasses Row Level Security. Used only by the import script and test setup, both run locally; keep it secret and do **not** add it to the Vercel environment (no request handler uses it) |
 | `SUPABASE_JWT_SECRET` | Only if the project still signs tokens with the legacy HS256 secret; leave empty for asymmetric keys |
 | `SUPABASE_TIMEOUT` | Seconds to wait on Supabase calls (default `10`) |
 
 **Google sign-in is not set up yet.** It is a pending step: create a Google OAuth client and enable the provider in the
 Supabase dashboard (Authentication > Providers), and for the local stack in `supabase/config.toml`.
+
+### Hosted Supabase setup
+
+Before real users sign up on the deployed app, in the Supabase dashboard (Authentication > URL Configuration):
+
+- [ ] **Site URL** = the Vercel production domain, e.g. `https://<domain>` (it defaults to `http://localhost:3000`).
+- [ ] **Redirect URLs** allow-list: `https://<domain>/**`, plus the Vercel preview domains
+      (e.g. `https://*-<team-slug>.vercel.app/**`) if you log in on previews. Login and sign-up send people back to
+      the page they came from, which must match this list.
+- [ ] **Confirm email** stays on (Authentication > Providers > Email).
+- [ ] The built-in email sender is rate-limited and meant for testing
+      ([current limits](https://supabase.com/docs/guides/auth/rate-limits)); set up
+      [custom SMTP](https://supabase.com/docs/guides/auth/auth-smtp) before real users sign up.
 
 ### Tests
 
@@ -48,7 +61,8 @@ and chosen a role, so a profile exists):
 ```
 
 It uses the service-role key, imports everything in one request, and prints `Imported N meals`. It refuses if the
-owner already has meals unless you pass `--force`. The SQLite file is left untouched.
+owner already has meals unless you pass `--force`. `--force` only appends: it never deletes or de-duplicates, so
+re-running an import with it adds every meal a second time. The SQLite file is left untouched.
 
 ### Model settings (`.env`)
 
