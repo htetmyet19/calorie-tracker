@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/styles.css">
 </head>
-<body class="has-fab">
+<body>
   <header class="masthead">
     <p class="wordmark">Tracker</p>
     <!-- nav.js adds the Settings button here, the Settings panel and the bottom bar -->
@@ -60,6 +60,10 @@
         <figcaption class="visually-hidden" id="plate-summary"></figcaption>
       </figure>
 
+      <button class="snap" type="button" id="log-open" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13.5" r="3.5"/></svg>
+        Snap a meal
+      </button>
       <button class="btn btn-pill calc-open" id="calc-open" aria-haspopup="dialog">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></svg>
         Calculate my goal
@@ -80,11 +84,6 @@
       <p class="empty" id="meals-empty">Nothing logged on this day yet. Tap “Snap a meal” to add one.</p>
     </section>
   </main>
-
-  <button class="fab" type="button" id="log-open" aria-haspopup="dialog">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13.5" r="3.5"/></svg>
-    Snap a meal
-  </button>
 
   <!-- Logging flow: photo, estimate, check, save. Opens from "Snap a meal". -->
   <dialog class="sheet" id="log-sheet" aria-labelledby="log-heading">

@@ -367,26 +367,26 @@ button { cursor: pointer; }
 }
 
 /* Floating "Snap a meal" button, above the bottom bar */
-.fab {
-  position: fixed;
-  left: 50%;
-  bottom: calc(80px + env(safe-area-inset-bottom));
-  z-index: 6;
-  transform: translateX(-50%);
-  display: inline-flex;
+/* Main action, in the page flow under the plate so it never covers other controls */
+.snap {
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
+  width: min(100%, 320px);
+  margin: 4px auto 0;
   padding: 14px 22px;
   border: 0;
   border-radius: 999px;
   background: var(--accent);
   color: var(--accent-ink);
+  font: inherit;
   font-weight: 700;
+  cursor: pointer;
   box-shadow: 0 10px 30px rgba(198, 243, 107, 0.3), 0 2px 8px rgba(0, 0, 0, 0.4);
 }
-.fab:hover { filter: brightness(1.06); }
-.fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
-body.has-fab .layout { padding-bottom: 140px; }
+.snap:hover { filter: brightness(1.06); }
+.snap svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
 .page-status:empty { display: none; }
 .page-status { margin: 0 0 12px; padding: 12px 14px; border-radius: 14px; background: var(--field); border: 1px solid var(--line); }
 .page-status.is-error { background: rgba(239, 122, 108, 0.1); border-color: rgba(239, 122, 108, 0.4); }
