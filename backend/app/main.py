@@ -10,7 +10,7 @@ from . import config
 from .analysis import AnalysisError, analyze_meal
 from .auth import User, current_user
 from .schemas import AnalyzeResponse, DayLog, MealIn, MealOut, ProfileOut, RoleIn, SettingsIn, SettingsOut, WeightIn, WeightOut
-from .storage import Storage, UploadRejected, new_path
+from .storage import Storage, StorageError, UploadRejected, new_path
 from .store import ProfileExists, SettingsExist, Store, StoreUnavailable, get_store
 
 log = logging.getLogger("calorie_tracker")
@@ -128,7 +128,7 @@ def remove_meal(meal_id: int, store: Store = Depends(require_profile),
     if row is None:
         raise HTTPException(404, "Meal not found")
     if row.get("photo_path"):
-        # The row is already gone; a leftover file is retried by the retention job.
+        # The row is already gone; an orphaned file is removed by the daily job's orphan sweep (Task 7).
         try:
             storage.remove(MEAL_BUCKET, [row["photo_path"]])
         except Exception as e:
@@ -172,7 +172,10 @@ def get_meal_photo(meal_id: int, store: Store = Depends(require_profile),
     path = store.meal_photo_path(meal_id)
     if not path:  # False: not found / not owner; None: no photo
         raise HTTPException(404, "Photo not found")
-    url = storage.signed_url(MEAL_BUCKET, path, SIGNED_URL_SECONDS)
+    try:
+        url = storage.signed_url(MEAL_BUCKET, path, SIGNED_URL_SECONDS)
+    except StorageError:  # row points at a missing object; StoreUnavailable still gives 503
+        raise HTTPException(404, "Photo not found")
     return RedirectResponse(url, status_code=307)
 
 

@@ -154,6 +154,13 @@ def test_photo_get_not_found_404():
     assert make(FakePhotoStore(found=False), FakeStorage()).get("/api/meals/1/photo").status_code == 404
 
 
+def test_photo_get_missing_object_404():
+    class Missing(FakeStorage):
+        def signed_url(self, *a, **k):
+            raise StorageError(400)
+    assert make(FakePhotoStore(photo_path="u1/a.jpg"), Missing()).get("/api/meals/1/photo").status_code == 404
+
+
 def test_photo_get_storage_down_is_503():
     class Down(FakeStorage):
         def signed_url(self, *a, **k):
