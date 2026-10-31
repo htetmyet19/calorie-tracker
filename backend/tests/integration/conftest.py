@@ -102,3 +102,24 @@ def add_meal(service):
         assert r.status_code == 201, f"meal insert failed: {r.status_code} {r.text}"
         return r.json()[0]
     return _add
+
+
+@pytest.fixture(scope="session")
+def storage():
+    """Storage API client using the service key (bypasses RLS). Setup only."""
+    _require_config()
+    key = config.SUPABASE_SERVICE_ROLE_KEY
+    with _client({"apikey": key, "Authorization": f"Bearer {key}"}, "/storage/v1") as c:
+        yield c
+
+
+@pytest.fixture
+def upload_object():
+    def _upload(user: TestUser, bucket: str, path: str, data: bytes = b"\xff\xd8\xff",
+                content_type: str = "image/jpeg") -> int:
+        with _client({"apikey": config.SUPABASE_PUBLISHABLE_KEY,
+                      "Authorization": f"Bearer {user.token}"}, "/storage/v1") as c:
+            r = c.post(f"/object/{bucket}/{path}", content=data,
+                       headers={"Content-Type": content_type})
+        return r.status_code
+    return _upload
