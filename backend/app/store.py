@@ -240,12 +240,11 @@ class Store:
         return {"id": row["id"], "checked_on": row["checked_on"], "weight_kg": kg}
 
     def reset_reminders(self) -> None:
-        # Single-column upsert: leaves every other settings column untouched.
+        # PATCH, not upsert: with no settings row there is nothing to reset, and a
+        # check-in must not create an all-null row (it would block the one-time migration).
         resp = self._request(
-            "POST", "/client_settings", write=True,
-            json={"user_id": self.user.id, "reminders_sent": 0},
-            params={"on_conflict": "user_id"},
-            prefer="resolution=merge-duplicates,return=minimal")
+            "PATCH", "/client_settings", write=True, json={"reminders_sent": 0},
+            params={"user_id": f"eq.{self.user.id}"}, prefer="return=minimal")
         self._check(resp)
 
     def get_checkin(self, checkin_id: int) -> dict | None:

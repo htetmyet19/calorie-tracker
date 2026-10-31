@@ -114,3 +114,15 @@ def test_rls_photo_must_point_at_own_checkin(make_user, rest, service):
     r = rest(a.token).patch("/progress_photos", params={"id": f"eq.{pa['id']}"},
                             json={"checkin_id": cb.json()[0]["id"]})
     assert r.status_code in (401, 403)
+
+
+def test_checkin_does_not_create_settings_row(api, make_user, service):
+    from app.auth import User
+    from app.store import Store
+    a = make_user()
+    assert api.post("/api/checkins", headers=auth(a), json={"checked_on": DAY}).status_code == 201
+    assert Store(User(id=a.id, token=a.token)).get_settings() is None
+    assert service.get("/client_settings", params={"user_id": f"eq.{a.id}"}).json() == []
+    # the one-time browser-settings move still works afterwards
+    assert api.put("/api/settings", headers=auth(a), params={"only_if_empty": "1"},
+                   json={"goal_kcal": 1800}).status_code == 200
