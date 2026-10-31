@@ -24,6 +24,9 @@ PAGE = 1000  # PostgREST's default row cap
 PAYLOAD = json.dumps({"title": "Weekly check-in due", "url": "/progress.html"},
                      separators=(",", ":"))
 GONE = (404, 410)
+# Push services drop a TTL-0 message if the phone is unreachable right then; the next
+# reminder is at least 3 days away, so keep this one for a day.
+PUSH_TTL_SECONDS = 86400
 
 
 class CronError(RuntimeError):
@@ -65,7 +68,8 @@ def _push(send: Callable, sub: dict) -> bool | None:
     info = {"endpoint": sub["endpoint"], "keys": {"p256dh": sub["p256dh"], "auth": sub["auth"]}}
     try:
         send(info, data=PAYLOAD, vapid_private_key=config.VAPID_PRIVATE_KEY,
-             vapid_claims={"sub": config.VAPID_SUBJECT}, timeout=10)
+             vapid_claims={"sub": config.VAPID_SUBJECT}, timeout=10,
+             ttl=PUSH_TTL_SECONDS)
         return True
     except WebPushException as e:
         status = getattr(getattr(e, "response", None), "status_code", None)

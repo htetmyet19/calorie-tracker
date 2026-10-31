@@ -139,6 +139,7 @@ def test_sends_to_due_users_only_and_records_it():
     assert sorted(c[0] for c in send.calls) == ["https://push.example/a/1", "https://push.example/c/1"]
     assert all(c[1] == PAYLOAD for c in send.calls)
     assert all(c[2]["vapid_private_key"] == "priv" for c in send.calls)
+    assert all(c[2]["ttl"] == 86400 for c in send.calls)
     assert all(c[2]["vapid_claims"] == {"sub": "mailto:a@example.com"} for c in send.calls)
     by = {r["user_id"]: r for r in db.settings}
     assert by["a"]["reminders_sent"] == 1 and by["a"]["last_reminded_on"] == "2026-11-07"
