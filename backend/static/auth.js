@@ -4,10 +4,19 @@
 
 // Where to send the user after login. Same-site paths only, so a crafted
 // ?next= link can't bounce them to another site.
-function safeNext(raw) {
+function safeNext(raw, origin = (typeof location !== "undefined" ? location.origin : "http://localhost")) {
   if (typeof raw !== "string" || !raw.startsWith("/")) return "/";
-  if (raw.startsWith("//") || raw.startsWith("/\\")) return "/";
-  return raw;
+  // Browsers strip tab/LF/CR when parsing URLs, so "/\t/evil.example" would become "//evil.example".
+  // Reject control characters and backslashes, raw or percent-encoded.
+  const bad = /[\u0000-\u001f\\]/;
+  try {
+    if (bad.test(raw) || bad.test(decodeURIComponent(raw))) return "/";
+    const u = new URL(raw, origin);
+    if (u.origin !== origin) return "/";
+    return u.pathname + u.search + u.hash;
+  } catch (e) {
+    return "/";
+  }
 }
 
 let authClient = null;
@@ -33,6 +42,8 @@ async function api(path, options = {}) {
   headers.set("Authorization", `Bearer ${session.access_token}`);
   const res = await fetch(path, { ...options, headers });
   if (res.status === 401) {
+    // The server rejected a session we still hold; drop it or login.html would bounce straight back.
+    try { await client.auth.signOut({ scope: "local" }); } catch (e) { /* ignore */ }
     location = "/login.html?next=" + encodeURIComponent(location.pathname + location.search);
     return new Promise(() => {});
   }

@@ -5,6 +5,6 @@ const { safeNext } = require("../static/auth.js");
 
 test("safeNext keeps same-site paths", () => assert.equal(safeNext("/?d=1"), "/?d=1"));
 test("safeNext blocks other sites", () => {
-  for (const bad of ["https://evil.example", "//evil.example", "/\\evil.example", "javascript:alert(1)", null, ""])
+  for (const bad of ["https://evil.example", "//evil.example", "/\\evil.example", "javascript:alert(1)", null, "", "/\t/evil.example", "/\n/evil.example", "/\r/evil.example", "/%09/evil.example"])
     assert.equal(safeNext(bad), "/");
 });
