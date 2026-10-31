@@ -89,6 +89,26 @@ networkingMode=mirrored
 (The alternative, setting `OLLAMA_HOST=0.0.0.0` on Windows and pointing `OLLAMA_URL` at the Windows IP,
 also exposes Ollama to your whole network.)
 
+## Daily job and push
+
+Once a day (02:30 UTC, 09:00 in Myanmar) Vercel Cron calls `GET /api/cron/daily`. The job sends weekly check-in
+reminders by web push: at most two per due check-in, the second three days after the first. "Today" is computed in
+`Asia/Yangon`. It stops starting new work after 50 s and leaves the rest for the next day.
+
+1. Generate a VAPID key pair (prints two lines, writes nothing):
+   ```bash
+   .venv/bin/python scripts/gen_vapid.py
+   ```
+   Paste the output into `backend/.env` for local use and into the Vercel project's environment variables.
+   Also set `VAPID_SUBJECT` to a `mailto:` address you control.
+2. Set `CRON_SECRET` on Vercel to a long random string (for example `openssl rand -hex 32`). Vercel Cron sends it as
+   `Authorization: Bearer <CRON_SECRET>`; the endpoint answers 401 to anything else, and always when it is unset.
+3. Set `SUPABASE_SERVICE_ROLE_KEY` on Vercel. It bypasses Row Level Security and is read only by `app/cron.py`
+   (a unit test enforces this); keep it out of client code, logs and screenshots.
+4. Keep the same `VAPID_PRIVATE_KEY` for good: changing it invalidates every existing push subscription.
+
+Run it by hand against a local stack: `curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:8000/api/cron/daily`.
+
 ## How it works
 
 | File | Role |
@@ -102,6 +122,7 @@ also exposes Ollama to your whole network.)
 | `app/main.py` | FastAPI routes: `/api/me`, `POST /api/analyze`, `GET/POST /api/meals`, `DELETE /api/meals/{id}` |
 | `supabase/migrations/` | Postgres schema and RLS policies |
 | `scripts/import_sqlite.py` | One-off import of the old SQLite meals |
+| `app/cron.py`, `app/reminders.py` | Daily job (service-key client) and the pure reminder rules |
 | `static/` | Plain HTML/CSS/JS frontend |
 
 ## Using it from the Android app

@@ -33,10 +33,19 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
 # Publishable (anon) key, safe for clients; used for auth calls made on behalf of users.
 SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY", "")
-# Service-role key bypasses RLS: used only by the import script, never by request handlers.
+# Service-role key bypasses RLS: used only by app/cron.py and the scripts, never by request handlers.
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 # Seconds to wait on Supabase HTTP calls.
 SUPABASE_TIMEOUT = float(os.getenv("SUPABASE_TIMEOUT", "10"))
+
+# Daily job (Vercel Cron sends "Authorization: Bearer <CRON_SECRET>") and web push (VAPID).
+CRON_SECRET = os.getenv("CRON_SECRET", "")
+VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
+# A mailto: address the push services can contact, e.g. mailto:you@example.com.
+VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "")
+# "Today" for check-in due dates and reminders.
+TIMEZONE = "Asia/Yangon"
 
 STATIC_DIR = BASE_DIR / "static"
 

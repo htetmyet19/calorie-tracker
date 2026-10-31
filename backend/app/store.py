@@ -47,6 +47,10 @@ class SettingsExist(Exception):
     """A settings row already exists for this user."""
 
 
+class EndpointTaken(Exception):
+    """The push endpoint is registered to another user."""
+
+
 class Store:
     def __init__(self, user: User):
         self.user = user
@@ -296,6 +300,45 @@ class Store:
         self._check(resp)
         rows = resp.json() if resp.content else []
         return rows[0] if rows else None
+
+    # ---- push subscriptions ----
+
+    def add_push_subscription(self, endpoint: str, p256dh: str, auth: str) -> None:
+        """Register this user's push endpoint (refreshing its keys) and enable reminders.
+
+        There is no UPDATE policy, so refresh = delete own row, then insert. A unique
+        violation after that means another user owns the endpoint (RLS hides their row).
+        """
+        own = {"user_id": f"eq.{self.user.id}", "endpoint": f"eq.{endpoint}"}
+        self._check(self._request("DELETE", "/push_subscriptions", write=True,
+                                  params=own, prefer="return=minimal"))
+        resp = self._request("POST", "/push_subscriptions", write=True, prefer="return=minimal",
+                             json={"user_id": self.user.id, "endpoint": endpoint,
+                                   "p256dh": p256dh, "auth": auth})
+        if resp.status_code == 409:
+            raise EndpointTaken()
+        self._check(resp)
+        # Upsert only these two columns: a subscriber gets a settings row, and the
+        # job-owned reminder counters are never touched from here.
+        resp = self._request(
+            "POST", "/client_settings", write=True,
+            json={"user_id": self.user.id, "reminders_enabled": True},
+            params={"on_conflict": "user_id"},
+            prefer="resolution=merge-duplicates,return=minimal")
+        self._check(resp)
+
+    def remove_push_subscription(self, endpoint: str) -> None:
+        self._check(self._request("DELETE", "/push_subscriptions", write=True, prefer="return=minimal",
+                                  params={"user_id": f"eq.{self.user.id}",
+                                          "endpoint": f"eq.{endpoint}"}))
+        resp = self._request("GET", "/push_subscriptions", params={
+            "user_id": f"eq.{self.user.id}", "select": "id", "limit": "1"})
+        self._check(resp)
+        if not resp.json():
+            # PATCH, not upsert: no settings row means nothing to switch off.
+            self._check(self._request(
+                "PATCH", "/client_settings", write=True, json={"reminders_enabled": False},
+                params={"user_id": f"eq.{self.user.id}"}, prefer="return=minimal"))
 
 
 def get_store(user: User = Depends(current_user)) -> Store:

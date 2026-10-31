@@ -1,7 +1,7 @@
 import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 class FoodItem(BaseModel):
@@ -134,3 +134,26 @@ class CheckinList(BaseModel):
     checkins: list[CheckinOut]
     next_due_on: str
     due: bool
+
+
+class PushKeys(BaseModel):
+    p256dh: str = Field(min_length=1, max_length=512)
+    auth: str = Field(min_length=1, max_length=512)
+
+
+class PushSubscriptionIn(BaseModel):
+    endpoint: HttpUrl
+    keys: PushKeys
+
+    @field_validator("endpoint")
+    @classmethod
+    def _https_only(cls, v):
+        if v.scheme != "https":
+            raise ValueError("endpoint must be https")
+        if len(str(v)) > 2048:
+            raise ValueError("endpoint too long")
+        return v
+
+
+class PushEndpointIn(BaseModel):
+    endpoint: HttpUrl

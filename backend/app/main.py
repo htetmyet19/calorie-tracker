@@ -1,4 +1,5 @@
 import datetime
+import hmac
 import logging
 import re
 
@@ -6,14 +7,14 @@ from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, Uploa
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 
-from . import config
+from . import config, cron
 from .analysis import AnalysisError, analyze_meal
 from .auth import User, current_user
 from .checkin_rules import is_due, next_due_on
-from .schemas import (AnalyzeResponse, CheckinIn, CheckinList, CheckinOut, DayLog, MealIn, MealOut, PhotoOut, PhotoRecordIn, PhotoUploadIn, ProfileOut, RoleIn,
+from .schemas import (AnalyzeResponse, CheckinIn, CheckinList, CheckinOut, DayLog, MealIn, MealOut, PhotoOut, PhotoRecordIn, PhotoUploadIn, ProfileOut, PushEndpointIn, PushSubscriptionIn, RoleIn,
                       SettingsIn, SettingsOut, WeightIn, WeightOut)
 from .storage import Storage, StorageError, UploadRejected, new_path
-from .store import ProfileExists, SettingsExist, Store, StoreUnavailable, get_store
+from .store import EndpointTaken, ProfileExists, SettingsExist, Store, StoreUnavailable, get_store
 
 log = logging.getLogger("calorie_tracker")
 
@@ -312,3 +313,34 @@ def remove_progress_photo(photo_id: int, store: Store = Depends(require_profile)
 
 # Serves static/index.html and its assets at "/". API routes above are matched first.
 app.frontend("/", directory=config.STATIC_DIR)
+
+
+@app.get("/api/push/public-key")
+def push_public_key():
+    if not config.VAPID_PUBLIC_KEY:
+        raise HTTPException(503, "Push is not configured")
+    return {"key": config.VAPID_PUBLIC_KEY}
+
+
+@app.post("/api/push/subscribe", status_code=201)
+def push_subscribe(body: PushSubscriptionIn, store: Store = Depends(require_profile)):
+    try:
+        store.add_push_subscription(str(body.endpoint), body.keys.p256dh, body.keys.auth)
+    except EndpointTaken:
+        raise HTTPException(409, "endpoint_taken")
+    return Response(status_code=201)
+
+
+@app.delete("/api/push/subscribe", status_code=204)
+def push_unsubscribe(body: PushEndpointIn, store: Store = Depends(require_profile)):
+    store.remove_push_subscription(str(body.endpoint))
+    return Response(status_code=204)
+
+
+@app.get("/api/cron/daily")
+def cron_daily(request: Request):
+    expected = config.CRON_SECRET
+    given = request.headers.get("authorization", "")
+    if not expected or not hmac.compare_digest(given.encode(), f"Bearer {expected}".encode()):
+        raise HTTPException(401, "Unauthorized")
+    return cron.run_daily(datetime.datetime.now(datetime.timezone.utc))
