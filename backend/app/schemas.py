@@ -99,6 +99,11 @@ class WeightIn(BaseModel):
     weight_kg: float = Field(ge=30, le=300)
 
 
+class DailyTotal(BaseModel):
+    date: str
+    total_calories: float
+
+
 class WeightOut(BaseModel):
     logged_on: str
     weight_kg: float

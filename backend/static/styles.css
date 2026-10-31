@@ -793,3 +793,83 @@ body.has-tabbar { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
 .role-options .role-desc { display: block; margin-top: 2px; color: var(--muted); font-size: var(--step--1); }
 .role-options label:has(input:checked) { border-color: var(--ink); background: var(--field); }
 .role-options label:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- Progress page ---------- */
+.progress {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 12px 16px 40px;
+  display: grid;
+  gap: 16px;
+}
+.progress .status:empty { min-height: 0; margin: 0; }
+.card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 18px 16px;
+}
+.card .section-title { margin-bottom: 0; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.card-sub { color: var(--muted); font-size: var(--step--1); }
+.btn-small { padding: 7px 12px; font-size: var(--step--1); }
+
+.checkin-when { margin-top: 6px; font-size: var(--step-1); font-weight: 600; }
+.checkin-card .btn { display: inline-block; margin-top: 12px; text-decoration: none; }
+
+.weight-summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-top: 10px; }
+.weight-latest { font-size: var(--step-2); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.weight-change { color: var(--ink-2); font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+
+.chart { display: block; width: 100%; height: auto; margin-top: 12px; overflow: visible; }
+.chart .axis { stroke: var(--line); stroke-width: 1; }
+.chart .tick, .chart .goal-label { fill: var(--muted); font-size: 11px; font-family: var(--font); }
+.chart .goal-label { fill: var(--ink-2); font-weight: 600; }
+.chart-line .line { fill: none; stroke: var(--dinner); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.chart-line .dot { fill: var(--surface); stroke: var(--dinner); stroke-width: 2; }
+.chart-bars .bar { fill: var(--lunch); }
+.chart-bars .bar.is-over { fill: var(--chili); }
+.chart-bars .goal { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.card .empty { margin-top: 12px; }
+
+.timeline { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 14px; }
+.timeline > li { border-top: 1px solid var(--line); padding-top: 12px; }
+.timeline-date { display: flex; justify-content: space-between; gap: 12px; font-weight: 600; }
+.timeline-weight { color: var(--ink-2); font-weight: 400; font-variant-numeric: tabular-nums; }
+.timeline-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+.thumb-pose { margin: 0; }
+.thumb-pose img, .thumb-missing {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--field);
+}
+.thumb-missing { display: grid; place-items: center; color: var(--muted); font-size: var(--step--1); }
+.thumb-pose figcaption { margin-top: 2px; color: var(--muted); font-size: var(--step--1); text-align: center; }
+
+.private-note { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-size: var(--step--1); }
+.private-note svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+
+/* Log weight dialog: inline field errors as on the login page, in the app's colours */
+.form-rows { display: grid; gap: 14px; }
+.form-label { display: block; margin-bottom: 6px; font-size: var(--step--1); font-weight: 600; color: var(--ink-2); }
+.field-wide { display: flex; width: 100%; padding: 10px 12px; }
+.field-wide input { flex: 1; min-width: 0; width: 100%; }
+.calc .field-error { color: var(--chili); }
+.calc .field:has([aria-invalid]) { border-color: var(--chili); }
+
+/* Compare dialog */
+.compare { width: min(640px, calc(100vw - 32px)); }
+.compare-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.compare-pick .calc-select { margin-top: 0; }
+.compare-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+.compare-pane { margin: 0; }
+.compare-pane img { display: block; width: 100%; height: auto; border-radius: 10px; background: var(--field); }
+.compare-missing {
+  display: grid; place-items: center; aspect-ratio: 3 / 4; padding: 8px;
+  border-radius: 10px; background: var(--field); color: var(--muted);
+  font-size: var(--step--1); text-align: center;
+}
+.compare-pane figcaption { margin-top: 4px; font-weight: 600; text-align: center; }

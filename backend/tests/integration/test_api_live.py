@@ -80,3 +80,22 @@ def test_meals_report_photo_removed(api, make_user, service):
     service.patch("/meals", params={"id": f"eq.{mid}"}, json={"photo_removed": True})
     day = api.get("/api/meals", headers=auth(u), params={"date": "2026-10-31"}).json()
     assert day["meals"][0]["photo_removed"] is True
+
+
+def test_daily_totals_sum_my_meals_only(api, make_user):
+    me, other = auth(make_user()), auth(make_user())
+    for when, kcal in (("2026-10-29T08:00", 150), ("2026-10-29T19:00", 150), ("2026-10-31T23:30", 150)):
+        meal = {**MEAL, "eaten_at": when, "items": [{**ITEM, "calories": kcal}]}
+        assert api.post("/api/meals", headers=me, json=meal).status_code == 201
+    assert api.post("/api/meals", headers=other, json=MEAL).status_code == 201
+
+    r = api.get("/api/meals/daily-totals", headers=me, params={"from": "2026-10-28", "to": "2026-10-31"})
+    assert r.status_code == 200
+    assert r.json() == [
+        {"date": "2026-10-28", "total_calories": 0.0},
+        {"date": "2026-10-29", "total_calories": 300.0},
+        {"date": "2026-10-30", "total_calories": 0.0},
+        {"date": "2026-10-31", "total_calories": 150.0},
+    ]
+    r = api.get("/api/meals/daily-totals", headers=other, params={"from": "2026-10-31", "to": "2026-10-31"})
+    assert r.json() == [{"date": "2026-10-31", "total_calories": 150.0}]

@@ -127,6 +127,24 @@ class Store:
         self._check(resp)
         return [self._to_meal(r) for r in resp.json()]
 
+    def daily_totals(self, start: datetime.date, end: datetime.date) -> list[dict]:
+        """Calories per local day, start..end inclusive, days without meals as 0."""
+        nxt = end + datetime.timedelta(days=1)
+        # user_id filter: RLS also exposes an active trainer's clients' meals.
+        resp = self._request("GET", "/meals", params={
+            "user_id": f"eq.{self.user.id}",
+            "and": f"(eaten_at.gte.{start.isoformat()},eaten_at.lt.{nxt.isoformat()})",
+            "select": "eaten_at,total_calories",
+        })
+        self._check(resp)
+        days = (end - start).days + 1
+        totals = {(start + datetime.timedelta(days=i)).isoformat(): 0.0 for i in range(days)}
+        for r in resp.json():
+            day = r["eaten_at"][:10]
+            if day in totals:
+                totals[day] += float(r["total_calories"])
+        return [{"date": d, "total_calories": round(t, 1)} for d, t in totals.items()]
+
     def delete_meal_returning(self, meal_id: int) -> dict | None:
         """Delete an own meal; return the deleted row (with photo_path) or None."""
         resp = self._request("DELETE", "/meals", write=True, params={

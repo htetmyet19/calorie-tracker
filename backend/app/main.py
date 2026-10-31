@@ -11,7 +11,7 @@ from . import config, cron
 from .analysis import AnalysisError, analyze_meal
 from .auth import User, current_user
 from .checkin_rules import is_due, next_due_on
-from .schemas import (AnalyzeResponse, CheckinIn, CheckinList, CheckinOut, DayLog, MealIn, MealOut, PhotoOut, PhotoRecordIn, PhotoUploadIn, ProfileOut, PushEndpointIn, PushSubscriptionIn, RoleIn,
+from .schemas import (AnalyzeResponse, CheckinIn, CheckinList, CheckinOut, DailyTotal, DayLog, MealIn, MealOut, PhotoOut, PhotoRecordIn, PhotoUploadIn, ProfileOut, PushEndpointIn, PushSubscriptionIn, RoleIn,
                       SettingsIn, SettingsOut, WeightIn, WeightOut)
 from .storage import Storage, StorageError, UploadRejected, new_path
 from .store import EndpointTaken, ProfileExists, SettingsExist, Store, StoreUnavailable, get_store
@@ -108,6 +108,22 @@ async def analyze(photo: UploadFile = File(...), user: User = Depends(current_us
 @app.post("/api/meals", response_model=MealOut, status_code=201)
 def create_meal(meal: MealIn, store: Store = Depends(require_profile)):
     return store.add_meal(meal)
+
+
+MAX_TOTALS_DAYS = 31
+
+
+@app.get("/api/meals/daily-totals", response_model=list[DailyTotal])
+def daily_totals(from_: str = Query(..., alias="from", description="YYYY-MM-DD"),
+                 to: str = Query(..., description="YYYY-MM-DD"),
+                 store: Store = Depends(require_profile)):
+    """Calories per day from..to inclusive, zero-filled; at most 31 days."""
+    start, end = parse_day(from_, "from"), parse_day(to, "to")
+    if start > end:
+        raise HTTPException(400, "from must not be after to")
+    if (end - start).days + 1 > MAX_TOTALS_DAYS:
+        raise HTTPException(400, f"range must be at most {MAX_TOTALS_DAYS} days")
+    return store.daily_totals(start, end)
 
 
 @app.get("/api/meals", response_model=DayLog)

@@ -1,14 +1,4 @@
-const $ = (id) => document.getElementById(id);
-const el = (tag, props = {}, ...children) => {
-  const node = Object.assign(document.createElement(tag), props);
-  node.append(...children);
-  return node;
-};
-const svgEl = (tag, attrs = {}) => {
-  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
-  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
-  return node;
-};
+// Today page. Needs dom.js, auth.js, energy.js, units.js, images.js and nav.js loaded first.
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
 const MEAL_LABEL = { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack" };
@@ -22,10 +12,7 @@ let loadError = null;    // the message loadDay last showed, if any
 const DEFAULT_GOAL = 2000;
 let savedGoal = DEFAULT_GOAL; // the goal the server last confirmed
 
-const pad = (n) => String(n).padStart(2, "0");
-const isoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const localDateTime = (d) => `${isoDate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-const parseDate = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
 const fmt = (n) => Math.round(n).toLocaleString("en-IN");
 const round1 = (x) => Math.round(x * 10) / 10;
 
