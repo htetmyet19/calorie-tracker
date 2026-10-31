@@ -22,7 +22,7 @@ Meals and profiles live in Supabase Postgres, per user. Copy `.env.example` to `
 |---|---|
 | `SUPABASE_URL` | Project URL (local: `http://127.0.0.1:54321`) |
 | `SUPABASE_PUBLISHABLE_KEY` | Publishable (anon) key; also served to the web page via `/api/public-config` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Bypasses Row Level Security. Used only by the import script and test setup, both run locally; keep it secret and do **not** add it to the Vercel environment (no request handler uses it) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Bypasses Row Level Security. Used by the import script, test setup and the daily job (`app/cron.py`, the only app module allowed to read it). It must be set on Vercel for the cron job; keep it secret |
 | `SUPABASE_JWT_SECRET` | Only if the project still signs tokens with the legacy HS256 secret; leave empty for asymmetric keys |
 | `SUPABASE_TIMEOUT` | Seconds to wait on Supabase calls (default `10`) |
 
@@ -41,6 +41,17 @@ Before real users sign up on the deployed app, in the Supabase dashboard (Authen
 - [ ] The built-in email sender is rate-limited and meant for testing
       ([current limits](https://supabase.com/docs/guides/auth/rate-limits)); set up
       [custom SMTP](https://supabase.com/docs/guides/auth/auth-smtp) before real users sign up.
+
+Apply the schema to a hosted project once, after `supabase link`:
+
+```bash
+npx supabase@2 link --project-ref <ref>
+npx supabase@2 db push
+```
+
+M2 adds four migrations on top of the M1 one: `20261101000000_m2_client_tracking.sql`,
+`20261101000001_m2_photo_path_owner.sql`, `20261101000002_m2_checkin_owner.sql` and
+`20261101000003_m2_photo_removed.sql`.
 
 ### Tests
 
@@ -89,6 +100,16 @@ networkingMode=mirrored
 (The alternative, setting `OLLAMA_HOST=0.0.0.0` on Windows and pointing `OLLAMA_URL` at the Windows IP,
 also exposes Ollama to your whole network.)
 
+## Client tracking (M2)
+
+- Pages: `/` (Today, with the meal log), `/progress.html` (weight and calorie charts, check-in timeline, Compare),
+  `/checkin.html` (weekly check-in with optional photos) and the Settings panel (units, reminders, push).
+- Weight can be entered in kg or lb. The accepted lb range is 66.2-661.3 (30-300 kg).
+- Meal photos are deleted after 90 days. The meal stays and shows "Photo removed after 90 days". Progress photos are
+  kept until you delete them. Uploads with no matching row are swept after 24 h.
+- Changed from M1: calculator details are saved to the account only when you press "Use this goal" (Cancel discards
+  them). Values an older version kept in the browser are moved to the account once.
+
 ## Daily job and push
 
 Once a day (02:30 UTC, 09:00 in Myanmar) Vercel Cron calls `GET /api/cron/daily`. The job sends weekly check-in
@@ -107,7 +128,31 @@ reminders by web push: at most two per due check-in, the second three days after
    (a unit test enforces this); keep it out of client code, logs and screenshots.
 4. Keep the same `VAPID_PRIVATE_KEY` for good: changing it invalidates every existing push subscription.
 
-Run it by hand against a local stack: `curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:8000/api/cron/daily`.
+Schedule: `backend/vercel.json` has `{"path": "/api/cron/daily", "schedule": "30 2 * * *"}` (UTC). Env var names
+needed on Vercel: `CRON_SECRET`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `SUPABASE_SERVICE_ROLE_KEY`.
+
+Run it by hand against a local server (`.env` must have `SUPABASE_SERVICE_ROLE_KEY`; use any placeholder as the secret
+and set the same value as `CRON_SECRET` in `.env`):
+
+```bash
+curl -H "Authorization: Bearer <your-CRON_SECRET>" http://localhost:8000/api/cron/daily
+```
+
+## Manual phone checks
+
+Automated tests cannot cover these. Push needs HTTPS: use a Vercel preview, or on Android Chrome use
+`chrome://inspect` port forwarding to `localhost:8000`.
+
+- [ ] Allow notifications in Settings and receive a real push on Android Chrome; tapping it opens Progress.
+- [ ] Camera capture: photos keep the right orientation (EXIF) and HEIC files from iPhones are handled.
+- [ ] A saved meal shows its photo thumbnail; a failed upload shows "Photo not uploaded – retry" and retry works.
+- [ ] Enter weight in lb, save, reload: the value round-trips.
+- [ ] 360 px wide layout in light and dark on Today, Progress and Check-in.
+- [ ] Check-in with a skipped photo saves and appears in the timeline.
+- [ ] Compare on Progress shows two check-ins side by side.
+
+Known follow-ups: timeline thumbnails are the full stored photos (data cost; store small thumbnails later), and the
+checks above are still pending on a real device.
 
 ## How it works
 
