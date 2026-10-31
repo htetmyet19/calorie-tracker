@@ -11,6 +11,7 @@ let justSavedId = null;  // the segment to draw in after a save
 let loadError = null;    // the message loadDay last showed, if any
 const DEFAULT_GOAL = 2000;
 let savedGoal = DEFAULT_GOAL; // the goal the server last confirmed
+let userId = null;            // for telling the user's own goal from a trainer's
 
 const localDateTime = (d) => `${isoDate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const fmt = (n) => Math.round(n).toLocaleString("en-IN");
@@ -86,7 +87,7 @@ async function saveGoal(goal, extra = {}) {
 
 $("goal").addEventListener("change", () => {
   const goal = Math.round(Math.min(9000, Math.max(500, parseFloat($("goal").value) || DEFAULT_GOAL)));
-  saveGoal(goal);
+  saveGoal(goal, { goal_weight_kg: null }); // typed in by hand: not tied to a weight
 });
 
 // ---------- Goal calculator ----------
@@ -173,10 +174,48 @@ $("calc-form").addEventListener("input", renderCalc);
 $("calc").addEventListener("close", () => {
   const p = $("calc").returnValue === "use" && readProfile();
   if (!p) return;
-  saveGoal(suggestedGoal(energyProfile(p)).kcal, p); // one save: details and goal together
+  // One save: details, goal and the weight it was worked out from together
+  saveGoal(suggestedGoal(energyProfile(p)).kcal, { ...p, goal_weight_kg: p.weight_kg });
 });
 
-document.addEventListener("settingschange", (e) => setCalcUnit(e.detail.weight_unit));
+document.addEventListener("settingschange", (e) => {
+  setCalcUnit(e.detail.weight_unit);
+  renderGoalNudge(e.detail);
+});
+
+// ---------- New goal after a weight change ----------
+
+let nudge = null; // { changeKg, kcal, weightKg } while the card is shown
+
+function renderGoalNudge(s) {
+  const r = goalRefresh(s, userId);
+  nudge = r && { ...r, weightKg: s.weight_kg };
+  $("goal-nudge").hidden = !r;
+  if (!r) return;
+  const unit = s.weight_unit === "lb" ? "lb" : "kg";
+  const amount = `${fromKg(Math.abs(r.changeKg), unit).toFixed(1)} ${unit}`;
+  $("goal-nudge-title").textContent =
+    `You've ${r.changeKg < 0 ? "lost" : "gained"} ${amount} since you set your goal`;
+  $("goal-nudge-text").textContent =
+    `At your new weight your body needs a little ${r.changeKg < 0 ? "less" : "more"} energy. ` +
+    `Suggested goal: ${fmt(r.kcal)} kcal a day.`;
+  $("goal-nudge-update").textContent = `Update to ${fmt(r.kcal)}`;
+  $("goal-nudge-keep").textContent = `Keep ${fmt(s.goal_kcal)}`;
+}
+
+// Both answers move the goal's weight to today's, so the card returns only after
+// another 2 kg change. The settingschange event that follows hides it.
+$("goal-nudge-update").addEventListener("click", () => {
+  if (nudge) saveGoal(nudge.kcal, { goal_weight_kg: nudge.weightKg });
+});
+$("goal-nudge-keep").addEventListener("click", async () => {
+  if (!nudge) return;
+  try {
+    await saveSettings({ goal_weight_kg: nudge.weightKg });
+  } catch (err) {
+    setStatus(err.message, true);
+  }
+});
 
 // ---------- The plate ----------
 
@@ -666,6 +705,7 @@ async function start() {
       location = "/login.html?next=" + encodeURIComponent(location.pathname + location.search);
       return;
     }
+    userId = data.session.user.id;
     const me = await api("/api/me"); // api() sends 401s to the login page
     if (me.status === 404) {
       location = "/welcome.html";
@@ -681,7 +721,9 @@ async function start() {
   }
   try {
     // Also moves old browser settings to the server, once.
-    savedGoal = (await loadSettings()).goal_kcal || DEFAULT_GOAL;
+    const settings = await loadSettings();
+    savedGoal = settings.goal_kcal || DEFAULT_GOAL;
+    renderGoalNudge(settings);
   } catch (err) {
     setStatus(err.message, true); // the day still loads, against the default goal
   }

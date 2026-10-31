@@ -39,3 +39,46 @@ test("suggested goal never goes below the floor", () => {
   const small = { heightCm: 150, weightKg: 45, age: 70, sex: "female", activity: 1.2, goal: "lose" };
   assert.deepEqual(suggestedGoal(small), { kcal: GOAL_FLOOR, floored: true });
 });
+
+const { goalRefresh, GOAL_REFRESH_KG } = require("../static/energy.js");
+
+// Goal set at 74 kg: suggestedGoal gives 1,800 kcal for this profile.
+const SET = { height_cm: 170, age: 30, sex: "female", activity: 1.55, weight_goal: "lose",
+  goal_kcal: 1800, goal_weight_kg: 74, weight_kg: 74, goal_set_by: "me" };
+
+test("goal refresh triggers at 2 kg", () => assert.equal(GOAL_REFRESH_KG, 2));
+
+test("goal refresh suggests a new goal after a 2 kg+ change", () => {
+  assert.deepEqual(goalRefresh({ ...SET, weight_kg: 71 }, "me"), { changeKg: -3, kcal: 1750 });
+});
+
+test("goal refresh counts exactly 2 kg despite float rounding", () => {
+  // 72.4 - 70.4 is 1.99999... in floating point
+  assert.deepEqual(goalRefresh({ ...SET, goal_weight_kg: 72.4, weight_kg: 70.4 }, "me"),
+    { changeKg: -2, kcal: 1750 });
+});
+
+test("goal refresh stays quiet under 2 kg", () => {
+  assert.equal(goalRefresh({ ...SET, weight_kg: 72.1 }, "me"), null);
+});
+
+test("goal refresh stays quiet when the new suggestion equals the goal", () => {
+  assert.equal(goalRefresh({ ...SET, weight_kg: 72 }, "me"), null); // still rounds to 1,800
+});
+
+test("goal refresh never touches a trainer's goal", () => {
+  assert.equal(goalRefresh({ ...SET, weight_kg: 71, goal_set_by: "trainer-1" }, "me"), null);
+  assert.deepEqual(goalRefresh({ ...SET, weight_kg: 71, goal_set_by: null }, "me"),
+    { changeKg: -3, kcal: 1750 });
+});
+
+test("goal refresh needs the goal's weight and every calculator detail", () => {
+  assert.equal(goalRefresh({ ...SET, weight_kg: 71, goal_weight_kg: null }, "me"), null);
+  assert.equal(goalRefresh({ ...SET, weight_kg: 71, age: null }, "me"), null);
+  assert.equal(goalRefresh({ ...SET, weight_kg: null }, "me"), null);
+  assert.equal(goalRefresh({ ...SET, weight_kg: 71, goal_kcal: null }, "me"), null);
+});
+
+test("goal refresh also follows a weight gain", () => {
+  assert.deepEqual(goalRefresh({ ...SET, weight_kg: 77 }, "me"), { changeKg: 3, kcal: 1850 });
+});

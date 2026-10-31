@@ -33,6 +33,25 @@ function suggestedGoal(profile) {
   return kcal < GOAL_FLOOR ? { kcal: GOAL_FLOOR, floored: true } : { kcal, floored: false };
 }
 
+// Each kg changes the estimate by only ~15 kcal, and weight swings 0.5-1.5 kg a
+// day, so the goal is only revisited after a real change.
+const GOAL_REFRESH_KG = 2;
+
+// settings: the saved settings (goal_weight_kg is the weight the goal was worked
+// out from; weight_kg the latest). Returns { changeKg, kcal } when the calculator
+// now suggests a different goal, else null. A goal set by someone else (a
+// trainer) or typed in by hand (no goal_weight_kg) is never revisited.
+function goalRefresh(s, userId) {
+  if (s.goal_kcal == null || s.goal_weight_kg == null || s.weight_kg == null) return null;
+  if (s.goal_set_by && s.goal_set_by !== userId) return null;
+  if ([s.height_cm, s.age, s.sex, s.activity, s.weight_goal].some((v) => v == null)) return null;
+  const changeKg = Math.round((s.weight_kg - s.goal_weight_kg) * 10) / 10;
+  if (Math.abs(changeKg) < GOAL_REFRESH_KG) return null;
+  const { kcal } = suggestedGoal({ heightCm: s.height_cm, weightKg: s.weight_kg, age: s.age,
+    sex: s.sex, activity: s.activity, goal: s.weight_goal });
+  return kcal === s.goal_kcal ? null : { changeKg, kcal };
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { bmi, bmiCategory, bmr, tdee, suggestedGoal, GOAL_FLOOR };
+  module.exports = { bmi, bmiCategory, bmr, tdee, suggestedGoal, GOAL_FLOOR, goalRefresh, GOAL_REFRESH_KG };
 }

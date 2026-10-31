@@ -34,6 +34,16 @@
         </button>
       </div>
 
+      <!-- Shown when the logged weight has moved 2 kg+ from the goal's weight (energy.js goalRefresh) -->
+      <aside class="goal-nudge" id="goal-nudge" aria-labelledby="goal-nudge-title" hidden>
+        <p class="goal-nudge-title" id="goal-nudge-title"></p>
+        <p class="goal-nudge-text" id="goal-nudge-text"></p>
+        <div class="goal-nudge-actions">
+          <button class="btn btn-primary" type="button" id="goal-nudge-update"></button>
+          <button class="btn btn-pill" type="button" id="goal-nudge-keep"></button>
+        </div>
+      </aside>
+
       <figure class="plate" id="plate">
         <svg class="ring" id="ring" viewBox="0 0 240 240" role="img" aria-labelledby="plate-summary"></svg>
         <div class="plate-well">

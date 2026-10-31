@@ -154,6 +154,24 @@ button { cursor: pointer; }
 .nav-btn:disabled { opacity: 0.3; cursor: default; }
 .nav-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
+/* ---------- New goal after a weight change ---------- */
+.goal-nudge {
+  max-width: 380px;
+  margin: 0 auto 16px;
+  padding: 16px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(198, 243, 107, 0.4);
+  background:
+    radial-gradient(90% 120% at 100% 0%, rgba(198, 243, 107, 0.14), transparent 60%),
+    var(--surface);
+  animation: alert-in 220ms ease-out;
+}
+.goal-nudge-title { font-weight: 700; }
+.goal-nudge-text { margin-top: 4px; color: var(--ink-2); font-size: var(--step--1); }
+.goal-nudge-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.goal-nudge-actions .btn { padding: 10px 16px; font-size: var(--step--1); }
+@media (prefers-reduced-motion: reduce) { .goal-nudge { animation: none; } }
+
 /* ---------- The ring ---------- */
 .plate {
   position: relative;

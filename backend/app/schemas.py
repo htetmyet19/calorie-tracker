@@ -87,6 +87,8 @@ class SettingsIn(BaseModel):
     activity: Literal[1.2, 1.375, 1.55, 1.725, 1.9] | None = None
     weight_goal: Literal["lose", "maintain", "gain"] | None = None
     goal_kcal: int | None = Field(default=None, ge=500, le=9000)
+    # The weight the goal was worked out from; None for a goal typed in by hand.
+    goal_weight_kg: float | None = Field(default=None, ge=30, le=300)
     weight_unit: Literal["kg", "lb"] = "kg"
     reminders_enabled: bool = False
 

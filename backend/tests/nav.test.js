@@ -12,7 +12,8 @@ const LOADED = {
 test("a partial save sends every field, so PUT never resets the others", () => {
   assert.deepEqual(settingsBody(LOADED, { weight_unit: "kg" }), {
     height_cm: 170, weight_kg: 70.5, age: 30, sex: "female", activity: 1.375,
-    weight_goal: "lose", goal_kcal: 1800, weight_unit: "kg", reminders_enabled: true,
+    weight_goal: "lose", goal_kcal: 1800, goal_weight_kg: null, weight_unit: "kg",
+    reminders_enabled: true,
   });
 });
 
@@ -23,7 +24,8 @@ test("goal_set_by is server-owned and never sent", () => {
 test("missing loaded settings fall back to the server defaults", () => {
   assert.deepEqual(settingsBody(null, { goal_kcal: 2000 }), {
     height_cm: null, weight_kg: null, age: null, sex: null, activity: null,
-    weight_goal: null, goal_kcal: 2000, weight_unit: "kg", reminders_enabled: false,
+    weight_goal: null, goal_kcal: 2000, goal_weight_kg: null, weight_unit: "kg",
+    reminders_enabled: false,
   });
 });
 

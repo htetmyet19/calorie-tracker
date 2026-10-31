@@ -10,7 +10,8 @@ from app.store import SettingsExist, get_store
 
 PROFILE = {"id": "u1", "role": "client", "display_name": "Asha"}
 BODY = {"height_cm": 170, "weight_kg": 70.5, "age": 30, "sex": "female", "activity": 1.375,
-        "weight_goal": "lose", "goal_kcal": 1800, "weight_unit": "lb", "reminders_enabled": True}
+        "weight_goal": "lose", "goal_kcal": 1800, "goal_weight_kg": 71.2, "weight_unit": "lb",
+        "reminders_enabled": True}
 
 
 class FakeStore:
@@ -47,7 +48,7 @@ def test_get_settings_defaults():
     assert r.status_code == 200
     assert r.json() == {
         "height_cm": None, "weight_kg": None, "age": None, "sex": None, "activity": None,
-        "weight_goal": None, "goal_kcal": None, "weight_unit": "kg",
+        "weight_goal": None, "goal_kcal": None, "goal_weight_kg": None, "weight_unit": "kg",
         "reminders_enabled": False, "goal_set_by": None}
 
 
@@ -59,7 +60,8 @@ def test_put_settings_roundtrip():
     assert c.get("/api/settings").json() == {**BODY, "goal_set_by": "u1"}
 
 
-@pytest.mark.parametrize("patch", [{"height_cm": 119}, {"goal_kcal": 9050}, {"activity": 1.3}])
+@pytest.mark.parametrize("patch", [{"height_cm": 119}, {"goal_kcal": 9050}, {"activity": 1.3},
+                                   {"goal_weight_kg": 29.9}, {"goal_weight_kg": 300.1}])
 def test_put_settings_rejects_out_of_range(patch):
     r = make_client(FakeStore()).put("/api/settings", json={**BODY, **patch})
     assert r.status_code == 422
