@@ -443,7 +443,7 @@ async function start() {
 }
 
 $("logout").addEventListener("click", async () => {
-  await logout();
+  try { await logout(); } catch (e) { /* logout clears what it can; leave either way */ }
   location = "/login.html";
 });
 

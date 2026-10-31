@@ -29,8 +29,9 @@ def test_valid_token_returns_sub():
 
 
 def test_expired_token_rejected():
+    # Past the 30 s leeway.
     with pytest.raises(AuthError):
-        verify_token(tok(exp=int(time.time()) - 10))
+        verify_token(tok(exp=int(time.time()) - 60))
 
 
 def test_missing_exp_rejected():
@@ -69,6 +70,20 @@ def test_garbage_token_rejected():
         verify_token("not-a-jwt")
 
 
+def test_small_clock_skew_tolerated():
+    # The client's clock (or Supabase's) may run a few seconds ahead of ours.
+    assert verify_token(tok(iat=int(time.time()) + 10)) == "u1"
+
+
+def test_large_clock_skew_rejected():
+    with pytest.raises(AuthError):
+        verify_token(tok(iat=int(time.time()) + 120))
+
+
+def test_expired_within_leeway_accepted():
+    assert verify_token(tok(exp=int(time.time()) - 10)) == "u1"
+
+
 @pytest.fixture
 def client():
     app = FastAPI()
@@ -91,6 +106,17 @@ def test_current_user_rejects_bad_token(client):
     r = client.get("/me", headers={"Authorization": "Bearer nope"})
     assert r.status_code == 401
     assert r.json() == {"detail": "not_logged_in"}
+
+
+def test_rejected_token_logged_without_token(client, caplog):
+    t = tok(exp=int(time.time()) - 3600)
+    with caplog.at_level("WARNING", logger="app.auth"):
+        r = client.get("/me", headers={"Authorization": f"Bearer {t}"})
+    assert r.status_code == 401
+    [rec] = [r for r in caplog.records if r.name == "app.auth"]
+    assert rec.levelname == "WARNING"
+    assert "ExpiredSignatureError" in rec.getMessage()
+    assert t not in caplog.text
 
 
 def test_current_user_returns_user(client):

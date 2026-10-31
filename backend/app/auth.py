@@ -1,5 +1,6 @@
 """Verify Supabase access tokens (JWTs) and expose the logged-in user to routes."""
 import json
+import logging
 
 import jwt
 from fastapi import Header, HTTPException
@@ -7,7 +8,11 @@ from pydantic import BaseModel
 
 from . import config
 
+logger = logging.getLogger(__name__)
+
 _ASYMMETRIC_ALGS = ("ES256", "RS256")
+# Seconds of clock skew tolerated on exp/iat/nbf, so a slightly fast clock doesn't log people out.
+_LEEWAY = 30
 
 # Created on first use so importing this module works with an empty SUPABASE_URL.
 _jwks_client: jwt.PyJWKClient | None = None
@@ -60,6 +65,7 @@ def verify_token(token: str) -> str:
             key,
             algorithms=[alg],
             audience="authenticated",
+            leeway=_LEEWAY,
             options={"require": ["exp", "sub"]},
         )
     except (jwt.PyJWTError, ValueError, TypeError) as e:
@@ -80,5 +86,8 @@ def current_user(authorization: str | None = Header(None)) -> User:
         return User(id=verify_token(token), token=token)
     except AuthUnavailable:
         raise HTTPException(503, "Login service unreachable. Try again in a minute.")
-    except AuthError:
+    except AuthError as e:
+        # Type and reason only, never the token; repr and the cap keep header junk from forging log lines.
+        cause = e.__cause__
+        logger.warning("token rejected: %s: %.200r", type(cause or e).__name__, str(cause or e))
         raise HTTPException(401, "not_logged_in")

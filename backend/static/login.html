@@ -35,7 +35,8 @@
   <script src="/auth.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
-    const next = safeNext(new URLSearchParams(location.search).get("next"));
+    const params = new URLSearchParams(location.search);
+    const next = safeNext(params.get("next"));
     function setStatus(msg, isError = false) {
       $("status").textContent = msg;
       $("status").classList.toggle("is-error", isError);
@@ -49,6 +50,8 @@
       try { await fn(); } catch (err) { setStatus(err.message || "Something went wrong. Try again.", true); }
       busy(false);
     }
+
+    if (params.get("expired") === "1") setStatus("Your session ended. Please log in again.");
 
     // Already logged in: skip the form.
     initAuth().then(async (client) => {
@@ -79,7 +82,12 @@
       if (!$("login-form").reportValidity()) return;
       run(async () => {
         const client = await initAuth();
-        const { data, error } = await client.auth.signUp({ email: $("email").value.trim(), password: $("password").value });
+        const { data, error } = await client.auth.signUp({
+          email: $("email").value.trim(),
+          password: $("password").value,
+          // Without this the confirmation link goes to the project's Site URL, not this deployment.
+          options: { emailRedirectTo: location.origin + next },
+        });
         if (error) throw error;
         if (!data.session) {
           setStatus("Check your email to confirm your account, then log in.");
