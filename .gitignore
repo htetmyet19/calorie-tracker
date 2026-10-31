@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+**/.venv/
+**/__pycache__/
+backend/data/
+**/.vercel/
+mobile/.gradle/
+mobile/build/
+mobile/app/build/
+mobile/local.properties
+backend/supabase/.temp/
+.superpowers/

@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Tracker: calorie log</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="masthead">
+    <p class="wordmark">Tracker</p>
+  </header>
+
+  <main class="layout">
+    <!-- The day: one plate whose rim fills toward the calorie goal, one segment per meal -->
+    <section class="day" aria-labelledby="day-name">
+      <div class="day-nav">
+        <button class="nav-btn" id="prev-day" aria-label="Previous day">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <h1 class="day-name">
+          <button id="day-name" class="day-picker" aria-label="Choose a date">Today</button>
+        </h1>
+        <input type="date" id="log-date" class="visually-hidden" tabindex="-1" aria-hidden="true">
+        <button class="nav-btn" id="next-day" aria-label="Next day">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+
+      <figure class="plate" id="plate">
+        <svg class="ring" id="ring" viewBox="0 0 240 240" role="img" aria-labelledby="plate-summary"></svg>
+        <div class="plate-well">
+          <p class="eaten"><span id="day-total">0</span></p>
+          <p class="goal-line">
+            of
+            <label class="visually-hidden" for="goal">Daily calorie goal</label>
+            <input type="number" id="goal" min="500" max="9000" step="50" inputmode="numeric">
+            kcal
+          </p>
+          <p class="remaining" id="remaining"></p>
+        </div>
+        <div class="tooltip" id="tooltip" role="presentation" hidden></div>
+        <figcaption class="visually-hidden" id="plate-summary"></figcaption>
+      </figure>
+
+      <button class="btn btn-quiet calc-open" id="calc-open">Calculate my goal</button>
+
+      <ul class="legend" id="legend"></ul>
+
+      <dl class="macros">
+        <div><dt>Protein</dt><dd><span id="m-protein">0</span> g</dd></div>
+        <div><dt>Carbs</dt><dd><span id="m-carbs">0</span> g</dd></div>
+        <div><dt>Fat</dt><dd><span id="m-fat">0</span> g</dd></div>
+      </dl>
+    </section>
+
+    <section class="meals-section" aria-labelledby="meals-heading">
+      <h2 id="meals-heading" class="section-title">Meals</h2>
+      <ul class="meals" id="meals"></ul>
+      <p class="empty" id="meals-empty">Nothing logged on this day yet. Photograph your next meal to start.</p>
+    </section>
+
+    <!-- Logging flow: photo, estimate, check, save -->
+    <section class="log" aria-labelledby="log-heading">
+      <h2 id="log-heading" class="section-title">Log a meal</h2>
+
+      <label class="drop" id="drop">
+        <input type="file" id="photo" accept="image/*" capture="environment" class="visually-hidden">
+        <img id="preview" alt="Your meal photo" hidden>
+        <span class="drop-empty" id="drop-empty">
+          <svg viewBox="0 0 48 48" aria-hidden="true">
+            <circle cx="24" cy="26" r="13"/><circle cx="24" cy="26" r="7"/><path d="M6 14h7l3-5h16l3 5h7v26H6z"/>
+          </svg>
+          <span class="drop-title">Take or choose a photo of your plate</span>
+          <span class="drop-sub">Shoot from above with the whole plate in frame. JPEG, PNG or WebP, up to 10 MB.</span>
+        </span>
+        <span class="drop-busy" aria-hidden="true">Reading your plate…</span>
+      </label>
+
+      <button id="analyze" class="btn btn-primary" disabled>Estimate calories</button>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+
+      <div id="result" class="result" hidden>
+        <p class="hint">This is an AI estimate. Fix anything it got wrong before saving, especially the grams: portion size is where most of the error comes from.</p>
+
+        <ul class="items" id="items"></ul>
+        <button id="add-item" class="btn btn-quiet">Add an item it missed</button>
+
+        <ul class="warnings" id="warnings"></ul>
+        <p class="notes" id="notes"></p>
+
+        <fieldset class="meal-type">
+          <legend>Which meal is this?</legend>
+          <div class="meal-type-options" id="meal-type"></div>
+        </fieldset>
+
+        <div class="save-row">
+          <p class="meal-sum"><span id="meal-total">0</span> kcal</p>
+          <button id="save" class="btn btn-primary">Save to today</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Goal calculator: BMI plus a Mifflin-St Jeor estimate of daily needs -->
+  <dialog class="calc" id="calc" aria-labelledby="calc-title">
+    <form method="dialog" id="calc-form">
+      <h2 id="calc-title" class="section-title">Calculate my goal</h2>
+
+      <div class="calc-grid">
+        <label>Height <span class="field"><input type="number" id="c-height" min="120" max="230" step="1" inputmode="numeric" required><span class="unit">cm</span></span></label>
+        <label>Weight <span class="field"><input type="number" id="c-weight" min="30" max="300" step="0.1" inputmode="decimal" required><span class="unit">kg</span></span></label>
+        <label>Age <span class="field"><input type="number" id="c-age" min="18" max="100" step="1" inputmode="numeric" required><span class="unit">yrs</span></span></label>
+      </div>
+
+      <fieldset class="meal-type">
+        <legend>Sex</legend>
+        <div class="meal-type-options">
+          <label><input type="radio" name="c-sex" value="male">Male</label>
+          <label><input type="radio" name="c-sex" value="female">Female</label>
+          <label><input type="radio" name="c-sex" value="unspecified" checked>Prefer not to say</label>
+        </div>
+      </fieldset>
+
+      <label class="calc-select">Activity
+        <select id="c-activity">
+          <option value="1.2">Sedentary: desk job, little exercise</option>
+          <option value="1.375">Light: exercise 1–3 days a week</option>
+          <option value="1.55" selected>Moderate: exercise 3–5 days a week</option>
+          <option value="1.725">Very active: hard exercise 6–7 days a week</option>
+          <option value="1.9">Athlete: physical job or training twice a day</option>
+        </select>
+      </label>
+
+      <fieldset class="meal-type">
+        <legend>Goal</legend>
+        <div class="meal-type-options">
+          <label><input type="radio" name="c-goal" value="lose">Lose weight</label>
+          <label><input type="radio" name="c-goal" value="maintain" checked>Maintain</label>
+          <label><input type="radio" name="c-goal" value="gain">Gain weight</label>
+        </div>
+      </fieldset>
+
+      <dl class="calc-result" id="calc-result" hidden>
+        <div><dt>BMI</dt><dd><span id="r-bmi"></span> <span class="calc-cat" id="r-bmi-cat"></span></dd></div>
+        <div><dt>Maintenance</dt><dd><span id="r-tdee"></span> kcal</dd></div>
+        <div><dt>Suggested goal</dt><dd><strong id="r-goal"></strong> kcal</dd></div>
+      </dl>
+      <p class="warnings calc-floor" id="r-floor" hidden>Raised to 1,200 kcal: going lower isn't safe without medical supervision.</p>
+      <p class="hint">An estimate from the Mifflin–St Jeor equation. Real needs can differ by a few hundred kcal, and BMI ignores muscle and build. Not medical advice.</p>
+
+      <div class="save-row">
+        <button class="btn btn-quiet" value="cancel" formnovalidate>Cancel</button>
+        <button class="btn btn-primary" id="calc-use" value="use" disabled>Use this goal</button>
+      </div>
+    </form>
+  </dialog>
+
+
+  <script src="/energy.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A thali seen from above: steel plate, with the rim filling toward the goal in the four meal colours. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Plate body -->
+    <path
+        android:fillColor="#FBFCFC"
+        android:pathData="M54,25a29,29 0 1,1 0,58a29,29 0 1,1 0,-58z" />
+    <!-- Unfilled rim (track) -->
+    <path
+        android:strokeColor="#D5DBDF"
+        android:strokeWidth="7"
+        android:fillColor="#00000000"
+        android:pathData="M54,29a25,25 0 1,1 0,50a25,25 0 1,1 0,-50z" />
+    <!-- Breakfast: 12 o'clock to ~2 o'clock -->
+    <path
+        android:strokeColor="#B98114"
+        android:strokeWidth="7"
+        android:fillColor="#00000000"
+        android:pathData="M55.74,29.06A25,25 0 0,1 75.20,40.75" />
+    <!-- Lunch: ~2 to ~5 o'clock -->
+    <path
+        android:strokeColor="#3F6B2E"
+        android:strokeWidth="7"
+        android:fillColor="#00000000"
+        android:pathData="M76.47,43.04A25,25 0 0,1 67.98,74.73" />
+    <!-- Dinner: ~5 to ~7 o'clock -->
+    <path
+        android:strokeColor="#4058A6"
+        android:strokeWidth="7"
+        android:fillColor="#00000000"
+        android:pathData="M65.74,76.07A25,25 0 0,1 44.63,77.18" />
+    <!-- Snack: short arc ending around 8 o'clock -->
+    <path
+        android:strokeColor="#A63F6E"
+        android:strokeWidth="7"
+        android:fillColor="#00000000"
+        android:pathData="M42.26,76.07A25,25 0 0,1 31.16,64.17" />
+    <!-- Inner well -->
+    <path
+        android:strokeColor="#C4CBD0"
+        android:strokeWidth="1"
+        android:fillColor="#F6F8F9"
+        android:pathData="M54,37a17,17 0 1,1 0,34a17,17 0 1,1 0,-34z" />
+</vector>
