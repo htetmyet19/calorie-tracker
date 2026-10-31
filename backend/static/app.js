@@ -241,7 +241,7 @@ function renderMeals(day) {
     del.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
     del.addEventListener("click", async () => {
       if (!confirm(`Delete ${MEAL_LABEL[m.meal_type].toLowerCase()} at ${time}?`)) return;
-      await fetch(`/api/meals/${m.id}`, { method: "DELETE" });
+      await api(`/api/meals/${m.id}`, { method: "DELETE" });
       loadDay();
     });
     return el("li", {},
@@ -256,7 +256,7 @@ function renderMeals(day) {
 
 async function loadDay() {
   const date = currentDate();
-  const res = await fetch(`/api/meals?date=${date}`);
+  const res = await api(`/api/meals?date=${date}`);
   if (!res.ok) return;
   const day = await res.json();
   if (date !== currentDate()) return; // user moved on to another day meanwhile
@@ -291,7 +291,7 @@ $("analyze").addEventListener("click", async () => {
   const form = new FormData();
   form.append("photo", selectedFile);
   try {
-    const res = await fetch("/api/analyze", { method: "POST", body: form });
+    const res = await api("/api/analyze", { method: "POST", body: form });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || `The estimate failed (${res.status}). Try again.`);
     if (!data.is_food) {
@@ -397,7 +397,7 @@ $("save").addEventListener("click", async () => {
   const eaten_at = date === isoDate(now) ? localDateTime(now) : `${date}T12:00`;
   const meal_type = $("meal-type").querySelector("input:checked").value;
   try {
-    const res = await fetch("/api/meals", {
+    const res = await api("/api/meals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ eaten_at, meal_type, items: items.map((i) => ({ ...i, confidence: i.confidence || "high" })) }),
@@ -416,5 +416,35 @@ $("save").addEventListener("click", async () => {
 
 // ---------- Start ----------
 
-$("goal").value = localStorage.getItem("goal") || 2000;
-setDate(isoDate(new Date()));
+// Nothing loads until we know who is using the app: logged in, with a role chosen.
+async function start() {
+  try {
+    const client = await initAuth();
+    const { data } = await client.auth.getSession();
+    if (!data.session) {
+      location = "/login.html?next=" + encodeURIComponent(location.pathname + location.search);
+      return;
+    }
+    const me = await api("/api/me"); // api() sends 401s to the login page
+    if (me.status === 404) {
+      location = "/welcome.html";
+      return;
+    }
+    if (!me.ok) {
+      const body = await me.json().catch(() => ({}));
+      throw new Error(typeof body.detail === "string" ? body.detail : "Couldn't load your account. Try again.");
+    }
+  } catch (err) {
+    setStatus(err.message, true);
+    return;
+  }
+  $("goal").value = localStorage.getItem("goal") || 2000;
+  setDate(isoDate(new Date()));
+}
+
+$("logout").addEventListener("click", async () => {
+  await logout();
+  location = "/login.html";
+});
+
+start();

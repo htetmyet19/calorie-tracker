@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Tracker: welcome</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="auth-page">
+    <h1>How will you use Tracker?</h1>
+    <p class="hint">You can't change this later, so pick the one that fits.</p>
+
+    <form class="auth-form" id="role-form">
+      <label class="field"><span class="visually-hidden">Display name</span>
+        <input id="display-name" type="text" autocomplete="name" placeholder="Your name" maxlength="60" required></label>
+
+      <fieldset class="role-options" style="border:0;padding:0;margin:0">
+        <legend class="visually-hidden">Role</legend>
+        <label>
+          <input type="radio" name="role" value="client" checked>
+          <span class="role-title">I want to track my meals</span>
+          <span class="role-desc">Log what you eat from a photo and keep an eye on your calories.</span>
+        </label>
+        <label>
+          <input type="radio" name="role" value="trainer">
+          <span class="role-title">I'm a trainer</span>
+          <span class="role-desc">Coach clients and follow their progress.</span>
+        </label>
+      </fieldset>
+
+      <button class="btn btn-primary" id="continue" type="submit">Continue</button>
+    </form>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="/auth.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    function setStatus(msg, isError = false) {
+      $("status").textContent = msg;
+      $("status").classList.toggle("is-error", isError);
+    }
+
+    // Send people who are logged out to login, and people who already chose a role to the app.
+    (async () => {
+      try {
+        const client = await initAuth();
+        const { data } = await client.auth.getSession();
+        if (!data.session) { location = "/login.html?next=/welcome.html"; return; }
+        const me = await api("/api/me");
+        if (me.ok) location = "/";
+      } catch (err) { setStatus(err.message, true); }
+    })();
+
+    $("role-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const role = document.querySelector('input[name="role"]:checked').value;
+      $("continue").disabled = true;
+      setStatus("");
+      try {
+        const res = await api("/api/me/role", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role, display_name: $("display-name").value.trim() }),
+        });
+        if (res.status === 409) { location = "/"; return; } // role already chosen
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(typeof body.detail === "string" ? body.detail : "Couldn't save your choice. Check your name and try again.");
+        }
+        if (role === "trainer") {
+          setStatus("Thanks. Trainer profiles open soon; we'll review yours before you're listed.");
+          setTimeout(() => { location = "/"; }, 2500);
+          return;
+        }
+        location = "/";
+      } catch (err) {
+        setStatus(err.message, true);
+        $("continue").disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

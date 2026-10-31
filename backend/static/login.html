@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Tracker: log in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="auth-page">
+    <h1>Tracker</h1>
+    <p class="hint">Snap your meals. Your trainer sees your progress.</p>
+
+    <div class="auth-form">
+      <button class="btn btn-outline" id="google" type="button">Continue with Google</button>
+      <p class="auth-or" aria-hidden="true">or</p>
+    </div>
+
+    <form class="auth-form" id="login-form" style="margin-top: 12px">
+      <label class="field"><span class="visually-hidden">Email</span>
+        <input id="email" type="email" autocomplete="email" placeholder="Email" required></label>
+      <label class="field"><span class="visually-hidden">Password</span>
+        <input id="password" type="password" autocomplete="current-password" placeholder="Password" minlength="6" required></label>
+      <button class="btn btn-primary" id="login" type="submit">Log in</button>
+      <button class="btn btn-quiet" id="signup" type="button">Create an account</button>
+    </form>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="/auth.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const next = safeNext(new URLSearchParams(location.search).get("next"));
+    function setStatus(msg, isError = false) {
+      $("status").textContent = msg;
+      $("status").classList.toggle("is-error", isError);
+    }
+    function busy(on) {
+      for (const id of ["google", "login", "signup"]) $(id).disabled = on;
+    }
+    async function run(fn) {
+      busy(true);
+      setStatus("");
+      try { await fn(); } catch (err) { setStatus(err.message || "Something went wrong. Try again.", true); }
+      busy(false);
+    }
+
+    // Already logged in: skip the form.
+    initAuth().then(async (client) => {
+      const { data } = await client.auth.getSession();
+      if (data.session) location = next;
+    }).catch((err) => setStatus(err.message, true));
+
+    $("google").addEventListener("click", () => run(async () => {
+      const client = await initAuth();
+      const { error } = await client.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: location.origin + next },
+      });
+      if (error) throw error;
+    }));
+
+    $("login-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      run(async () => {
+        const client = await initAuth();
+        const { error } = await client.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
+        if (error) throw error;
+        location = next;
+      });
+    });
+
+    $("signup").addEventListener("click", () => {
+      if (!$("login-form").reportValidity()) return;
+      run(async () => {
+        const client = await initAuth();
+        const { data, error } = await client.auth.signUp({ email: $("email").value.trim(), password: $("password").value });
+        if (error) throw error;
+        if (!data.session) {
+          setStatus("Check your email to confirm your account, then log in.");
+          return;
+        }
+        location = next;
+      });
+    });
+  </script>
+</body>
+</html>
