@@ -122,3 +122,31 @@ def test_bucket_limits(make_user, upload_object):
                          data=b"\xff" * (400 * 1024)) in (400, 413)
     assert upload_object(a, "meal-photos", f"{a.id}/t.txt", data=b"hi",
                          content_type="text/plain") in (400, 415)
+
+
+def test_meal_photo_path_must_be_in_owner_folder(make_user, rest, add_meal, service):
+    a, b = make_user("client"), make_user("client")
+    m = add_meal(a)
+    for bad in (f"{b.id}/x.jpg", f"{a.id}/../{b.id}/x.jpg"):
+        r = rest(a.token).patch("/meals", params={"id": f"eq.{m['id']}"},
+                                json={"photo_path": bad})
+        assert r.status_code in (400, 403), bad
+    row = service.get("/meals", params={"id": f"eq.{m['id']}"}).json()[0]
+    assert row["photo_path"] is None
+    r = rest(a.token).patch("/meals", params={"id": f"eq.{m['id']}"},
+                            json={"photo_path": f"{a.id}/x.jpg"},
+                            headers={"Prefer": "return=representation"})
+    assert r.status_code == 200 and r.json()[0]["photo_path"] == f"{a.id}/x.jpg"
+
+
+def test_progress_photo_path_must_be_in_owner_folder(make_user, rest, service):
+    a, b = make_user("client"), make_user("client")
+    c = service.post("/checkins", json={"user_id": a.id, "checked_on": DAY}).json()[0]
+    poses = iter(["front", "side", "back", "front"])
+    for bad in (f"{b.id}/x.jpg", f"{a.id}/../{b.id}/x.jpg"):
+        r = rest(a.token).post("/progress_photos", json={
+            "user_id": a.id, "checkin_id": c["id"], "pose": next(poses), "photo_path": bad})
+        assert r.status_code in (400, 403), bad
+    r = rest(a.token).post("/progress_photos", json={
+        "user_id": a.id, "checkin_id": c["id"], "pose": "back", "photo_path": f"{a.id}/ok.jpg"})
+    assert r.status_code == 201
