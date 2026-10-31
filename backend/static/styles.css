@@ -571,40 +571,31 @@ button { cursor: pointer; }
   margin: 0 auto;
   padding: 56px 0 40px;
 }
-/* Ring with soft meal-colour glows; on a mouse they lean toward the cursor
-   (auth-ui.js sets --gx/--gy/--rx/--ry), on touch they drift slowly. */
+/* A soft halo in the meal colours hugs the ring; it brightens on hover. */
 .gate-orb {
-  --gx: 0px; --gy: 0px; --rx: 0deg; --ry: 0deg;
   position: relative;
   justify-self: center;
   display: grid;
   place-items: center;
-  width: 200px;
-  height: 200px;
-  margin-bottom: 4px;
-  transform: perspective(600px) rotateX(var(--rx)) rotateY(var(--ry));
-  transition: transform 300ms ease-out;
+  margin-bottom: 12px;
 }
 .orb-glow {
   position: absolute;
-  inset: -30px;
+  inset: -18px;
   border-radius: 50%;
-  background:
-    radial-gradient(closest-side at 30% 30%, var(--breakfast), transparent),
-    radial-gradient(closest-side at 72% 34%, var(--snack), transparent),
-    radial-gradient(closest-side at 64% 74%, var(--dinner), transparent),
-    radial-gradient(closest-side at 30% 70%, var(--lunch), transparent);
-  filter: blur(32px);
-  opacity: 0.55;
-  transform: translate(var(--gx), var(--gy));
-  transition: transform 400ms ease-out, opacity 300ms;
-  animation: orb-drift 14s ease-in-out infinite alternate;
+  /* Colours follow the arcs, starting at the top like the ring. */
+  background: conic-gradient(var(--breakfast) 0 20%, var(--lunch) 23% 46%,
+    var(--dinner) 50% 77%, var(--snack) 80% 91%, var(--breakfast) 100%);
+  -webkit-mask: radial-gradient(closest-side, transparent 55%, #000 68%, #000 80%, transparent 100%);
+  mask: radial-gradient(closest-side, transparent 55%, #000 68%, #000 80%, transparent 100%);
+  filter: blur(10px);
+  opacity: 0.3;
+  transition: opacity 250ms ease-out, filter 250ms ease-out;
 }
-.gate-orb.is-tracking .orb-glow { animation: none; opacity: 0.75; }
-@keyframes orb-drift {
-  0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
-  50%  { transform: translate(8px, -6px) rotate(120deg) scale(1.06); }
-  100% { transform: translate(-6px, 8px) rotate(240deg) scale(0.97); }
+.gate-orb .gate-ring circle:not(.track) { transition: filter 250ms ease-out; }
+@media (hover: hover) {
+  .gate-orb:hover .orb-glow { opacity: 0.85; filter: blur(14px); }
+  .gate-orb:hover .gate-ring circle:not(.track) { filter: drop-shadow(0 0 10px var(--c)); }
 }
 .gate-ring {
   position: relative;
@@ -680,15 +671,14 @@ button { cursor: pointer; }
 .gate .field:has([aria-invalid]) { border-color: rgba(239, 122, 108, 0.7); background: rgba(239, 122, 108, 0.08); }
 @keyframes alert-in { from { opacity: 0; transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) {
-  .gate .status, .orb-glow { animation: none; }
-  .gate-orb, .orb-glow { transition: none; }
+  .gate .status { animation: none; }
+  .orb-glow, .gate-orb .gate-ring circle { transition: none; }
 }
 .gate-switch { text-align: center; color: var(--gate-muted); }
 .gate-switch a { color: var(--gate-ink); font-weight: 600; text-underline-offset: 3px; }
 
 @media (min-width: 800px) {
   .gate { padding-top: 12vh; }
-  .gate-orb { width: 240px; height: 240px; }
   .gate-ring { width: 150px; height: 150px; }
 }
 
