@@ -91,3 +91,12 @@ class SettingsIn(BaseModel):
 
 class SettingsOut(SettingsIn):
     goal_set_by: str | None = None
+
+
+class WeightIn(BaseModel):
+    weight_kg: float = Field(ge=30, le=300)
+
+
+class WeightOut(BaseModel):
+    logged_on: str
+    weight_kg: float

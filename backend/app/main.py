@@ -7,10 +7,20 @@ from fastapi.responses import JSONResponse
 from . import config
 from .analysis import AnalysisError, analyze_meal
 from .auth import User, current_user
-from .schemas import AnalyzeResponse, DayLog, MealIn, MealOut, ProfileOut, RoleIn, SettingsIn, SettingsOut
+from .schemas import AnalyzeResponse, DayLog, MealIn, MealOut, ProfileOut, RoleIn, SettingsIn, SettingsOut, WeightIn, WeightOut
 from .store import ProfileExists, SettingsExist, Store, StoreUnavailable, get_store
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def parse_day(value: str, field: str) -> datetime.date:
+    """Parse a strict YYYY-MM-DD calendar date or raise 400."""
+    try:
+        if not DATE_RE.match(value):
+            raise ValueError(value)
+        return datetime.date.fromisoformat(value)
+    except ValueError:
+        raise HTTPException(400, f"{field} must be a real YYYY-MM-DD date")
 
 
 app = FastAPI(title="Calorie Tracker")
@@ -84,12 +94,7 @@ def create_meal(meal: MealIn, store: Store = Depends(require_profile)):
 
 @app.get("/api/meals", response_model=DayLog)
 def list_meals(date: str = Query(..., description="YYYY-MM-DD"), store: Store = Depends(require_profile)):
-    try:
-        if not DATE_RE.match(date):
-            raise ValueError(date)
-        day = datetime.date.fromisoformat(date)
-    except ValueError:
-        raise HTTPException(400, "date must be a real YYYY-MM-DD date")
+    day = parse_day(date, "date")
     meals = store.meals_on(day)
     items = [i for m in meals for i in m.items]
     return DayLog(
@@ -120,6 +125,32 @@ def put_settings(body: SettingsIn, only_if_empty: str = Query("0"),
         return store.put_settings(body, only_if_empty=only_if_empty.lower() in ("1", "true"))
     except SettingsExist:
         raise HTTPException(409, "settings_exist")
+
+
+MAX_WEIGHT_SPAN_DAYS = 400
+
+
+@app.get("/api/weights", response_model=list[WeightOut])
+def list_weights(from_: str = Query(..., alias="from", description="YYYY-MM-DD"),
+                 to: str = Query(..., description="YYYY-MM-DD"),
+                 store: Store = Depends(require_profile)):
+    start, end = parse_day(from_, "from"), parse_day(to, "to")
+    if start > end:
+        raise HTTPException(400, "from must not be after to")
+    if (end - start).days > MAX_WEIGHT_SPAN_DAYS:
+        raise HTTPException(400, f"range must be at most {MAX_WEIGHT_SPAN_DAYS} days")
+    return store.weights_between(start, end)
+
+
+@app.put("/api/weights/{day}", response_model=WeightOut)
+def put_weight(day: str, body: WeightIn, store: Store = Depends(require_profile)):
+    return store.upsert_weight(parse_day(day, "date"), body.weight_kg)
+
+
+@app.delete("/api/weights/{day}", status_code=204)
+def remove_weight(day: str, store: Store = Depends(require_profile)):
+    if not store.delete_weight(parse_day(day, "date")):
+        raise HTTPException(404, "Weight not found")
 
 
 # Serves static/index.html and its assets at "/". API routes above are matched first.

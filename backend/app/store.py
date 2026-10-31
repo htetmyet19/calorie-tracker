@@ -12,7 +12,7 @@ from fastapi import Depends
 
 from . import config
 from .auth import User, current_user
-from .schemas import FoodItem, MealIn, MealOut, SettingsIn
+from .schemas import FoodItem, MealIn, MealOut, SettingsIn, WeightOut
 
 
 # One pooled client per process, so warm serverless invocations reuse open TLS
@@ -161,6 +161,44 @@ class Store:
                 prefer="resolution=merge-duplicates,return=representation")
         self._check(resp)
         return self._settings_row(resp.json()[0])
+
+    @staticmethod
+    def _to_weight(row: dict) -> WeightOut:
+        return WeightOut(logged_on=row["logged_on"], weight_kg=round(float(row["weight_kg"]), 2))
+
+    def weights_between(self, start: datetime.date, end: datetime.date) -> list[WeightOut]:
+        resp = self._request("GET", "/weight_logs", params={
+            "user_id": f"eq.{self.user.id}",
+            "and": f"(logged_on.gte.{start.isoformat()},logged_on.lte.{end.isoformat()})",
+            "order": "logged_on.asc",
+        })
+        self._check(resp)
+        return [self._to_weight(r) for r in resp.json()]
+
+    def upsert_weight(self, day: datetime.date, kg: float) -> WeightOut:
+        kg = round(kg, 2)
+        resp = self._request(
+            "POST", "/weight_logs", write=True,
+            json={"user_id": self.user.id, "logged_on": day.isoformat(), "weight_kg": kg},
+            params={"on_conflict": "user_id,logged_on"},
+            prefer="resolution=merge-duplicates,return=representation")
+        self._check(resp)
+        out = self._to_weight(resp.json()[0])
+        # Keep the profile weight in step. Upserting only this column leaves every
+        # other settings column (goal, reminders, goal_set_by) untouched.
+        sync = self._request(
+            "POST", "/client_settings", write=True,
+            json={"user_id": self.user.id, "weight_kg": kg},
+            params={"on_conflict": "user_id"},
+            prefer="resolution=merge-duplicates,return=minimal")
+        self._check(sync)
+        return out
+
+    def delete_weight(self, day: datetime.date) -> bool:
+        resp = self._request("DELETE", "/weight_logs", write=True, params={
+            "user_id": f"eq.{self.user.id}", "logged_on": f"eq.{day.isoformat()}"})
+        self._check(resp)
+        return bool(resp.json()) if resp.content else False
 
 
 def get_store(user: User = Depends(current_user)) -> Store:
