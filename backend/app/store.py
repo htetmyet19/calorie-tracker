@@ -173,6 +173,8 @@ class Store:
         row = dict(row)
         if row.get("activity") is not None:
             row["activity"] = round(float(row["activity"]), 3)
+        if row.get("goal_weight_kg") is not None:
+            row["goal_weight_kg"] = round(float(row["goal_weight_kg"]), 2)
         return row
 
     def get_settings(self) -> dict | None:
@@ -206,6 +208,8 @@ class Store:
     # The values a user saves from the calculator or goal field. A row where all are
     # null exists only because of a weight log or a push subscription.
     SAVED_SETTINGS = ("height_cm", "age", "sex", "activity", "weight_goal", "goal_kcal")
+    # Sent with a goal, filled alongside the saved values (null for a hand-typed goal)
+    GOAL_BASIS = ("goal_weight_kg",)
 
     def _fill_empty_settings(self, s: SettingsIn, body: dict) -> httpx.Response:
         """Fill an existing row that has no saved values; SettingsExist otherwise.
@@ -214,7 +218,7 @@ class Store:
         cannot both win. Weight, unit and reminders flag change only when the
         caller sent them explicitly.
         """
-        patch = {k: body[k] for k in (*self.SAVED_SETTINGS, "updated_at")}
+        patch = {k: body[k] for k in (*self.SAVED_SETTINGS, *self.GOAL_BASIS, "updated_at")}
         for k in ("weight_kg", "weight_unit", "reminders_enabled"):
             if k in s.model_fields_set:
                 patch[k] = body[k]

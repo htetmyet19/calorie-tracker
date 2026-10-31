@@ -120,6 +120,7 @@ async function loadCheckins() {
     checkinsAt = Date.now();
     setMsg("checkin-when", checkinText(data, t));
     $("checkin-start").hidden = !data.due;
+    card.classList.toggle("is-due", !!data.due);
     renderTimeline();
   } catch (err) {
     setMsg("checkin-status", err.message);
@@ -272,7 +273,8 @@ function renderWeights() {
   const summary = weightSummary(weights, unit);
   $("weight-empty").hidden = !!summary;
   $("weight-summary").hidden = !summary;
-  svg.hidden = !summary;
+  // SVG elements have no .hidden property, so the attribute is set directly.
+  svg.toggleAttribute("hidden", !summary);
   svg.replaceChildren();
   if (!summary) return;
   setMsg("weight-latest", summary.latest);
@@ -283,7 +285,19 @@ function renderWeights() {
   const points = linePoints(values, W, H - LABEL, PAD);
   svg.setAttribute("aria-label", weightLabel(weights, unit));
   svg.append(svgEl("line", { class: "axis", x1: 0, x2: W, y1: H - LABEL, y2: H - LABEL }));
-  if (values.length > 1) svg.append(svgEl("polyline", { class: "line", points }));
+  if (values.length > 1) {
+    // A lime fade under the line, from the line down to the axis.
+    const fade = svgEl("linearGradient", { id: "weight-fade", x1: 0, y1: 0, x2: 0, y2: 1 });
+    fade.append(svgEl("stop", { offset: "0", "stop-color": "#c6f36b", "stop-opacity": "0.28" }),
+      svgEl("stop", { offset: "1", "stop-color": "#c6f36b", "stop-opacity": "0" }));
+    const pts = points.split(" ");
+    const base = H - LABEL;
+    const defs = svgEl("defs");
+    defs.append(fade);
+    svg.append(defs,
+      svgEl("polygon", { class: "area", points: `${pts[0].split(",")[0]},${base} ${points} ${pts[pts.length - 1].split(",")[0]},${base}` }),
+      svgEl("polyline", { class: "line", points }));
+  }
   for (const p of points.split(" ")) {
     const [cx, cy] = p.split(",");
     svg.append(svgEl("circle", { class: "dot", cx, cy, r: 3.5 }));
@@ -399,7 +413,7 @@ function renderCalories() {
   const label = svgEl("text", { class: "goal-label", x: W, y: TOP + goalY - 4, "text-anchor": "end" });
   label.textContent = `Goal ${kcal(goal)}`;
   svg.append(label);
-  svg.hidden = false;
+  svg.removeAttribute("hidden"); // SVG elements have no .hidden property
 }
 
 // ---------- Start ----------

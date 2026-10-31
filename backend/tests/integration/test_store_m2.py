@@ -108,3 +108,25 @@ def test_backdated_weight_does_not_overwrite_profile_weight(make_user):
     # the last log gone: the profile weight stays as it was
     assert s.delete_weight(today - datetime.timedelta(days=30)) is True
     assert s.get_settings()["weight_kg"] == 85
+
+
+def test_goal_weight_saved_and_kept_when_weight_is_logged(make_user, service):
+    import datetime
+    u = make_user()
+    s = _store(u)
+    out = s.put_settings(SettingsIn(weight_kg=74, goal_kcal=1800, goal_weight_kg=74.05))
+    assert out["goal_weight_kg"] == 74.05
+    s.upsert_weight(datetime.date(2026, 10, 31), 71.5)
+    st = s.get_settings()
+    assert st["weight_kg"] == 71.5 and st["goal_weight_kg"] == 74.05  # the goal's basis stays
+    r = service.patch("/client_settings", params={"user_id": f"eq.{u.id}"},
+                      json={"goal_weight_kg": 29})
+    assert r.status_code == 400  # check constraint
+
+
+def test_goal_weight_filled_with_only_if_empty(make_user):
+    import datetime
+    s = _store(make_user())
+    s.upsert_weight(datetime.date(2026, 10, 31), 65.5)  # row exists, nothing saved yet
+    out = s.put_settings(SettingsIn(goal_kcal=1700, goal_weight_kg=65.5), only_if_empty=True)
+    assert out["goal_kcal"] == 1700 and out["goal_weight_kg"] == 65.5

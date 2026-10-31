@@ -4,7 +4,7 @@
 
 const SETTINGS_DEFAULTS = {
   height_cm: null, weight_kg: null, age: null, sex: null, activity: null,
-  weight_goal: null, goal_kcal: null, weight_unit: "kg", reminders_enabled: false,
+  weight_goal: null, goal_kcal: null, goal_weight_kg: null, weight_unit: "kg", reminders_enabled: false,
 };
 
 // PUT /api/settings replaces every field, so a partial change is merged into the
