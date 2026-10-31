@@ -35,6 +35,15 @@ function inputWeight(kg, unit) {
   return Math.min(max, Math.max(min, fromKg(kg, unit)));
 }
 
+// The message for a typed weight, or "" when it is valid (Progress and Check-in).
+function weightError(raw, unit) {
+  const v = Number(raw);
+  if (String(raw).trim() === "" || !Number.isFinite(v)) return "Enter your weight.";
+  const { min, max } = weightRange(unit);
+  if (v < min || v > max) return `Enter a weight between ${min} and ${max} ${unit}.`;
+  return "";
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { KG_PER_LB, toKg, fromKg, formatWeight, weightRange, inputWeight };
+  module.exports = { KG_PER_LB, toKg, fromKg, formatWeight, weightRange, inputWeight, weightError };
 }

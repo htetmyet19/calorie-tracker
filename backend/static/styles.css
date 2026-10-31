@@ -873,3 +873,52 @@ body.has-tabbar { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
   font-size: var(--step--1); text-align: center;
 }
 .compare-pane figcaption { margin-top: 4px; font-weight: 600; text-align: center; }
+
+/* ---------- Weekly check-in ---------- */
+.checkin {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 16px 40px;
+  display: grid;
+  gap: 12px;
+}
+.checkin .status:empty { min-height: 0; margin: 0; }
+.checkin-top { display: flex; align-items: center; justify-content: space-between; min-height: 40px; }
+.checkin-back { text-decoration: none; }
+.dots { display: flex; gap: 6px; margin-left: auto; }
+.dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.dots span.is-on { background: var(--ink); }
+.step-count { color: var(--muted); font-size: var(--step--1); }
+.step-title { font-size: var(--step-2); font-weight: 700; letter-spacing: -0.02em; margin: 4px 0 16px; }
+.step-title:focus { outline: none; }
+.step-title:focus-visible { outline: 2px solid var(--focus); }
+.ci-unit-pick { margin-top: 12px; }
+.checkin .hint { margin: 10px 0 0; }
+.step-actions { display: flex; align-items: center; gap: 16px; margin-top: 24px; }
+.step-actions .btn-primary { flex: 1; padding: 13px 18px; }
+.step-actions .btn-quiet { padding: 13px 8px; }
+.photo-drop { aspect-ratio: 3 / 4; max-height: 52vh; display: grid; place-items: center; }
+.photo-drop .drop-empty { padding: 24px; }
+.photo-preview { width: 100%; height: 100%; object-fit: cover; }
+.photo-drop.is-failed { outline: 2px dashed var(--chili); background: color-mix(in srgb, var(--chili) 8%, var(--field)); }
+
+.checkin-done { text-align: center; }
+.done-mark { width: 64px; height: 64px; margin: 4px auto 12px; border-radius: 50%; background: var(--ink); display: grid; place-items: center; }
+.done-mark svg { width: 32px; height: 32px; fill: none; stroke: var(--surface); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.done-saved { font-size: var(--step-1); font-weight: 600; }
+.done-summary { margin-top: 4px; color: var(--ink-2); font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+.done-retry { display: grid; gap: 8px; justify-items: center; margin-top: 12px; }
+.done-retry .btn { color: var(--chili); }
+.remind { margin-top: 20px; padding: 14px; border-radius: 12px; background: var(--field); text-align: left; }
+.remind-title { font-weight: 600; }
+.remind-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.done-back { display: inline-block; margin-top: 20px; }
+
+/* Settings: notifications blocked */
+.settings-reminders .hint.is-blocked {
+  padding: 10px 12px;
+  border: 1px solid var(--chili);
+  border-radius: 10px;
+  color: var(--chili);
+  background: color-mix(in srgb, var(--chili) 8%, var(--surface));
+}

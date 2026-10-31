@@ -1,6 +1,6 @@
 // Shared by the app pages: bottom bar, Settings panel and the settings cache.
-// Needs auth.js (api, logout) loaded first. settingsBody and legacySettings are
-// pure so Node can test them (tests/nav.test.js).
+// Needs auth.js (api, logout) loaded first, and push.js for the reminders switch.
+// settingsBody and legacySettings are pure so Node can test them (tests/nav.test.js).
 
 const SETTINGS_DEFAULTS = {
   height_cm: null, weight_kg: null, age: null, sex: null, activity: null,
@@ -140,6 +140,19 @@ function saveSettings(partial) {
   return run;
 }
 
+// Drops the cached settings and loads them again, e.g. after the reminders
+// routes changed reminders_enabled on the server. Queued behind pending saves.
+function refreshSettings() {
+  const run = saveChain.then(async () => {
+    settingsPromise = null;
+    const s = await loadSettings();
+    document.dispatchEvent(new CustomEvent("settingschange", { detail: s }));
+    return s;
+  });
+  saveChain = run.catch(() => {});
+  return run;
+}
+
 // ---------- Bottom bar and Settings panel ----------
 
 const TABS = [
@@ -165,6 +178,11 @@ function renderTabbar(active) {
   document.body.classList.add("has-tabbar");
 }
 
+const REMINDERS_HINT = "A notification when your weekly check-in is due.";
+const REMINDERS_BLOCKED = "Notifications are blocked. In Chrome: ⋮ → Settings → Site settings → Notifications";
+const REMINDERS_UNAVAILABLE = "Reminders aren't available yet.";
+const REMINDERS_UNSUPPORTED = "This browser can't show reminders.";
+
 const SETTINGS_HTML = `
   <div class="settings-head">
     <h2 id="settings-title" class="section-title">Settings</h2>
@@ -177,10 +195,10 @@ const SETTINGS_HTML = `
       <label><input type="radio" name="weight-unit" value="lb">lb</label>
     </div>
   </fieldset>
-  <div class="settings-reminders" id="settings-reminders" hidden>
+  <div class="settings-reminders" id="settings-reminders">
     <label class="switch-row">
       <span>Weekly reminders</span>
-      <input type="checkbox" role="switch" id="reminders-switch" class="switch">
+      <input type="checkbox" role="switch" id="reminders-switch" class="switch" aria-describedby="reminders-hint">
     </label>
     <p class="hint" id="reminders-hint">A notification when your weekly check-in is due.</p>
   </div>
@@ -204,6 +222,37 @@ function renderSettingsPanel() {
     const radio = dialog.querySelector(`input[name="weight-unit"][value="${unit}"]`);
     if (radio) radio.checked = true;
   };
+
+  // Weekly reminders switch: reflects reminders_enabled; a blocked permission
+  // shows how to unblock it and keeps the switch off.
+  const remSwitch = dialog.querySelector("#reminders-switch");
+  const remHint = dialog.querySelector("#reminders-hint");
+  const showReminders = (enabled) => {
+    const supported = typeof pushSupported === "function" && pushSupported();
+    const blocked = supported && Notification.permission === "denied";
+    remSwitch.checked = !!enabled && supported && !blocked;
+    remSwitch.disabled = !supported || blocked;
+    remHint.textContent = !supported ? REMINDERS_UNSUPPORTED : blocked ? REMINDERS_BLOCKED : REMINDERS_HINT;
+    remHint.classList.toggle("is-blocked", blocked);
+  };
+  remSwitch.addEventListener("change", async () => {
+    setPanelStatus("");
+    const want = remSwitch.checked;
+    remSwitch.disabled = true;
+    try {
+      if (want) {
+        const result = await enableReminders();
+        if (result === "unavailable") setPanelStatus(REMINDERS_UNAVAILABLE, true);
+        showReminders(result === "enabled");
+      } else {
+        await disableReminders();
+        showReminders(false);
+      }
+    } catch (err) {
+      setPanelStatus(err.message, true);
+      showReminders(lastSettings ? lastSettings.reminders_enabled : !want);
+    }
+  });
 
   dialog.querySelector("#settings-close").addEventListener("click", () => dialog.close());
   dialog.querySelectorAll('input[name="weight-unit"]').forEach((radio) => {
@@ -231,8 +280,11 @@ function renderSettingsPanel() {
   open.addEventListener("click", async () => {
     setPanelStatus("");
     dialog.showModal();
+    if (typeof preloadPushKey === "function" && pushSupported()) preloadPushKey().catch(() => {});
     try {
-      showUnit((await loadSettings()).weight_unit);
+      const settings = await loadSettings();
+      showUnit(settings.weight_unit);
+      showReminders(settings.reminders_enabled);
     } catch (err) {
       setPanelStatus(err.message, true);
     }
@@ -248,5 +300,5 @@ function initNav(active) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { settingsBody, legacySettings, moveLegacySettings, loadSettings, saveSettings, SETTINGS_DEFAULTS };
+  module.exports = { settingsBody, legacySettings, moveLegacySettings, loadSettings, saveSettings, refreshSettings, SETTINGS_DEFAULTS };
 }

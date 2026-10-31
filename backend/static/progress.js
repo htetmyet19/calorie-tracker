@@ -46,14 +46,6 @@ function caloriesLabel(days, goal) {
   return `Calories over the last ${days.length} days against a goal of ${kcal(goal)} kcal: ${parts.join(", ")}`;
 }
 
-function weightError(raw, unit) {
-  const v = Number(raw);
-  if (String(raw).trim() === "" || !Number.isFinite(v)) return "Enter your weight.";
-  const { min, max } = weightRange(unit);
-  if (v < min || v > max) return `Enter a weight between ${min} and ${max} ${unit}.`;
-  return "";
-}
-
 function dateError(value, today) {
   if (!value) return "Choose a date.";
   if (value > today) return "The date can't be in the future.";
