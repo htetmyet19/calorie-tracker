@@ -9,13 +9,16 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from . import config
 from .analysis import AnalysisError, analyze_meal
 from .auth import User, current_user
-from .schemas import AnalyzeResponse, DayLog, MealIn, MealOut, ProfileOut, RoleIn, SettingsIn, SettingsOut, WeightIn, WeightOut
+from .checkin_rules import is_due, next_due_on
+from .schemas import (AnalyzeResponse, CheckinIn, CheckinList, CheckinOut, DayLog, MealIn, MealOut, PhotoOut, PhotoRecordIn, PhotoUploadIn, ProfileOut, RoleIn,
+                      SettingsIn, SettingsOut, WeightIn, WeightOut)
 from .storage import Storage, StorageError, UploadRejected, new_path
 from .store import ProfileExists, SettingsExist, Store, StoreUnavailable, get_store
 
 log = logging.getLogger("calorie_tracker")
 
 MEAL_BUCKET = "meal-photos"
+PROGRESS_BUCKET = "progress-photos"
 MAX_MEAL_PHOTO_BYTES = 300 * 1024
 MEAL_PHOTO_TYPES = ("image/jpeg", "image/png", "image/webp")
 SIGNED_URL_SECONDS = 300
@@ -217,6 +220,94 @@ def put_weight(day: str, body: WeightIn, store: Store = Depends(require_profile)
 def remove_weight(day: str, store: Store = Depends(require_profile)):
     if not store.delete_weight(parse_day(day, "date")):
         raise HTTPException(404, "Weight not found")
+
+
+@app.post("/api/checkins", response_model=CheckinOut, status_code=201)
+def create_checkin(body: CheckinIn, store: Store = Depends(require_profile)):
+    day = parse_day(body.checked_on, "checked_on")
+    row = store.create_checkin(day, body.weight_kg)
+    store.reset_reminders()
+    return CheckinOut(id=row["id"], checked_on=row["checked_on"], weight_kg=row["weight_kg"])
+
+
+def _own_checkin(store: Store, checkin_id: int) -> dict:
+    row = store.get_checkin(checkin_id)
+    if row is None:
+        raise HTTPException(404, "Check-in not found")
+    return row
+
+
+@app.post("/api/checkins/{checkin_id}/photos/upload-url")
+def checkin_photo_upload_url(checkin_id: int, body: PhotoUploadIn,
+                             store: Store = Depends(require_profile),
+                             storage: Storage = Depends(get_storage)):
+    _own_checkin(store, checkin_id)
+    path = new_path(store.user.id)
+    try:
+        url = storage.signed_upload_url(PROGRESS_BUCKET, path)
+    except StorageError:
+        raise HTTPException(502, "Could not prepare the upload.")
+    return {"upload_url": url, "path": path}
+
+
+@app.post("/api/checkins/{checkin_id}/photos", response_model=PhotoOut, status_code=201)
+def record_checkin_photo(checkin_id: int, body: PhotoRecordIn,
+                         store: Store = Depends(require_profile),
+                         storage: Storage = Depends(get_storage)):
+    _own_checkin(store, checkin_id)
+    if not body.path.startswith(f"{store.user.id}/") or ".." in body.path:
+        raise HTTPException(400, "Invalid photo path.")
+    if not storage.exists(PROGRESS_BUCKET, body.path):
+        raise HTTPException(400, "photo_not_uploaded")
+    old = store.photo_for_pose(checkin_id, body.pose)
+    row = store.upsert_photo(checkin_id, body.pose, body.path)
+    if old and old["photo_path"] != body.path:
+        # The row already points at the new file; a leftover is removed by the daily orphan sweep.
+        try:
+            storage.remove(PROGRESS_BUCKET, [old["photo_path"]])
+        except Exception as e:
+            log.warning("progress_photo_delete_failed photo_id=%s error=%s", row["id"], type(e).__name__)
+    try:
+        url = storage.signed_url(PROGRESS_BUCKET, body.path, SIGNED_URL_SECONDS)
+    except StorageError:
+        raise HTTPException(502, "Could not create a link for the photo.")
+    return PhotoOut(id=row["id"], pose=row["pose"], url=url)
+
+
+@app.get("/api/checkins", response_model=CheckinList)
+def list_checkins(today: str = Query(..., description="YYYY-MM-DD, the browser's local date"),
+                  limit: int = Query(26, ge=1, le=100),
+                  store: Store = Depends(require_profile),
+                  storage: Storage = Depends(get_storage)):
+    today_d = parse_day(today, "today")
+    rows = store.list_checkins(limit)
+    checkins = []
+    for r in rows:
+        photos = []
+        for p in r["photos"]:
+            try:
+                url = storage.signed_url(PROGRESS_BUCKET, p["photo_path"], SIGNED_URL_SECONDS)
+            except StorageError:  # row points at a missing object: leave it out
+                continue
+            photos.append(PhotoOut(id=p["id"], pose=p["pose"], url=url))
+        checkins.append(CheckinOut(id=r["id"], checked_on=r["checked_on"],
+                                   weight_kg=r["weight_kg"], photos=photos))
+    last = datetime.date.fromisoformat(rows[0]["checked_on"]) if rows else None
+    return CheckinList(checkins=checkins, next_due_on=next_due_on(last, today_d).isoformat(),
+                       due=is_due(last, today_d))
+
+
+@app.delete("/api/progress-photos/{photo_id}", status_code=204)
+def remove_progress_photo(photo_id: int, store: Store = Depends(require_profile),
+                          storage: Storage = Depends(get_storage)):
+    row = store.delete_photo_returning(photo_id)
+    if row is None:
+        raise HTTPException(404, "Photo not found")
+    try:
+        storage.remove(PROGRESS_BUCKET, [row["photo_path"]])
+    except Exception as e:
+        log.warning("progress_photo_delete_failed photo_id=%s error=%s", photo_id, type(e).__name__)
+    return Response(status_code=204)
 
 
 # Serves static/index.html and its assets at "/". API routes above are matched first.

@@ -101,3 +101,36 @@ class WeightIn(BaseModel):
 class WeightOut(BaseModel):
     logged_on: str
     weight_kg: float
+
+
+class CheckinIn(BaseModel):
+    checked_on: str = Field(description="YYYY-MM-DD")
+    weight_kg: float | None = Field(default=None, ge=30, le=300)
+
+
+class PhotoUploadIn(BaseModel):
+    pose: Literal["front", "side", "back"]
+
+
+class PhotoRecordIn(BaseModel):
+    pose: Literal["front", "side", "back"]
+    path: str
+
+
+class PhotoOut(BaseModel):
+    id: int
+    pose: Literal["front", "side", "back"]
+    url: str
+
+
+class CheckinOut(BaseModel):
+    id: int
+    checked_on: str
+    weight_kg: float | None = None
+    photos: list[PhotoOut] = []
+
+
+class CheckinList(BaseModel):
+    checkins: list[CheckinOut]
+    next_due_on: str
+    due: bool

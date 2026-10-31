@@ -219,5 +219,85 @@ class Store:
         return bool(resp.json()) if resp.content else False
 
 
+    # ---- check-ins and progress photos ----
+
+    def create_checkin(self, day: datetime.date, kg: float | None) -> dict:
+        """Create a check-in; with a weight, upsert that day's weight log and link it."""
+        weight_log_id = None
+        if kg is not None:
+            out = self.upsert_weight(day, kg)
+            resp = self._request("GET", "/weight_logs", params={
+                "user_id": f"eq.{self.user.id}", "logged_on": f"eq.{day.isoformat()}",
+                "select": "id"})
+            self._check(resp)
+            weight_log_id = resp.json()[0]["id"]
+            kg = out.weight_kg
+        resp = self._request("POST", "/checkins", write=True, json={
+            "user_id": self.user.id, "checked_on": day.isoformat(),
+            "weight_log_id": weight_log_id})
+        self._check(resp)
+        row = resp.json()[0]
+        return {"id": row["id"], "checked_on": row["checked_on"], "weight_kg": kg}
+
+    def reset_reminders(self) -> None:
+        # Single-column upsert: leaves every other settings column untouched.
+        resp = self._request(
+            "POST", "/client_settings", write=True,
+            json={"user_id": self.user.id, "reminders_sent": 0},
+            params={"on_conflict": "user_id"},
+            prefer="resolution=merge-duplicates,return=minimal")
+        self._check(resp)
+
+    def get_checkin(self, checkin_id: int) -> dict | None:
+        resp = self._request("GET", "/checkins", params={
+            "id": f"eq.{checkin_id}", "user_id": f"eq.{self.user.id}"})
+        self._check(resp)
+        rows = resp.json()
+        return rows[0] if rows else None
+
+    def list_checkins(self, limit: int) -> list[dict]:
+        resp = self._request("GET", "/checkins", params={
+            "user_id": f"eq.{self.user.id}",
+            "select": "id,checked_on,weight_logs(weight_kg),progress_photos(id,pose,photo_path)",
+            "order": "checked_on.desc,id.desc",
+            "limit": str(limit),
+        })
+        self._check(resp)
+        out = []
+        for r in resp.json():
+            w = r.get("weight_logs")
+            out.append({
+                "id": r["id"], "checked_on": r["checked_on"],
+                "weight_kg": round(float(w["weight_kg"]), 2) if w else None,
+                "photos": sorted(r.get("progress_photos") or [], key=lambda p: p["id"]),
+            })
+        return out
+
+    def photo_for_pose(self, checkin_id: int, pose: str) -> dict | None:
+        resp = self._request("GET", "/progress_photos", params={
+            "checkin_id": f"eq.{checkin_id}", "pose": f"eq.{pose}",
+            "user_id": f"eq.{self.user.id}"})
+        self._check(resp)
+        rows = resp.json()
+        return rows[0] if rows else None
+
+    def upsert_photo(self, checkin_id: int, pose: str, path: str) -> dict:
+        resp = self._request(
+            "POST", "/progress_photos", write=True,
+            json={"user_id": self.user.id, "checkin_id": checkin_id, "pose": pose,
+                  "photo_path": path},
+            params={"on_conflict": "checkin_id,pose"},
+            prefer="resolution=merge-duplicates,return=representation")
+        self._check(resp)
+        return resp.json()[0]
+
+    def delete_photo_returning(self, photo_id: int) -> dict | None:
+        resp = self._request("DELETE", "/progress_photos", write=True, params={
+            "id": f"eq.{photo_id}", "user_id": f"eq.{self.user.id}"})
+        self._check(resp)
+        rows = resp.json() if resp.content else []
+        return rows[0] if rows else None
+
+
 def get_store(user: User = Depends(current_user)) -> Store:
     return Store(user)
