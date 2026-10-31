@@ -64,6 +64,7 @@
 
     $("signup-form").addEventListener("submit", (e) => {
       e.preventDefault();
+      if (!validate(e.currentTarget)) return;
       run(async () => {
         const client = await initAuth();
         const { data, error } = await client.auth.signUp({
@@ -74,7 +75,7 @@
         });
         if (error) throw error;
         if (!data.session) {
-          setStatus("Check your email to confirm your account, then log in.");
+          setStatus("Check your email to confirm your account, then log in.", "success");
           return;
         }
         location = next;
