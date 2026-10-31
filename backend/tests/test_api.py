@@ -155,9 +155,13 @@ def test_impossible_date_is_400(client, date):
     assert r.json()["detail"] == "date must be a real YYYY-MM-DD date"
 
 
-@pytest.mark.parametrize("bad", ["2026-02-30T08:00", "yesterday", "2026-10-31T08:00:00"])
+@pytest.mark.parametrize("bad", ["2026-02-30T08:00", "yesterday", "2026-10-31T08:00:00", "2026-1-3T8:0", "2026-10-31T8:15"])
 def test_malformed_eaten_at_is_422(client, bad):
     assert client.post("/api/meals", json={**MEAL, "eaten_at": bad}).status_code == 422
+
+
+def test_canonical_eaten_at_is_accepted(client):
+    assert client.post("/api/meals", json={**MEAL, "eaten_at": "2026-10-31T08:15"}).status_code == 201
 
 
 def test_delete_missing_meal_is_404(client_store_down):

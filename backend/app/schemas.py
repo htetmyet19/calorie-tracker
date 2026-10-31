@@ -36,7 +36,9 @@ class MealIn(BaseModel):
     @classmethod
     def _real_datetime(cls, v: str) -> str:
         try:
-            datetime.datetime.strptime(v, "%Y-%m-%dT%H:%M")
+            parsed = datetime.datetime.strptime(v, "%Y-%m-%dT%H:%M")
+            if parsed.strftime("%Y-%m-%dT%H:%M") != v:
+                raise ValueError(v)
         except ValueError:
             raise ValueError("eaten_at must be a real datetime like 2026-10-31T08:00")
         return v
