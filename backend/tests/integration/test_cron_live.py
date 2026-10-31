@@ -208,3 +208,19 @@ def test_orphan_sweep_keeps_referenced_and_recent_objects(make_user, service, st
     assert out["photos_removed"] >= 2
     for (bucket, kind), path in objs.items():
         assert _exists(storage, bucket, path) == (kind == "referenced"), (bucket, kind)
+
+
+def test_orphan_sweep_with_many_referenced_objects_completes(make_user, service, storage, upload_object):
+    """100+ old candidate paths for one user once overflowed the gateway URL limit (414)."""
+    import uuid
+    u = make_user()
+    paths = [f"{u.id}/{uuid.uuid4().hex}.jpg" for _ in range(130)]
+    for p in paths:
+        assert upload_object(u, "meal-photos", p) == 200
+    r = service.post("/meals", json=[{
+        "user_id": u.id, "eaten_at": datetime.now().isoformat(), "meal_type": "lunch",
+        "items": [{"name": "rice"}], "total_calories": 500, "photo_path": p} for p in paths])
+    assert r.status_code == 201, r.text
+    out = cron.run_daily(datetime.now(timezone.utc) + timedelta(days=2), send=Sender())
+    assert out["failures"] == 0
+    assert all(_exists(storage, "meal-photos", p) for p in paths)

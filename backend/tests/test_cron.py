@@ -58,9 +58,10 @@ class FakeDb:
         self.failures = list(failures)                 # deletion_failures rows
         self.progress = list(progress)                 # {"photo_path"}
         self.remove_fail, self.patch_fail, self.delete_fail = set(remove_fail), set(patch_fail), set(delete_fail)
-        self.calls = []
+        self.calls, self.urls = [], []
 
     def handler(self, request: httpx.Request) -> httpx.Response:
+        self.urls.append((request.method, str(request.url)))
         q = dict(request.url.params)
         path = request.url.path.removeprefix("/rest/v1")
         self.calls.append((request.method, path, q))
@@ -422,3 +423,33 @@ def test_orphan_removal_failure_goes_to_deletion_failures():
     out = cron.run_daily(NOW, send=Sender(), client=db.client())
     assert out["photos_removed"] == 0 and out["failures"] == 1
     assert db.failures[0]["ref"] == "meal-photos/u1/orphan.jpg"
+
+
+def test_reference_lookups_stay_under_url_limit():
+    import uuid
+    old = "2026-11-05T00:00:00Z"
+    uid = str(uuid.uuid4())
+    paths = [f"{uid}/{uuid.uuid4().hex}.jpg" for _ in range(250)]
+    db = FakeDb(meals=[meal(i, "2026-11-01T10:00:00", p) for i, p in enumerate(paths[:50], 1)],
+                objects={"meal-photos": {p: old for p in paths}})
+    out = cron.run_daily(NOW, send=Sender(), client=db.client())
+    lookups = [u for m, u in db.urls if m == "GET" and "photo_path=in." in u]
+    assert len(lookups) >= 250 // 40 and max(len(u) for u in lookups) < 4000
+    assert out["photos_removed"] == 200 and out["failures"] == 0
+    assert set(db.objects["meal-photos"]) == set(paths[:50])
+
+
+def test_logs_carry_ids_not_paths(caplog):
+    old = "2026-11-05T00:00:00Z"
+    db = FakeDb(meals=[meal(1, "2026-01-01T10:00:00", "u1/secret-a.jpg")],
+                failures=[{"id": 7, "kind": "storage", "ref": "meal-photos/u1/secret-b.jpg",
+                           "attempts": 1, "last_error": "CronError"}],
+                objects={"meal-photos": {"u1/secret-a.jpg": old, "u1/secret-b.jpg": old,
+                                         "u1/secret-c.jpg": old}},
+                remove_fail=["u1/secret-a.jpg", "u1/secret-b.jpg", "u1/secret-c.jpg"])
+    with caplog.at_level("INFO", logger="calorie_tracker"):
+        cron.run_daily(NOW, send=Sender(), client=db.client())
+    msgs = [r.getMessage() for r in caplog.records if r.name == "calorie_tracker"]
+    assert any("photo_remove_failed" in m for m in msgs)
+    assert not any("secret" in m or "u1/" in m for m in msgs)
+    assert any("failure_id=7" in m for m in msgs) and any("meal_id=1" in m for m in msgs)

@@ -30,6 +30,9 @@ PUSH_TTL_SECONDS = 86400
 RETENTION_DAYS = 90
 ORPHAN_GRACE = datetime.timedelta(hours=24)  # an upload may land before its row is written
 MEAL_BUCKET, PROGRESS_BUCKET = "meal-photos", "progress-photos"
+# Paths per reference lookup. Each is ~80 URL chars inside the quoted in.(...) filter and
+# the local gateway answers 414 at 99-100 of them, so stay well below, independent of BATCH.
+REF_CHUNK = 40
 REFERENCES = {MEAL_BUCKET: "/meals", PROGRESS_BUCKET: "/progress_photos"}
 
 
@@ -168,7 +171,8 @@ def _record_failure(db: _Db, ref: str, exc: Exception) -> None:
         log.warning("deletion_failure_record_failed error=%s", type(e).__name__)
 
 
-def _try_remove(db: _Db, state: _Cleanup, bucket: str, path: str) -> bool:
+def _try_remove(db: _Db, state: _Cleanup, bucket: str, path: str, who: str = "") -> bool:
+    """`who` is an ID for the log line (meal_id=.., failure_id=..); paths are never logged."""
     ref = f"{bucket}/{path}"
     if ref in state.failed:
         return False
@@ -177,7 +181,7 @@ def _try_remove(db: _Db, state: _Cleanup, bucket: str, path: str) -> bool:
     try:
         _remove_object(db, bucket, path)
     except CronError as e:
-        log.warning("photo_remove_failed ref=%s error=%s", ref, type(e).__name__)
+        log.warning("photo_remove_failed bucket=%s %s error=%s", bucket, who, type(e).__name__)
         _record_failure(db, ref, e)
         state.failed.add(ref)
         return False
@@ -192,7 +196,7 @@ def _retry_failures(db: _Db, state: _Cleanup, out_of_time: Callable[[], bool]) -
         bucket, _, path = row["ref"].partition("/")
         if not path:
             continue
-        if _try_remove(db, state, bucket, path):
+        if _try_remove(db, state, bucket, path, f"failure_id={row['id']}"):
             try:
                 db.request("DELETE", "/deletion_failures", params={"id": f"eq.{row['id']}"})
             except CronError as e:
@@ -213,7 +217,7 @@ def _cleanup_meals(db: _Db, state: _Cleanup, now_utc: datetime.datetime,
             if out_of_time():
                 return
             # Object first: a failure leaves photo_path set so the meal is tried again.
-            if not _try_remove(db, state, MEAL_BUCKET, row["photo_path"]):
+            if not _try_remove(db, state, MEAL_BUCKET, row["photo_path"], f"meal_id={row['id']}"):
                 continue
             try:
                 db.request("PATCH", "/meals", json={"photo_path": None}, params={
@@ -252,8 +256,8 @@ def _sweep_bucket(db: _Db, state: _Cleanup, bucket: str, cutoff: datetime.dateti
             created = datetime.datetime.fromisoformat(e["created_at"].replace("Z", "+00:00"))
             if created < cutoff:
                 old.append(f"{folder}/{e['name']}")
-        for i in range(0, len(old), BATCH):
-            chunk = old[i:i + BATCH]
+        for i in range(0, len(old), REF_CHUNK):
+            chunk = old[i:i + REF_CHUNK]
             used = {r["photo_path"] for r in db.get_all(REFERENCES[bucket], {
                 "photo_path": f"in.({','.join(_quote(p) for p in chunk)})", "select": "photo_path"})}
             for path in chunk:
