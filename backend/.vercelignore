@@ -6,3 +6,5 @@ scripts/
 .env.local
 .env*
 .vercel/
+tests/
+supabase/

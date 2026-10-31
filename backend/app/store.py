@@ -4,6 +4,7 @@ Every request carries the user's own JWT, so Row Level Security applies to
 all queries. Errors never include response bodies or credentials.
 """
 import datetime
+import threading
 
 import httpx
 from fastapi import Depends
@@ -11,6 +12,21 @@ from fastapi import Depends
 from . import config
 from .auth import User, current_user
 from .schemas import FoodItem, MealIn, MealOut
+
+
+# One pooled client per process, so warm serverless invocations reuse open TLS
+# connections. No base_url: the full URL is built per request from config.
+_http: httpx.Client | None = None
+_http_lock = threading.Lock()
+
+
+def _client() -> httpx.Client:
+    global _http
+    if _http is None:
+        with _http_lock:
+            if _http is None:
+                _http = httpx.Client(timeout=config.SUPABASE_TIMEOUT)
+    return _http
 
 
 class StoreUnavailable(Exception):
@@ -35,8 +51,7 @@ class Store:
             headers["Prefer"] = "return=representation"
         url = f"{config.SUPABASE_URL.rstrip('/')}/rest/v1{path}"
         try:
-            with httpx.Client(timeout=config.SUPABASE_TIMEOUT) as client:
-                resp = client.request(method, url, params=params, json=json, headers=headers)
+            resp = _client().request(method, url, params=params, json=json, headers=headers)
         except httpx.RequestError as e:
             # Report only the exception type: messages can embed URLs.
             raise StoreUnavailable(type(e).__name__) from None
