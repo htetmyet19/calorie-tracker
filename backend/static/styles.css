@@ -535,7 +535,20 @@ body.has-fab .layout { padding-bottom: 140px; }
 }
 
 /* ---------- Goal calculator ---------- */
-.calc-open { display: block; margin: 4px auto 0; font-size: var(--step--1); }
+/* Pill under the ring: quiet next to "Snap a meal", lime icon, lights up on hover */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: var(--field);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  transition: border-color 150ms, background 150ms;
+}
+.btn-pill svg { width: 18px; height: 18px; fill: none; stroke: var(--accent); stroke-width: 2; }
+.btn-pill:hover { border-color: rgba(198, 243, 107, 0.5); background: rgba(198, 243, 107, 0.08); }
+.calc-open { display: flex; margin: 12px auto 0; font-size: var(--step--1); }
 
 .calc {
   width: min(440px, calc(100vw - 32px));
