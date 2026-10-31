@@ -112,3 +112,99 @@ def test_subscribe_routes_live(make_user, service):
         assert c.request("DELETE", "/api/push/subscribe", headers=ha, json={"endpoint": ep}).status_code == 204
     assert state(service, a)["reminders_enabled"] is False
     assert service.get("/client_settings", params={"user_id": f"eq.{b.id}"}).json() == []
+
+
+# ---- photo cleanup ----
+
+def _today_yangon():
+    return cron.yangon_today(datetime.now(timezone.utc))
+
+
+def _meal_with_photo(service, upload_object, u, days_old, name):
+    path = f"{u.id}/{name}.jpg"
+    assert upload_object(u, "meal-photos", path) == 200
+    eaten = datetime.combine(_today_yangon() - timedelta(days=days_old), datetime.min.time())
+    r = service.post("/meals", json={
+        "user_id": u.id, "eaten_at": eaten.isoformat(), "meal_type": "lunch",
+        "items": [{"name": "rice"}], "total_calories": 500, "photo_path": path})
+    assert r.status_code == 201, r.text
+    return r.json()[0]["id"], path
+
+
+def _exists(storage, bucket, path):
+    return storage.head(f"/object/authenticated/{bucket}/{path}").status_code == 200
+
+
+def _photo_path(service, meal_id):
+    return service.get("/meals", params={"id": f"eq.{meal_id}", "select": "photo_path"}).json()[0]["photo_path"]
+
+
+def _failures(service, ref):
+    return service.get("/deletion_failures", params={"ref": f"eq.{ref}"}).json()
+
+
+def test_cleanup_removes_only_old_photos(make_user, service, storage, upload_object):
+    u = make_user()
+    old_id, old_path = _meal_with_photo(service, upload_object, u, 91, "old")
+    new_id, new_path = _meal_with_photo(service, upload_object, u, 89, "new")
+    import time
+    cron.cleanup_meal_photos(httpx.Client(timeout=config.SUPABASE_TIMEOUT),
+                             datetime.now(timezone.utc), deadline=time.monotonic() + 50)
+    assert _photo_path(service, old_id) is None and not _exists(storage, "meal-photos", old_path)
+    assert _photo_path(service, new_id) == new_path and _exists(storage, "meal-photos", new_path)
+
+
+def test_cleanup_records_and_retries_failure(make_user, service, storage, upload_object, monkeypatch):
+    import time
+    u = make_user()
+    meal_id, path = _meal_with_photo(service, upload_object, u, 120, "stuck")
+    ref = f"meal-photos/{path}"
+    real = cron._remove_object
+
+    def flaky(db, bucket, p):
+        if p == path:
+            raise cron.CronError("Supabase returned 500")
+        real(db, bucket, p)
+    monkeypatch.setattr(cron, "_remove_object", flaky)
+    with httpx.Client(timeout=config.SUPABASE_TIMEOUT) as c:
+        out = cron.cleanup_meal_photos(c, datetime.now(timezone.utc), deadline=time.monotonic() + 50)
+        assert out[1] >= 1
+        rows = _failures(service, ref)
+        assert len(rows) == 1 and rows[0]["attempts"] == 1 and rows[0]["last_error"] == "CronError"
+        assert _photo_path(service, meal_id) == path and _exists(storage, "meal-photos", path)
+
+        cron.cleanup_meal_photos(c, datetime.now(timezone.utc), deadline=time.monotonic() + 50)
+        assert _failures(service, ref)[0]["attempts"] == 2
+
+        monkeypatch.setattr(cron, "_remove_object", real)
+        cron.cleanup_meal_photos(c, datetime.now(timezone.utc), deadline=time.monotonic() + 50)
+    assert _failures(service, ref) == []
+    assert _photo_path(service, meal_id) is None and not _exists(storage, "meal-photos", path)
+
+
+def test_orphan_sweep_keeps_referenced_and_recent_objects(make_user, service, storage, upload_object):
+    u = make_user()
+    ck = service.post("/checkins", json={"user_id": u.id, "checked_on": "2026-10-01"}).json()[0]["id"]
+    objs = {}
+    for bucket in ("meal-photos", "progress-photos"):
+        for kind in ("orphan", "referenced"):
+            objs[bucket, kind] = f"{u.id}/{bucket[:4]}-{kind}.jpg"
+            assert upload_object(u, bucket, objs[bucket, kind]) == 200
+    r = service.post("/meals", json={
+        "user_id": u.id, "eaten_at": datetime.now().isoformat(), "meal_type": "lunch",
+        "items": [{"name": "rice"}], "total_calories": 500,
+        "photo_path": objs["meal-photos", "referenced"]})
+    assert r.status_code == 201
+    assert service.post("/progress_photos", json={
+        "user_id": u.id, "checkin_id": ck, "pose": "front",
+        "photo_path": objs["progress-photos", "referenced"]}).status_code == 201
+
+    # Just uploaded: everything is younger than 24 h, so nothing goes.
+    out = cron.run_daily(datetime.now(timezone.utc), send=Sender())
+    assert all(_exists(storage, b, p) for (b, _), p in objs.items())
+
+    # Two days later the unreferenced objects are old enough; referenced ones stay.
+    out = cron.run_daily(datetime.now(timezone.utc) + timedelta(days=2), send=Sender())
+    assert out["photos_removed"] >= 2
+    for (bucket, kind), path in objs.items():
+        assert _exists(storage, bucket, path) == (kind == "referenced"), (bucket, kind)
