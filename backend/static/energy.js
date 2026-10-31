@@ -10,10 +10,12 @@ function bmi(weightKg, heightCm) {
   return weightKg / (m * m);
 }
 
+// WHO cut-offs for Asian populations (Lancet 2004): health risk rises at lower BMI
+// than the general 25/30 thresholds, which matters for users in Myanmar.
 function bmiCategory(value) {
   if (value < 18.5) return "Underweight";
-  if (value < 25) return "Healthy weight";
-  if (value < 30) return "Overweight";
+  if (value < 23) return "Healthy weight";
+  if (value < 27.5) return "Overweight";
   return "Obesity";
 }
 

@@ -179,5 +179,4 @@ After M5: usability test with 2 trainers and 3 clients in Myanmar using the Sect
 ## 13. Open items
 
 - Legal review of Myanmar privacy and cyber-security obligations (before launch).
-- Whether to switch the BMI categories to the WHO Asian cut-offs (23 / 27.5); small separate change.
 - Possible existing bug: `/api/analyze` allows 10 MB uploads but Vercel rejects bodies over ~4.5 MB (untested). Fixed by the browser resize in M2.

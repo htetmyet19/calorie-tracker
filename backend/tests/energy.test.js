@@ -9,12 +9,13 @@ test("bmi is kg / m^2", () => {
   assert.equal(Math.round(bmi(70, 175) * 10) / 10, 22.9);
 });
 
-test("bmi categories use WHO adult cut-offs", () => {
+test("bmi categories use WHO cut-offs for Asian populations", () => {
   assert.equal(bmiCategory(18.4), "Underweight");
   assert.equal(bmiCategory(18.5), "Healthy weight");
-  assert.equal(bmiCategory(24.9), "Healthy weight");
-  assert.equal(bmiCategory(25), "Overweight");
-  assert.equal(bmiCategory(30), "Obesity");
+  assert.equal(bmiCategory(22.9), "Healthy weight");
+  assert.equal(bmiCategory(23), "Overweight");
+  assert.equal(bmiCategory(27.4), "Overweight");
+  assert.equal(bmiCategory(27.5), "Obesity");
 });
 
 test("bmr follows Mifflin-St Jeor", () => {
