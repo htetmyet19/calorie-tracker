@@ -96,3 +96,13 @@ def test_only_if_empty_conflicts_when_row_has_saved_values(monkeypatch):
     with pytest.raises(store.SettingsExist):
         store.Store(User(id="u1", token="t")).put_settings(
             SettingsIn(goal_kcal=1800), only_if_empty=True)
+
+
+def test_meal_out_carries_photo_removed():
+    row = {"id": 1, "eaten_at": "2026-07-01T08:00:00", "meal_type": "lunch",
+           "items": [{"name": "rice", "portion": "1 plate", "grams": 200, "calories": 260,
+                      "protein_g": 5, "carbs_g": 56, "fat_g": 1, "confidence": "high"}],
+           "total_calories": 0, "photo_path": None}
+    assert store.Store._to_meal({**row, "photo_removed": True}).photo_removed is True
+    assert store.Store._to_meal(row).photo_removed is False
+    assert store.Store._to_meal({**row, "photo_path": "u1/a.jpg"}).has_photo is True

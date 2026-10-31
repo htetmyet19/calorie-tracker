@@ -70,3 +70,13 @@ def test_settings_move_after_weight_log_then_conflict(api, make_user):
     r = api.put("/api/settings?only_if_empty=true", headers=u, json={"goal_kcal": 1500})
     assert r.status_code == 409 and r.json() == {"detail": "settings_exist"}
     assert api.get("/api/settings", headers=u).json()["goal_kcal"] == 2500
+
+
+def test_meals_report_photo_removed(api, make_user, service):
+    u = make_user()
+    mid = api.post("/api/meals", headers=auth(u), json=MEAL).json()["id"]
+    day = api.get("/api/meals", headers=auth(u), params={"date": "2026-10-31"}).json()
+    assert day["meals"][0]["photo_removed"] is False and day["meals"][0]["has_photo"] is False
+    service.patch("/meals", params={"id": f"eq.{mid}"}, json={"photo_removed": True})
+    day = api.get("/api/meals", headers=auth(u), params={"date": "2026-10-31"}).json()
+    assert day["meals"][0]["photo_removed"] is True

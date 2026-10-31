@@ -152,6 +152,9 @@ def test_cleanup_removes_only_old_photos(make_user, service, storage, upload_obj
                              datetime.now(timezone.utc), deadline=time.monotonic() + 50)
     assert _photo_path(service, old_id) is None and not _exists(storage, "meal-photos", old_path)
     assert _photo_path(service, new_id) == new_path and _exists(storage, "meal-photos", new_path)
+    flags = {r["id"]: r["photo_removed"] for r in service.get("/meals", params={
+        "id": f"in.({old_id},{new_id})", "select": "id,photo_removed"}).json()}
+    assert flags == {old_id: True, new_id: False}
 
 
 def test_cleanup_records_and_retries_failure(make_user, service, storage, upload_object, monkeypatch):

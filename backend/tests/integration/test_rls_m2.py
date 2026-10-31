@@ -150,3 +150,11 @@ def test_progress_photo_path_must_be_in_owner_folder(make_user, rest, service):
     r = rest(a.token).post("/progress_photos", json={
         "user_id": a.id, "checkin_id": c["id"], "pose": "back", "photo_path": f"{a.id}/ok.jpg"})
     assert r.status_code == 201
+
+
+def test_owner_cannot_set_photo_removed(make_user, rest, add_meal):
+    # Only the daily job (service role) sets the 90-day flag.
+    u = make_user()
+    m = add_meal(u)
+    r = rest(u.token).patch("/meals", params={"id": f"eq.{m['id']}"}, json={"photo_removed": True})
+    assert r.status_code in (401, 403)

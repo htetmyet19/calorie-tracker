@@ -48,6 +48,7 @@ class MealOut(MealIn):
     id: int
     total_calories: float
     has_photo: bool = False
+    photo_removed: bool = False  # the daily job removed the photo after 90 days
 
 
 class DayLog(BaseModel):

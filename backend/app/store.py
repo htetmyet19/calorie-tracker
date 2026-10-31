@@ -87,6 +87,7 @@ class Store:
             items=[FoodItem(**i) for i in row["items"]],
             total_calories=row["total_calories"],
             has_photo=row.get("photo_path") is not None,
+            photo_removed=bool(row.get("photo_removed", False)),
         )
 
     def get_profile(self) -> dict | None:

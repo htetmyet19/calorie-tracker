@@ -220,7 +220,7 @@ def _cleanup_meals(db: _Db, state: _Cleanup, now_utc: datetime.datetime,
             if not _try_remove(db, state, MEAL_BUCKET, row["photo_path"], f"meal_id={row['id']}"):
                 continue
             try:
-                db.request("PATCH", "/meals", json={"photo_path": None}, params={
+                db.request("PATCH", "/meals", json={"photo_path": None, "photo_removed": True}, params={
                     "id": f"eq.{row['id']}", "photo_path": f"eq.{row['photo_path']}"})
             except CronError as e:
                 log.warning("meal_photo_unlink_failed meal_id=%s error=%s", row["id"], type(e).__name__)

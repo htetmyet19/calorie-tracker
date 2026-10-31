@@ -126,10 +126,11 @@ class FakeDb:
                     if x["photo_path"] and x["eaten_at"] < cutoff and x["id"] > after]
             return httpx.Response(200, json=rows[:100])
         if path == "/meals" and m == "PATCH":
-            assert body == {"photo_path": None}
+            assert body == {"photo_path": None, "photo_removed": True}
             for x in self.meals:
                 if x["id"] == int(q["id"].removeprefix("eq.")) and x["photo_path"] == q["photo_path"].removeprefix("eq."):
                     x["photo_path"] = None
+                    x["photo_removed"] = True
             return httpx.Response(204)
         if path == "/deletion_failures":
             if m == "GET" and "ref" in q:
@@ -341,6 +342,7 @@ def test_cleanup_removes_object_then_nulls_path_for_old_meals_only():
     assert (removed, failed) == (1, 0)
     assert set(db.objects["meal-photos"]) == {"u1/edge.jpg", "u1/new.jpg"}
     assert [m["photo_path"] for m in db.meals] == [None, "u1/edge.jpg", "u1/new.jpg"]
+    assert [m.get("photo_removed", False) for m in db.meals] == [True, False, False]
 
 
 def test_failed_removal_keeps_path_records_failure_then_retry_clears_it():
