@@ -18,6 +18,7 @@ const MACROS = [["protein_g", "P"], ["carbs_g", "C"], ["fat_g", "F"]];
 let items = [];          // food items for the meal being reviewed
 let selectedFile = null;
 let justSavedId = null;  // the segment to draw in after a save
+let loadError = null;    // the message loadDay last showed, if any
 
 const pad = (n) => String(n).padStart(2, "0");
 const isoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -256,10 +257,24 @@ function renderMeals(day) {
 
 async function loadDay() {
   const date = currentDate();
-  const res = await api(`/api/meals?date=${date}`);
-  if (!res.ok) return;
-  const day = await res.json();
+  const fallback = "Couldn't load your meals. Check your connection.";
+  let day;
+  try {
+    const res = await api(`/api/meals?date=${date}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : fallback);
+    day = data;
+  } catch (err) {
+    if (date !== currentDate()) return;
+    // fetch rejects with a TypeError ("Failed to fetch") when the network is down.
+    loadError = err instanceof TypeError ? fallback : err.message || fallback;
+    setStatus(loadError, true);
+    return;
+  }
   if (date !== currentDate()) return; // user moved on to another day meanwhile
+  // Clear our own earlier error, but not a message someone else has shown since.
+  if (loadError && $("status").textContent === loadError) setStatus("");
+  loadError = null;
   renderPlate(day);
   renderLegend(day);
   renderMeals(day);

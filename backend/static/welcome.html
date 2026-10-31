@@ -17,7 +17,7 @@
 
     <form class="auth-form" id="role-form">
       <label class="field"><span class="visually-hidden">Display name</span>
-        <input id="display-name" type="text" autocomplete="name" placeholder="Your name" maxlength="60" required></label>
+        <input id="display-name" type="text" autocomplete="name" placeholder="Your name" maxlength="80" required></label>
 
       <fieldset class="role-options" style="border:0;padding:0;margin:0">
         <legend class="visually-hidden">Role</legend>
@@ -38,7 +38,7 @@
     <p id="status" class="status" role="status" aria-live="polite"></p>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" integrity="sha384-GFr3yTh5lJznCbZfpTtXnwboFsxqtTQoeTZCRHhE0579KrRmlCzen5AA8ohaB5ug" crossorigin="anonymous"></script>
   <script src="/auth.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
@@ -54,7 +54,11 @@
         const { data } = await client.auth.getSession();
         if (!data.session) { location = "/login.html?next=/welcome.html"; return; }
         const me = await api("/api/me");
-        if (me.ok) location = "/";
+        if (me.ok) { location = "/"; return; }
+        if (me.status !== 404) { // 404 no_profile is expected here: the user hasn't chosen yet
+          const body = await me.json().catch(() => ({}));
+          setStatus(typeof body.detail === "string" ? body.detail : "Couldn't check your account. Try again.", true);
+        }
       } catch (err) { setStatus(err.message, true); }
     })();
 
