@@ -1,8 +1,8 @@
-// Browser-side Supabase auth for the login, welcome and main pages.
+// Browser-side Supabase auth for the login, signup, welcome and main pages.
 // Needs the supabase-js UMD script loaded first (it provides window.supabase).
 // Tests run this file in Node with stubbed fetch, window and localStorage (see tests/auth.test.js).
 
-const NO_RETURN_PAGES = ["/login.html", "/welcome.html"];
+const NO_RETURN_PAGES = ["/login.html", "/signup.html", "/welcome.html"];
 
 // Where to send the user after login. Same-site paths only, so a crafted
 // ?next= link can't bounce them to another site.

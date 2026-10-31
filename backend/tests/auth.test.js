@@ -8,8 +8,8 @@ test("safeNext blocks other sites", () => {
   for (const bad of ["https://evil.example", "//evil.example", "/\\evil.example", "javascript:alert(1)", null, "", "/\t/evil.example", "/\n/evil.example", "/\r/evil.example", "/%09/evil.example"])
     assert.equal(safeNext(bad), "/");
 });
-test("safeNext sends login and welcome pages to /", () => {
-  for (const loop of ["/login.html", "/login.html?next=/", "/welcome.html", "/welcome.html#x", "/./login.html", "/%6Cogin.html"])
+test("safeNext sends login, signup and welcome pages to /", () => {
+  for (const loop of ["/login.html", "/login.html?next=/", "/welcome.html", "/welcome.html#x", "/./login.html", "/%6Cogin.html", "/signup.html", "/signup.html?next=/"])
     assert.equal(safeNext(loop), "/");
 });
 test("safeNext keeps other pages with query and hash", () =>

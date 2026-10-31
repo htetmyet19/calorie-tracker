@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b1114">
+  <title>Tracker: sign up</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="immersive">
+  <main class="gate">
+    <!-- The Today screen's plate ring, one arc per meal colour, glowing -->
+    <svg class="gate-ring" viewBox="0 0 100 100" aria-hidden="true">
+      <circle class="track" cx="50" cy="50" r="40"/>
+      <circle style="--c: var(--breakfast)" cx="50" cy="50" r="40" stroke-dasharray="52 200" stroke-dashoffset="0"/>
+      <circle style="--c: var(--lunch)" cx="50" cy="50" r="40" stroke-dasharray="62 190" stroke-dashoffset="-58"/>
+      <circle style="--c: var(--dinner)" cx="50" cy="50" r="40" stroke-dasharray="70 182" stroke-dashoffset="-126"/>
+      <circle style="--c: var(--snack)" cx="50" cy="50" r="40" stroke-dasharray="28 224" stroke-dashoffset="-202"/>
+    </svg>
+    <h1 class="gate-title">Start tracking.</h1>
+    <p class="gate-sub">Snap your meals. Your trainer sees your progress.</p>
+
+    <button class="btn btn-ghost btn-google" id="google" type="button">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      Sign up with Google
+    </button>
+    <p class="auth-or" aria-hidden="true">or</p>
+
+    <form class="auth-form" id="signup-form">
+      <div>
+        <label class="auth-label" for="email">Email</label>
+        <span class="field"><input id="email" type="email" autocomplete="email" required></span>
+      </div>
+      <div>
+        <label class="auth-label" for="password">Password</label>
+        <span class="field">
+          <input id="password" type="password" autocomplete="new-password" minlength="6" required aria-describedby="password-hint">
+            <button class="eye" id="show-password" type="button" aria-label="Show password" aria-pressed="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+        </span>
+        <p class="auth-hint" id="password-hint">At least 6 characters.</p>
+      </div>
+      <button class="btn btn-accent" id="signup" type="submit">Create account</button>
+    </form>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+    <p class="gate-switch">Already have an account? <a href="/login.html" data-keep-next>Log in</a></p>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" integrity="sha384-GFr3yTh5lJznCbZfpTtXnwboFsxqtTQoeTZCRHhE0579KrRmlCzen5AA8ohaB5ug" crossorigin="anonymous"></script>
+  <script src="/auth.js"></script>
+  <script src="/auth-ui.js"></script>
+  <script>
+    initAuthPage();
+
+    $("signup-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      run(async () => {
+        const client = await initAuth();
+        const { data, error } = await client.auth.signUp({
+          email: $("email").value.trim(),
+          password: $("password").value,
+          // Without this the confirmation link goes to the project's Site URL, not this deployment.
+          options: { emailRedirectTo: location.origin + next },
+        });
+        if (error) throw error;
+        if (!data.session) {
+          setStatus("Check your email to confirm your account, then log in.");
+          return;
+        }
+        location = next;
+      });
+    });
+  </script>
+</body>
+</html>

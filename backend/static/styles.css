@@ -23,12 +23,6 @@
   --steel-3: #c4cbd0;
   --track: #e3e8eb;
 
-  /* Login hero: stays dark in both themes */
-  --hero-bg: #18262e;
-  --hero-ink: #f6f8f9;
-  --hero-muted: #b4c0c6;
-  --hero-track: #2b3a42;
-
   --font: "Familjen Grotesk", "Segoe UI", system-ui, sans-serif;
   --step--1: 0.8125rem;
   --step-0: 1rem;
@@ -59,9 +53,6 @@
     --steel-2: #3c484f;
     --steel-3: #232c31;
     --track: #2a3439;
-
-    --hero-bg: #0b1114;
-    --hero-track: #1f2a30;
   }
 }
 
@@ -551,52 +542,75 @@ button { cursor: pointer; }
 .auth-or::before, .auth-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 .auth-page .btn-quiet { justify-self: center; }
 
-/* Login: dark brand hero, form card overlapping it; side by side on wide screens. */
-.login { min-height: 100vh; min-height: 100dvh; }
-.login-hero {
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-  padding: 48px 24px 72px;
-  background: var(--hero-bg);
-  color: var(--hero-ink);
-  text-align: center;
+/* Login and sign-up: always dark, full page, no card. */
+.immersive {
+  --gate-bg: #0b1114;
+  --gate-ink: #f2f6f8;
+  --gate-muted: #93a1a9;
+  --gate-line: rgba(255, 255, 255, 0.12);
+  --gate-fill: rgba(255, 255, 255, 0.06);
+  --accent: #c6f36b;      /* lime: the one bright thing on the page */
+  --accent-ink: #0b1114;
+  --breakfast: #e0a83a;
+  --lunch: #5fb36f;
+  --dinner: #7f97e6;
+  --snack: #d9719d;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background:
+    radial-gradient(60% 40% at 50% 0%, rgba(127, 151, 230, 0.22), transparent 70%),
+    radial-gradient(50% 35% at 85% 20%, rgba(217, 113, 157, 0.14), transparent 70%),
+    var(--gate-bg);
+  background-attachment: fixed;
+  color: var(--gate-ink);
 }
-.login-hero h1 { font-size: var(--step-hero); font-weight: 700; letter-spacing: -0.03em; line-height: 1; margin-top: 10px; }
-.login-hero p { max-width: 24ch; color: var(--hero-muted); }
-.login-ring { width: 88px; height: 88px; transform: rotate(-90deg); }
-.login-ring circle { fill: none; stroke: var(--c); stroke-width: 10; }
-.login-ring .track { stroke: var(--hero-track); }
-
-.login-card {
+.gate {
   display: grid;
-  gap: 14px;
-  width: min(100% - 32px, 400px);
-  margin: -40px auto 32px;
-  padding: 24px 20px;
-  background: var(--surface);
-  border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(24, 38, 46, 0.06), 0 12px 32px rgba(24, 38, 46, 0.12);
+  gap: 16px;
+  width: min(100% - 32px, 380px);
+  margin: 0 auto;
+  padding: 56px 0 40px;
 }
-.login-card .auth-form { margin-top: 0; gap: 14px; }
-.login-card .btn { width: 100%; }
-.login-card .status { margin-top: 0; min-height: 0; }
-.login-card .status:empty { display: none; }
+.gate-ring {
+  justify-self: center;
+  width: 120px;
+  height: 120px;
+  margin-bottom: 12px;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+.gate-ring circle { fill: none; stroke: var(--c); stroke-width: 9; filter: drop-shadow(0 0 6px var(--c)); }
+.gate-ring .track { stroke: var(--gate-line); filter: none; }
+.gate-title { font-size: var(--step-hero); font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; }
+.gate-sub { margin-top: -8px; color: var(--gate-muted); }
+.gate .auth-or { color: var(--gate-muted); }
+.gate .auth-or::before, .gate .auth-or::after { border-color: var(--gate-line); }
+.gate .auth-form { margin-top: 0; gap: 14px; }
+.gate .btn { width: 100%; padding: 14px 18px; border-radius: 14px; }
+.btn-ghost { background: var(--gate-fill); color: var(--gate-ink); border: 1px solid var(--gate-line); }
+.btn-ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); }
 .btn-google { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .btn-google svg { width: 18px; height: 18px; }
-.auth-label { display: block; margin-bottom: 6px; font-size: var(--step--1); font-weight: 600; color: var(--ink-2); }
-.auth-form .field { align-items: center; }
-.eye { display: grid; place-items: center; width: 32px; height: 32px; margin: -6px -6px -6px 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
+.btn-accent { margin-top: 6px; background: var(--accent); color: var(--accent-ink); box-shadow: 0 8px 24px rgba(198, 243, 107, 0.25); }
+.btn-accent:hover:not(:disabled) { filter: brightness(1.06); }
+.auth-label { display: block; margin-bottom: 6px; font-size: var(--step--1); font-weight: 600; color: var(--gate-muted); }
+.auth-hint { margin-top: 6px; font-size: var(--step--1); color: var(--gate-muted); }
+.gate .field { align-items: center; padding: 12px 14px; border-radius: 14px; background: var(--gate-fill); border-color: var(--gate-line); }
+.gate .field:focus-within { border-color: var(--accent); }
+.gate .field input { color: var(--gate-ink); }
+.gate :focus-visible { outline-color: var(--accent); }
+.eye { display: grid; place-items: center; width: 32px; height: 32px; margin: -6px -6px -6px 0; border: 0; border-radius: 8px; background: transparent; color: var(--gate-muted); }
 .eye svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; }
-.eye[aria-pressed="true"] { color: var(--ink); }
-.login-switch { text-align: center; color: var(--muted); font-size: var(--step--1); }
-.login-switch .btn-quiet { width: auto; padding: 0; font-size: inherit; color: var(--ink); }
+.eye[aria-pressed="true"] { color: var(--gate-ink); }
+.gate .status { margin-top: 0; min-height: 0; color: var(--gate-ink); }
+.gate .status:empty { display: none; }
+.gate .status.is-error { color: #ef7a6c; }
+.gate-switch { text-align: center; color: var(--gate-muted); }
+.gate-switch a { color: var(--gate-ink); font-weight: 600; text-underline-offset: 3px; }
 
 @media (min-width: 800px) {
-  .login { display: grid; grid-template-columns: 1fr 1fr; align-items: center; }
-  .login-hero { align-self: stretch; align-content: center; padding: 48px; }
-  .login-ring { width: 120px; height: 120px; }
-  .login-card { margin: 32px auto; padding: 32px 28px; }
+  .gate { padding-top: 12vh; }
+  .gate-ring { width: 150px; height: 150px; }
 }
 
 .role-options { display: grid; gap: 10px; margin-top: 8px; }
