@@ -27,6 +27,11 @@ GEMINI_FALLBACK_MODELS = [
 # Retries per model for transient errors (503/500/504), with 1s, 2s, ... backoff.
 GEMINI_RETRIES = int(os.getenv("GEMINI_RETRIES", "2"))
 
+# Supabase project URL, e.g. https://xyz.supabase.co (used to fetch the JWKS for ES256/RS256 tokens).
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+# Legacy HS256 JWT secret; leave empty if the project signs tokens with asymmetric keys.
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
+
 # Vercel's filesystem is read-only except /tmp, which is wiped between instances:
 # meals logged there are lost unpredictably (demo use only).
 _DEFAULT_DB = Path("/tmp/calories.db") if os.getenv("VERCEL") else BASE_DIR / "data" / "calories.db"
