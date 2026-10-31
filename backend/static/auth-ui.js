@@ -55,7 +55,25 @@ async function run(fn) {
   for (const b of buttons) b.disabled = false;
 }
 
+// Touch screens have no hover: light the ring while a finger is on it,
+// and keep it lit briefly after lifting so a quick tap is visible.
+function lightOrbOnTouch() {
+  const orb = $("orb");
+  if (!orb) return;
+  let timer = 0;
+  orb.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse") return;
+    clearTimeout(timer);
+    orb.classList.add("is-lit");
+  });
+  const release = () => { timer = setTimeout(() => orb.classList.remove("is-lit"), 700); };
+  orb.addEventListener("pointerup", release);
+  orb.addEventListener("pointercancel", release);
+  orb.addEventListener("pointerleave", release);
+}
+
 function initAuthPage() {
+  lightOrbOnTouch();
   const form = document.querySelector(".auth-form");
   form.noValidate = true;
   // Clear a field's message as soon as it's fixed.

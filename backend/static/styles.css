@@ -575,6 +575,8 @@ button { cursor: pointer; }
 .gate-orb {
   position: relative;
   justify-self: center;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   display: grid;
   place-items: center;
   margin-bottom: 12px;
@@ -593,6 +595,9 @@ button { cursor: pointer; }
   transition: opacity 250ms ease-out, filter 250ms ease-out;
 }
 .gate-orb .gate-ring circle:not(.track) { transition: filter 250ms ease-out; }
+/* Lit on mouse hover, or while a finger touches it (auth-ui.js adds .is-lit). */
+.gate-orb.is-lit .orb-glow { opacity: 0.85; filter: blur(14px); }
+.gate-orb.is-lit .gate-ring circle:not(.track) { filter: drop-shadow(0 0 10px var(--c)); }
 @media (hover: hover) {
   .gate-orb:hover .orb-glow { opacity: 0.85; filter: blur(14px); }
   .gate-orb:hover .gate-ring circle:not(.track) { filter: drop-shadow(0 0 10px var(--c)); }
