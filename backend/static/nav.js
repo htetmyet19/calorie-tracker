@@ -47,9 +47,6 @@ function legacySettings(rawProfile, rawGoal, server) {
   return out;
 }
 
-if (typeof module !== "undefined") {
-  module.exports = { settingsBody, legacySettings, SETTINGS_DEFAULTS };
-}
 
 // ---------- Settings cache (browser only below) ----------
 
@@ -73,7 +70,7 @@ function dropLegacy() {
 }
 
 // One-time move of old browser settings. Never overwrites settings already saved
-// on the server (409); keys are removed once the server has answered for good.
+// on the server. Keys are removed on 200, on 409, or when nothing valid is left.
 async function moveLegacySettings(server) {
   const [rawProfile, rawGoal] = readLegacy();
   const fields = legacySettings(rawProfile, rawGoal, server);
@@ -86,20 +83,25 @@ async function moveLegacySettings(server) {
       body: JSON.stringify(fields),
     });
     if (res.ok) { dropLegacy(); return await res.json(); }
-    if (res.status === 409 || res.status === 422) dropLegacy();
+    if (res.status === 409) dropLegacy(); // the server already has settings: keep those
+    // Any other answer (422, 5xx) keeps the keys for the next load.
   } catch (e) { /* offline: keep the keys and try on the next load */ }
   return server;
 }
 
-async function fetchSettings() {
+async function getSettings(fallback) {
   let res;
   try {
     res = await api("/api/settings");
   } catch (e) {
-    throw new Error("Couldn't load your settings. Check your connection.");
+    throw new Error(fallback);
   }
-  if (!res.ok) throw await settingsError(res, "Couldn't load your settings. Try again.");
-  return moveLegacySettings(await res.json());
+  if (!res.ok) throw await settingsError(res, fallback);
+  return res.json();
+}
+
+async function fetchSettings() {
+  return moveLegacySettings(await getSettings("Couldn't load your settings. Check your connection."));
 }
 
 function loadSettings() {
@@ -111,9 +113,13 @@ function loadSettings() {
 }
 
 // Saves run one after another, so a second quick change merges onto the first.
+// Each save merges into a fresh copy from the server, not the page's cache: the
+// page may be hours old and another device may have changed the weight or
+// reminders since, which a full-object PUT would otherwise reset.
 function saveSettings(partial) {
   const run = saveChain.then(async () => {
-    const current = await loadSettings();
+    await loadSettings(); // the one-time browser-settings move happens first
+    const current = await getSettings(SAVE_ERROR);
     let res;
     try {
       res = await api("/api/settings", {
@@ -239,4 +245,8 @@ function renderSettingsPanel() {
 function initNav(active) {
   renderTabbar(active);
   renderSettingsPanel();
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { settingsBody, legacySettings, moveLegacySettings, loadSettings, saveSettings, SETTINGS_DEFAULTS };
 }

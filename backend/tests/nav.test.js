@@ -57,3 +57,68 @@ test("values the server would reject are dropped, not sent", () => {
   assert.deepEqual(legacySettings(junk, "99999", {}), { weight_goal: "lose" });
   assert.deepEqual(legacySettings("{not json", "abc", {}), {});
 });
+
+test("a save merges into the fresh server copy, keeping another device's changes", () => {
+  // Page loaded hours ago; since then another device logged a weight and turned reminders on.
+  const fresh = { ...LOADED, weight_kg: 68.04, reminders_enabled: true };
+  const body = settingsBody(fresh, { goal_kcal: 2000 });
+  assert.equal(body.weight_kg, 68.04);
+  assert.equal(body.reminders_enabled, true);
+  assert.equal(body.goal_kcal, 2000);
+});
+
+test("saveSettings re-reads the server before every PUT", async () => {
+  const calls = [];
+  const server = { ...LOADED, goal_set_by: undefined };
+  global.document = { dispatchEvent() {} };
+  global.CustomEvent = class { constructor(type, init) { this.type = type; this.detail = init.detail; } };
+  global.localStorage = { getItem: () => null, removeItem() {} };
+  global.api = async (path, opts = {}) => {
+    calls.push([opts.method || "GET", path]);
+    if ((opts.method || "GET") === "GET") {
+      return { ok: true, json: async () => ({ ...server }) };
+    }
+    const body = JSON.parse(opts.body);
+    Object.assign(server, body);
+    return { ok: true, json: async () => ({ ...server }) };
+  };
+  const nav = require("../static/nav.js");
+  await nav.loadSettings();                       // page load
+  server.weight_kg = 68.04;                       // another device, later
+  server.reminders_enabled = false;
+  const out = await nav.saveSettings({ weight_unit: "kg" });
+  assert.equal(out.weight_kg, 68.04);
+  assert.equal(out.reminders_enabled, false);
+  assert.deepEqual(calls, [["GET", "/api/settings"], ["GET", "/api/settings"], ["PUT", "/api/settings"]]);
+  delete global.api; delete global.document; delete global.CustomEvent; delete global.localStorage;
+});
+
+for (const [outcome, dropped] of [[200, true], [409, true], [422, false], [500, false], ["offline", false]]) {
+  test(`old browser settings are ${dropped ? "removed" : "kept"} after a ${outcome} move`, async () => {
+    const store = { profile: PROFILE, goal: "1800" };
+    global.localStorage = {
+      getItem: (k) => (k in store ? store[k] : null),
+      removeItem: (k) => { delete store[k]; },
+    };
+    global.api = async (path, opts) => {
+      assert.equal(path, "/api/settings?only_if_empty=1");
+      assert.equal(opts.method, "PUT");
+      if (outcome === "offline") throw new TypeError("Failed to fetch");
+      return { ok: outcome === 200, status: outcome, json: async () => ({ goal_kcal: 1800 }) };
+    };
+    const { moveLegacySettings } = require("../static/nav.js");
+    await moveLegacySettings({});
+    assert.deepEqual(Object.keys(store).length === 0, dropped);
+    delete global.api; delete global.localStorage;
+  });
+}
+
+test("old browser settings with nothing valid left are removed without a request", async () => {
+  const store = { profile: "{not json", goal: "abc" };
+  global.localStorage = { getItem: (k) => store[k] ?? null, removeItem: (k) => { delete store[k]; } };
+  global.api = async () => { throw new Error("no request expected"); };
+  const { moveLegacySettings } = require("../static/nav.js");
+  await moveLegacySettings({});
+  assert.deepEqual(store, {});
+  delete global.api; delete global.localStorage;
+});

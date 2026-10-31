@@ -3,7 +3,9 @@
 // typed with one decimal to show again unchanged.
 
 const KG_PER_LB = 0.45359237;
-const WEIGHT_RANGE = { kg: { min: 30, max: 300 }, lb: { min: 66, max: 661 } };
+// lb limits are the lb values whose kg stays inside 30-300 kg after rounding:
+// 66.1 lb is 29.98 kg and 661.4 lb is 300.01 kg.
+const WEIGHT_RANGE = { kg: { min: 30, max: 300 }, lb: { min: 66.2, max: 661.3 } };
 
 const roundTo = (x, dp) => {
   const f = 10 ** dp;
@@ -26,6 +28,13 @@ function weightRange(unit) {
   return { ...WEIGHT_RANGE[unit === "lb" ? "lb" : "kg"] };
 }
 
+// A stored weight as a value for a number input in this unit, clamped into
+// weightRange so the form stays valid (300 kg would otherwise show as 661.4 lb).
+function inputWeight(kg, unit) {
+  const { min, max } = weightRange(unit);
+  return Math.min(max, Math.max(min, fromKg(kg, unit)));
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { KG_PER_LB, toKg, fromKg, formatWeight, weightRange };
+  module.exports = { KG_PER_LB, toKg, fromKg, formatWeight, weightRange, inputWeight };
 }

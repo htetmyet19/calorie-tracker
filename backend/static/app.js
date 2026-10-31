@@ -107,7 +107,7 @@ function setCalcUnit(unit) {
   if (unit === calcUnit) return;
   const input = $("c-weight");
   const old = parseFloat(input.value);
-  if (!Number.isNaN(old)) input.value = fromKg(toKg(old, calcUnit), unit);
+  if (!Number.isNaN(old)) input.value = inputWeight(toKg(old, calcUnit), unit);
   calcUnit = unit;
   const range = weightRange(unit);
   input.min = range.min;
@@ -123,8 +123,7 @@ function readProfile() {
   }
   return {
     height_cm: parseFloat($("c-height").value),
-    // 66 lb is 29.94 kg; keep it inside the server's 30-300 kg range.
-    weight_kg: Math.min(300, Math.max(30, toKg(parseFloat($("c-weight").value), calcUnit))),
+    weight_kg: toKg(parseFloat($("c-weight").value), calcUnit), // weightRange keeps it in 30-300 kg
     age: parseInt($("c-age").value, 10),
     sex: document.querySelector('input[name="c-sex"]:checked').value,
     activity: parseFloat($("c-activity").value),
@@ -157,7 +156,7 @@ function renderCalc() {
 function restoreProfile(s) {
   setCalcUnit(s.weight_unit || "kg");
   if (s.height_cm != null) $("c-height").value = s.height_cm;
-  if (s.weight_kg != null) $("c-weight").value = fromKg(s.weight_kg, calcUnit);
+  if (s.weight_kg != null) $("c-weight").value = inputWeight(s.weight_kg, calcUnit);
   if (s.age != null) $("c-age").value = s.age;
   if (s.activity != null) $("c-activity").value = String(s.activity);
   for (const [name, value] of [["sex", s.sex], ["goal", s.weight_goal]]) {
@@ -284,7 +283,6 @@ function renderLegend(day) {
 const ANALYSIS_SIDE = 1600, ANALYSIS_QUALITY = 0.85; // sent to /api/analyze only
 const STORED_SIDE = 800, STORED_QUALITY = 0.7;       // kept with the meal
 const MAX_STORED_BYTES = 300 * 1024;                 // the server's meal-photo limit
-const RETENTION_DAYS = 90;
 
 const failedUploads = new Map(); // mealId -> Blob whose upload failed; memory only
 const uploadingIds = new Set();  // meals whose photo is uploading now
@@ -395,8 +393,6 @@ async function openPhoto(id, title) {
 }
 $("photo-view-close").addEventListener("click", () => $("photo-view").close());
 
-const daysSince = (eatenAt) => (Date.now() - new Date(eatenAt).getTime()) / 86400000;
-
 // Under the meal's text: uploading, upload failed (retry), or removed after 90 days.
 function photoNote(m) {
   if (m.has_photo) return null;
@@ -412,7 +408,7 @@ function photoNote(m) {
     });
     return retry;
   }
-  if (daysSince(m.eaten_at) > RETENTION_DAYS) {
+  if (m.photo_removed) { // set by the daily job when it removes a photo after 90 days
     return el("p", { className: "photo-note", textContent: "Photo removed after 90 days" });
   }
   return null;
