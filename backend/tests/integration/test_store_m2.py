@@ -69,3 +69,28 @@ def test_weight_upsert_creates_settings_row_if_missing(make_user):
     assert s.get_settings() is None
     s.upsert_weight(datetime.date(2026, 10, 31), 65.5)
     assert s.get_settings()["weight_kg"] == 65.5
+
+
+def test_only_if_empty_fills_row_created_by_weight_log(make_user):
+    # Ruling R7: a row that exists only because of a weight log has no saved
+    # calculator values, so the one-time browser move fills it in.
+    import datetime
+    u = make_user()
+    s = _store(u)
+    s.upsert_weight(datetime.date(2026, 10, 31), 71.25)
+    out = s.put_settings(SettingsIn(height_cm=170, age=30, sex="female", activity=1.375,
+                                    weight_goal="lose", goal_kcal=1800), only_if_empty=True)
+    assert out["goal_kcal"] == 1800 and out["activity"] == 1.375 and out["sex"] == "female"
+    assert out["goal_set_by"] == u.id
+    assert out["weight_kg"] == 71.25  # the logged weight is kept
+    with pytest.raises(SettingsExist):
+        s.put_settings(SettingsIn(goal_kcal=2500), only_if_empty=True)
+    assert s.get_settings()["goal_kcal"] == 1800
+
+
+def test_only_if_empty_keeps_reminders_of_a_push_subscriber(make_user):
+    u = make_user()
+    s = _store(u)
+    s.add_push_subscription(f"https://push.example/{u.id}", "p256dh-key", "auth-key")
+    out = s.put_settings(SettingsIn(goal_kcal=1900), only_if_empty=True)
+    assert out["goal_kcal"] == 1900 and out["reminders_enabled"] is True

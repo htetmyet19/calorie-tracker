@@ -74,6 +74,19 @@ def test_put_only_if_empty_conflict(flag):
     assert r.json() == {"detail": "settings_exist"}
 
 
+@pytest.mark.parametrize("flag", ["0", "false"])
+def test_put_only_if_empty_off_overwrites(flag):
+    c = make_client(FakeStore())
+    assert c.put("/api/settings", json=BODY).status_code == 200
+    assert c.put(f"/api/settings?only_if_empty={flag}", json=BODY).status_code == 200
+
+
+@pytest.mark.parametrize("flag", ["yes please", "2", ""])
+def test_put_only_if_empty_rejects_garbage(flag):
+    r = make_client(FakeStore()).put(f"/api/settings?only_if_empty={flag}", json=BODY)
+    assert r.status_code == 422
+
+
 def test_put_only_if_empty_when_empty_succeeds():
     r = make_client(FakeStore()).put("/api/settings?only_if_empty=1", json=BODY)
     assert r.status_code == 200

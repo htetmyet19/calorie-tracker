@@ -56,3 +56,17 @@ def test_missing_token_is_401(api):
 def test_user_without_profile_must_choose_role(api, make_user):
     r = api.get("/api/meals", headers=auth(make_user(role=None)), params={"date": "2026-10-31"})
     assert (r.status_code, r.json()) == (409, {"detail": "choose_role"})
+
+
+def test_settings_move_after_weight_log_then_conflict(api, make_user):
+    # Ruling R7 end to end: weight logged first, browser move succeeds, second move 409.
+    u = auth(make_user())
+    assert api.put("/api/weights/2026-10-31", headers=u, json={"weight_kg": 70}).status_code == 200
+    r = api.put("/api/settings?only_if_empty=1", headers=u,
+                json={"height_cm": 170, "age": 30, "sex": "male", "activity": 1.55,
+                      "weight_goal": "maintain", "goal_kcal": 2500})
+    assert r.status_code == 200
+    assert r.json()["goal_kcal"] == 2500 and r.json()["weight_kg"] == 70
+    r = api.put("/api/settings?only_if_empty=true", headers=u, json={"goal_kcal": 1500})
+    assert r.status_code == 409 and r.json() == {"detail": "settings_exist"}
+    assert api.get("/api/settings", headers=u).json()["goal_kcal"] == 2500

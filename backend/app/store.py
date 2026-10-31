@@ -171,7 +171,7 @@ class Store:
                 body["goal_set_by"] = self.user.id
             resp = self._request("POST", "/client_settings", write=True, json=body)
             if resp.status_code == 409:
-                raise SettingsExist()
+                resp = self._fill_empty_settings(s, body)
         else:
             current = self.get_settings()
             old_goal = current["goal_kcal"] if current else None
@@ -183,6 +183,31 @@ class Store:
                 prefer="resolution=merge-duplicates,return=representation")
         self._check(resp)
         return self._settings_row(resp.json()[0])
+
+    # The values a user saves from the calculator or goal field. A row where all are
+    # null exists only because of a weight log or a push subscription.
+    SAVED_SETTINGS = ("height_cm", "age", "sex", "activity", "weight_goal", "goal_kcal")
+
+    def _fill_empty_settings(self, s: SettingsIn, body: dict) -> httpx.Response:
+        """Fill an existing row that has no saved values; SettingsExist otherwise.
+
+        One PATCH filtered on the saved columns being null, so two devices racing
+        cannot both win. Weight, unit and reminders flag change only when the
+        caller sent them explicitly.
+        """
+        patch = {k: body[k] for k in (*self.SAVED_SETTINGS, "updated_at")}
+        for k in ("weight_kg", "weight_unit", "reminders_enabled"):
+            if k in s.model_fields_set:
+                patch[k] = body[k]
+        if "goal_set_by" in body:
+            patch["goal_set_by"] = body["goal_set_by"]
+        params = {"user_id": f"eq.{self.user.id}",
+                  **{k: "is.null" for k in self.SAVED_SETTINGS}}
+        resp = self._request("PATCH", "/client_settings", write=True, json=patch, params=params)
+        self._check(resp)
+        if not (resp.json() if resp.content else []):
+            raise SettingsExist()
+        return resp
 
     @staticmethod
     def _to_weight(row: dict) -> WeightOut:

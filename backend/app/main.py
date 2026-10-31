@@ -189,10 +189,10 @@ def get_settings(store: Store = Depends(require_profile)):
 
 
 @app.put("/api/settings", response_model=SettingsOut)
-def put_settings(body: SettingsIn, only_if_empty: str = Query("0"),
+def put_settings(body: SettingsIn, only_if_empty: bool = Query(False),
                  store: Store = Depends(require_profile)):
     try:
-        return store.put_settings(body, only_if_empty=only_if_empty.lower() in ("1", "true"))
+        return store.put_settings(body, only_if_empty=only_if_empty)
     except SettingsExist:
         raise HTTPException(409, "settings_exist")
 
