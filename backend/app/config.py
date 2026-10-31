@@ -31,6 +31,12 @@ GEMINI_RETRIES = int(os.getenv("GEMINI_RETRIES", "2"))
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 # Legacy HS256 JWT secret; leave empty if the project signs tokens with asymmetric keys.
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
+# Publishable (anon) key, safe for clients; used for auth calls made on behalf of users.
+SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY", "")
+# Service-role key bypasses RLS: used only by the import script, never by request handlers.
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+# Seconds to wait on Supabase HTTP calls.
+SUPABASE_TIMEOUT = float(os.getenv("SUPABASE_TIMEOUT", "10"))
 
 # Vercel's filesystem is read-only except /tmp, which is wiped between instances:
 # meals logged there are lost unpredictably (demo use only).
