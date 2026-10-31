@@ -45,9 +45,9 @@ class FakeStore:
         self._check()
         return [m for m in self.meals if m.eaten_at.startswith(date.isoformat())]
 
-    def delete_meal(self, meal_id):
+    def delete_meal_returning(self, meal_id):
         self._check()
-        return self.delete_result
+        return {"id": meal_id, "photo_path": None} if self.delete_result else None
 
 
 PROFILE = {"id": "u1", "role": "client", "display_name": "Asha"}

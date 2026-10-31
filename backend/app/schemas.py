@@ -47,6 +47,7 @@ class MealIn(BaseModel):
 class MealOut(MealIn):
     id: int
     total_calories: float
+    has_photo: bool = False
 
 
 class DayLog(BaseModel):

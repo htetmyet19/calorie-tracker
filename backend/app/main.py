@@ -1,14 +1,24 @@
 import datetime
+import logging
 import re
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 from . import config
 from .analysis import AnalysisError, analyze_meal
 from .auth import User, current_user
 from .schemas import AnalyzeResponse, DayLog, MealIn, MealOut, ProfileOut, RoleIn, SettingsIn, SettingsOut, WeightIn, WeightOut
+from .storage import Storage, UploadRejected, new_path
 from .store import ProfileExists, SettingsExist, Store, StoreUnavailable, get_store
+
+log = logging.getLogger("calorie_tracker")
+
+MEAL_BUCKET = "meal-photos"
+MAX_MEAL_PHOTO_BYTES = 300 * 1024
+MEAL_PHOTO_TYPES = ("image/jpeg", "image/png", "image/webp")
+SIGNED_URL_SECONDS = 300
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -31,6 +41,10 @@ async def store_unavailable_handler(request: Request, exc: StoreUnavailable):
     return JSONResponse(
         {"detail": "The database is unreachable. Try again in a minute."}, status_code=503
     )
+
+
+def get_storage(user: User = Depends(current_user)) -> Storage:
+    return Storage(user)
 
 
 def require_profile(store: Store = Depends(get_store)) -> Store:
@@ -108,9 +122,58 @@ def list_meals(date: str = Query(..., description="YYYY-MM-DD"), store: Store = 
 
 
 @app.delete("/api/meals/{meal_id}", status_code=204)
-def remove_meal(meal_id: int, store: Store = Depends(require_profile)):
-    if not store.delete_meal(meal_id):
+def remove_meal(meal_id: int, store: Store = Depends(require_profile),
+                storage: Storage = Depends(get_storage)):
+    row = store.delete_meal_returning(meal_id)
+    if row is None:
         raise HTTPException(404, "Meal not found")
+    if row.get("photo_path"):
+        # The row is already gone; a leftover file is retried by the retention job.
+        try:
+            storage.remove(MEAL_BUCKET, [row["photo_path"]])
+        except Exception as e:
+            log.warning("meal_photo_delete_failed meal_id=%s error=%s", meal_id, type(e).__name__)
+    return Response(status_code=204)
+
+
+@app.put("/api/meals/{meal_id}/photo", status_code=204)
+async def put_meal_photo(meal_id: int, photo: UploadFile = File(...),
+                         store: Store = Depends(require_profile),
+                         storage: Storage = Depends(get_storage)):
+    old = await run_in_threadpool(store.meal_photo_path, meal_id)
+    if old is False:
+        raise HTTPException(404, "Meal not found")
+    content_type = (photo.content_type or "").lower()
+    if content_type not in MEAL_PHOTO_TYPES:
+        raise HTTPException(400, "Photo must be a JPEG, PNG or WebP image.")
+    raw = await photo.read(MAX_MEAL_PHOTO_BYTES + 1)
+    if len(raw) > MAX_MEAL_PHOTO_BYTES:
+        raise HTTPException(413, "Photo is larger than 300 KB.")
+    path = new_path(store.user.id)
+    try:
+        await run_in_threadpool(storage.upload, MEAL_BUCKET, path, raw, content_type)
+    except UploadRejected:
+        raise HTTPException(400, "Photo was rejected.")
+    if not await run_in_threadpool(store.set_meal_photo, meal_id, path):
+        # Meal vanished between the lookup and the update: do not leave an orphan.
+        await run_in_threadpool(storage.remove, MEAL_BUCKET, [path])
+        raise HTTPException(404, "Meal not found")
+    if old:
+        try:
+            await run_in_threadpool(storage.remove, MEAL_BUCKET, [old])
+        except Exception as e:
+            log.warning("meal_photo_delete_failed meal_id=%s error=%s", meal_id, type(e).__name__)
+    return Response(status_code=204)
+
+
+@app.get("/api/meals/{meal_id}/photo")
+def get_meal_photo(meal_id: int, store: Store = Depends(require_profile),
+                   storage: Storage = Depends(get_storage)):
+    path = store.meal_photo_path(meal_id)
+    if not path:  # False: not found / not owner; None: no photo
+        raise HTTPException(404, "Photo not found")
+    url = storage.signed_url(MEAL_BUCKET, path, SIGNED_URL_SECONDS)
+    return RedirectResponse(url, status_code=307)
 
 
 @app.get("/api/settings", response_model=SettingsOut)

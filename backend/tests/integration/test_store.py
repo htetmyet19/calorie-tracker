@@ -59,24 +59,24 @@ def test_trainer_meals_on_excludes_clients_meals(make_user, link):
 def test_delete_own_meal(make_user):
     s = _store(make_user())
     m = s.add_meal(_meal())
-    assert s.delete_meal(m.id) is True
+    assert s.delete_meal_returning(m.id)["id"] == m.id
     assert s.meals_on(datetime.date(2026, 10, 31)) == []
-    assert s.delete_meal(m.id) is False
+    assert s.delete_meal_returning(m.id) is None
 
 
 def test_delete_other_users_meal_returns_false(make_user, add_meal):
     owner, other = make_user(), make_user()
     row = add_meal(owner)
-    assert _store(other).delete_meal(row["id"]) is False
-    assert _store(owner).delete_meal(row["id"]) is True
+    assert _store(other).delete_meal_returning(row["id"]) is None
+    assert _store(owner).delete_meal_returning(row["id"])["id"] == row["id"]
 
 
 def test_trainer_cannot_delete_clients_meal(make_user, link, add_meal):
     trainer, client = make_user("trainer"), make_user("client")
     link(client, trainer, "active")
     row = add_meal(client)
-    assert _store(trainer).delete_meal(row["id"]) is False
-    assert _store(client).delete_meal(row["id"]) is True
+    assert _store(trainer).delete_meal_returning(row["id"]) is None
+    assert _store(client).delete_meal_returning(row["id"])["id"] == row["id"]
 
 
 def test_get_and_create_profile(make_user):

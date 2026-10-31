@@ -6,6 +6,7 @@ all queries. Errors never include response bodies or credentials.
 import datetime
 import http.cookiejar
 import threading
+from typing import Literal
 
 import httpx
 from fastapi import Depends
@@ -81,6 +82,7 @@ class Store:
             meal_type=row["meal_type"],
             items=[FoodItem(**i) for i in row["items"]],
             total_calories=row["total_calories"],
+            has_photo=row.get("photo_path") is not None,
         )
 
     def get_profile(self) -> dict | None:
@@ -120,11 +122,27 @@ class Store:
         self._check(resp)
         return [self._to_meal(r) for r in resp.json()]
 
-    def delete_meal(self, meal_id: int) -> bool:
+    def delete_meal_returning(self, meal_id: int) -> dict | None:
+        """Delete an own meal; return the deleted row (with photo_path) or None."""
         resp = self._request("DELETE", "/meals", write=True, params={
             "id": f"eq.{meal_id}", "user_id": f"eq.{self.user.id}"})
         self._check(resp)
         # RLS-filtered deletes succeed with an empty body; only a returned row counts.
+        rows = resp.json() if resp.content else []
+        return rows[0] if rows else None
+
+    def meal_photo_path(self, meal_id: int) -> str | None | Literal[False]:
+        """The meal's photo path, None if it has none, False if not found/not owner."""
+        resp = self._request("GET", "/meals", params={
+            "id": f"eq.{meal_id}", "user_id": f"eq.{self.user.id}", "select": "photo_path"})
+        self._check(resp)
+        rows = resp.json()
+        return rows[0]["photo_path"] if rows else False
+
+    def set_meal_photo(self, meal_id: int, path: str | None) -> bool:
+        resp = self._request("PATCH", "/meals", write=True, json={"photo_path": path}, params={
+            "id": f"eq.{meal_id}", "user_id": f"eq.{self.user.id}"})
+        self._check(resp)
         return bool(resp.json()) if resp.content else False
 
     @staticmethod
