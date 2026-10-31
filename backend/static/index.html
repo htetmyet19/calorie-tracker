@@ -3,20 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b1114">
   <title>Tracker: calorie log</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/styles.css">
 </head>
-<body>
+<body class="has-fab">
   <header class="masthead">
     <p class="wordmark">Tracker</p>
     <!-- nav.js adds the Settings button here, the Settings panel and the bottom bar -->
   </header>
 
   <main class="layout">
+    <p id="page-status" class="status page-status" role="status" aria-live="polite"></p>
     <!-- The day: one plate whose rim fills toward the calorie goal, one segment per meal -->
     <section class="day" aria-labelledby="day-name">
       <div class="day-nav">
@@ -62,12 +64,23 @@
     <section class="meals-section" aria-labelledby="meals-heading">
       <h2 id="meals-heading" class="section-title">Meals</h2>
       <ul class="meals" id="meals"></ul>
-      <p class="empty" id="meals-empty">Nothing logged on this day yet. Photograph your next meal to start.</p>
+      <p class="empty" id="meals-empty">Nothing logged on this day yet. Tap “Snap a meal” to add one.</p>
     </section>
+  </main>
 
-    <!-- Logging flow: photo, estimate, check, save -->
-    <section class="log" aria-labelledby="log-heading">
-      <h2 id="log-heading" class="section-title">Log a meal</h2>
+  <button class="fab" type="button" id="log-open" aria-haspopup="dialog">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13.5" r="3.5"/></svg>
+    Snap a meal
+  </button>
+
+  <!-- Logging flow: photo, estimate, check, save. Opens from "Snap a meal". -->
+  <dialog class="sheet" id="log-sheet" aria-labelledby="log-heading">
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <section class="log">
+      <div class="sheet-head">
+        <h2 id="log-heading" class="section-title">Log a meal</h2>
+        <button class="btn btn-quiet" type="button" id="log-close">Close</button>
+      </div>
 
       <label class="drop" id="drop">
         <input type="file" id="photo" accept="image/*" capture="environment" class="visually-hidden">
@@ -105,7 +118,7 @@
         </div>
       </div>
     </section>
-  </main>
+  </dialog>
 
   <!-- Goal calculator: BMI plus a Mifflin-St Jeor estimate of daily needs -->
   <dialog class="calc" id="calc" aria-labelledby="calc-title">

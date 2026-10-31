@@ -24,9 +24,13 @@ function dayLabel(dateStr) {
   return parseDate(dateStr).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
 }
 
+// Messages show inside the log sheet while it is open, otherwise on the page.
+function statusEl() { return $("log-sheet").open ? $("status") : $("page-status"); }
+
 function setStatus(msg, isError = false) {
-  $("status").textContent = msg;
-  $("status").classList.toggle("is-error", isError);
+  const status = statusEl();
+  status.textContent = msg;
+  status.classList.toggle("is-error", isError);
 }
 
 function guessMealType() {
@@ -177,7 +181,7 @@ document.addEventListener("settingschange", (e) => setCalcUnit(e.detail.weight_u
 // ---------- The plate ----------
 
 const R = 103;               // ring radius in viewBox units (viewBox is 240)
-const STROKE = 20;
+const STROKE = 16;
 const GAP = 2.5;             // surface gap between segments
 const CIRC = 2 * Math.PI * R;
 
@@ -457,7 +461,7 @@ async function loadDay() {
   }
   if (date !== currentDate()) return; // user moved on to another day meanwhile
   // Clear our own earlier error, but not a message someone else has shown since.
-  if (loadError && $("status").textContent === loadError) setStatus("");
+  if (loadError && statusEl().textContent === loadError) setStatus("");
   loadError = null;
   renderPlate(day);
   renderLegend(day);
@@ -610,6 +614,7 @@ $("save").addEventListener("click", async () => {
     if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Couldn't save the meal. Check the numbers and try again.");
     justSavedId = data.id;
     resetLogger();
+    $("log-sheet").close(); // the saved message below goes to the page
     setStatus(`Saved ${MEAL_LABEL[meal_type].toLowerCase()}, ${fmt(data.total_calories)} kcal.`);
   } catch (err) {
     setStatus(err.message, true);
@@ -625,6 +630,29 @@ $("save").addEventListener("click", async () => {
   else setStatus("Saved without the photo: this browser can't read it.");
   uploadingIds.delete(data.id);
   loadDay();
+});
+
+// ---------- Log sheet and ring halo ----------
+
+$("log-open").addEventListener("click", () => {
+  $("page-status").textContent = "";
+  $("log-sheet").showModal();
+});
+$("log-close").addEventListener("click", () => $("log-sheet").close());
+// A tap on the dimmed backdrop closes the sheet; the photo and estimate are kept.
+$("log-sheet").addEventListener("click", (e) => {
+  const box = e.currentTarget.getBoundingClientRect();
+  const outside = e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom;
+  if (e.target === e.currentTarget && outside) e.currentTarget.close();
+});
+
+// On touch screens the ring's halo brightens while a finger is on it.
+let litTimer = 0;
+$("plate").addEventListener("pointerdown", (e) => {
+  if (e.pointerType === "mouse") return;
+  $("plate").classList.add("is-lit");
+  clearTimeout(litTimer);
+  litTimer = setTimeout(() => $("plate").classList.remove("is-lit"), 1200);
 });
 
 // ---------- Start ----------
