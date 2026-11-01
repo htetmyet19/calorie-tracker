@@ -91,7 +91,7 @@ button { cursor: pointer; }
   margin: 0 auto;
   padding: 12px 20px 64px;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);   /* not 1fr: a wide child must not widen the page */
   grid-template-areas: "day" "meals";
   gap: 32px;
 }
@@ -101,7 +101,7 @@ button { cursor: pointer; }
 
 @media (min-width: 900px) {
   .layout {
-    grid-template-columns: minmax(340px, 420px) 1fr;
+    grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
     grid-template-areas: "day meals";
     column-gap: 56px;
     padding-top: 24px;
@@ -308,7 +308,7 @@ button { cursor: pointer; }
 .meals { display: grid; gap: 10px; }
 .meals li {
   display: grid;
-  grid-template-columns: 10px 1fr auto auto;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
   align-items: center;
   column-gap: 12px;
   padding: 12px 10px 12px 14px;
@@ -319,7 +319,7 @@ button { cursor: pointer; }
 .meals .swatch { align-self: start; margin-top: 7px; border-radius: 50%; box-shadow: 0 0 8px var(--c); }
 .meals .when { font-weight: 600; }
 .meals .when time { font-weight: 400; color: var(--muted); margin-left: 6px; }
-.meals .what { font-size: var(--step--1); color: var(--ink-2); max-width: 52ch; }
+.meals .what { font-size: var(--step--1); color: var(--ink-2); max-width: 52ch; overflow-wrap: anywhere; }
 .meals .kcal { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 .icon-btn {
@@ -608,7 +608,20 @@ button { cursor: pointer; }
 .calc .save-row { margin-top: 18px; }
 
 /* ---------- Meal photos ---------- */
-.meals li.has-thumb { grid-template-columns: 10px 52px 1fr auto auto; }
+.meals li.has-thumb { grid-template-columns: 10px 52px minmax(0, 1fr) auto auto; }
+/* Narrow phones: a photo row has too little room for the name, so kcal moves under it */
+@media (max-width: 400px) {
+  .meals li.has-thumb {
+    grid-template-columns: 10px 52px minmax(0, 1fr) auto;
+    grid-template-areas: "sw thumb text del" "sw thumb kcal del";
+    column-gap: 10px;
+  }
+  .meals li.has-thumb > .swatch { grid-area: sw; }
+  .meals li.has-thumb > .thumb { grid-area: thumb; }
+  .meals li.has-thumb > div { grid-area: text; }
+  .meals li.has-thumb > .kcal { grid-area: kcal; justify-self: start; margin-top: 2px; }
+  .meals li.has-thumb > .icon-btn { grid-area: del; }
+}
 .thumb {
   width: 52px; height: 52px;
   padding: 0;
