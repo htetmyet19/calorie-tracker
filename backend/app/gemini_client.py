@@ -45,19 +45,37 @@ async def _call(client: genai.Client, model: str, image: bytes, prompt: str):
     )
 
 
+async def _backoff(seconds: float) -> None:
+    await asyncio.sleep(seconds)
+
+
 async def generate(image: bytes, prompt: str) -> MealAnalysis:
     client = _get_client()
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + config.GEMINI_DEADLINE
     last_error: errors.APIError | None = None
+    timed_out = False
 
     for model in _models():
         for attempt in range(config.GEMINI_RETRIES + 1):
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                timed_out = True
+                break
             try:
-                response = await _call(client, model, image, prompt)
+                response = await asyncio.wait_for(
+                    _call(client, model, image, prompt), min(config.GEMINI_ATTEMPT_TIMEOUT, remaining)
+                )
+            except asyncio.TimeoutError:  # the builtin TimeoutError only from Python 3.11
+                # A slow model rarely gets faster on a retry: go straight to the next one.
+                timed_out = True
+                log.warning("Gemini %s attempt %d timed out", model, attempt + 1)
+                break
             except errors.APIError as e:
                 last_error = e
                 log.warning("Gemini %s attempt %d failed (%s): %s", model, attempt + 1, e.code, e.message)
                 if e.code in _TRANSIENT and attempt < config.GEMINI_RETRIES:
-                    await asyncio.sleep(2**attempt)  # 1s, 2s, ...
+                    await _backoff(2**attempt)  # 1s, 2s, ...
                     continue
                 if e.code in _TRY_NEXT_MODEL or e.code == 404:  # 404: model retired for this key
                     break
@@ -67,9 +85,14 @@ async def generate(image: bytes, prompt: str) -> MealAnalysis:
             if not isinstance(analysis, MealAnalysis):
                 raise AnalysisError("Gemini returned a response that didn't match the expected format. Try again.")
             return analysis
+        if deadline - loop.time() <= 0:
+            timed_out = True
+            break
 
-    if last_error is not None and last_error.code == 429:
+    if last_error is not None and last_error.code == 429 and not timed_out:
         raise AnalysisError("Gemini free-tier rate limit reached on all models. Wait a minute and try again.", 429)
+    if timed_out:
+        raise AnalysisError("The estimate is taking too long right now. Please try again in a minute.", 504)
     raise AnalysisError(
         f"Gemini is unavailable right now (tried {', '.join(_models())}). Please try again shortly.", 503
     )
