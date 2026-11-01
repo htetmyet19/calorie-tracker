@@ -1,5 +1,6 @@
 // Shared by the app pages: bottom bar, Settings panel and the settings cache.
-// Needs auth.js (api, logout) loaded first, and push.js for the reminders switch.
+// Needs auth.js (api, logout) loaded first, push.js for the reminders switch and
+// install.js for "Install app".
 // settingsBody and legacySettings are pure so Node can test them (tests/nav.test.js).
 
 const SETTINGS_DEFAULTS = {
@@ -182,6 +183,13 @@ const REMINDERS_HINT = "A notification when your weekly check-in is due.";
 const REMINDERS_BLOCKED = "Notifications are blocked. In Chrome: ⋮ → Settings → Site settings → Notifications";
 const REMINDERS_UNAVAILABLE = "Reminders aren't available yet.";
 const REMINDERS_UNSUPPORTED = "This browser can't show reminders.";
+const REMINDERS_IOS = "On iPhone, reminders work once you add the app to your Home Screen (see below).";
+
+const INSTALL_HINTS = {
+  prompt: "Add Tracker to your home screen. It opens full-screen, like an app.",
+  ios: "Tap the Share button, then \u201cAdd to Home Screen\u201d.",
+  manual: "In your browser's menu, choose \u201cInstall app\u201d or \u201cAdd to Home screen\u201d.",
+};
 
 const SETTINGS_HTML = `
   <div class="settings-head">
@@ -201,6 +209,13 @@ const SETTINGS_HTML = `
       <input type="checkbox" role="switch" id="reminders-switch" class="switch" aria-describedby="reminders-hint">
     </label>
     <p class="hint" id="reminders-hint">A notification when your weekly check-in is due.</p>
+  </div>
+  <div class="settings-install" id="settings-install" hidden>
+    <div class="switch-row">
+      <span>Install app</span>
+      <button class="btn btn-outline" type="button" id="install-app" hidden>Install</button>
+    </div>
+    <p class="hint" id="install-hint"></p>
   </div>
   <p class="status" id="settings-status" role="status" aria-live="polite"></p>
   <button class="btn btn-outline settings-logout" type="button" id="logout">Log out</button>`;
@@ -232,7 +247,10 @@ function renderSettingsPanel() {
     const blocked = supported && Notification.permission === "denied";
     remSwitch.checked = !!enabled && supported && !blocked;
     remSwitch.disabled = !supported || blocked;
-    remHint.textContent = !supported ? REMINDERS_UNSUPPORTED : blocked ? REMINDERS_BLOCKED : REMINDERS_HINT;
+    const iosBrowser = typeof isIos === "function" && isIos(navigator.userAgent, navigator.maxTouchPoints || 0)
+      && !isStandalone();
+    remHint.textContent = !supported ? (iosBrowser ? REMINDERS_IOS : REMINDERS_UNSUPPORTED)
+      : blocked ? REMINDERS_BLOCKED : REMINDERS_HINT;
     remHint.classList.toggle("is-blocked", blocked);
   };
   remSwitch.addEventListener("change", async () => {
@@ -253,6 +271,22 @@ function renderSettingsPanel() {
       showReminders(lastSettings ? lastSettings.reminders_enabled : !want);
     }
   });
+
+  // Install app: Chrome's dialog, the iPhone steps, or nothing once installed.
+  const installBox = dialog.querySelector("#settings-install");
+  const installBtn = dialog.querySelector("#install-app");
+  const showInstall = () => {
+    const mode = typeof currentInstallMode === "function" ? currentInstallMode() : "installed";
+    installBox.hidden = mode === "installed";
+    installBtn.hidden = mode !== "prompt";
+    dialog.querySelector("#install-hint").textContent = INSTALL_HINTS[mode] || "";
+  };
+  installBtn.addEventListener("click", async () => {
+    await promptInstall();
+    showInstall();
+  });
+  document.addEventListener("installchange", showInstall);
+  showInstall();
 
   dialog.querySelector("#settings-close").addEventListener("click", () => dialog.close());
   dialog.querySelectorAll('input[name="weight-unit"]').forEach((radio) => {
@@ -281,6 +315,7 @@ function renderSettingsPanel() {
   open.textContent = "Settings";
   open.addEventListener("click", async () => {
     setPanelStatus("");
+    showInstall();
     dialog.showModal();
     if (typeof preloadPushKey === "function" && pushSupported()) preloadPushKey().catch(() => {});
     try {
