@@ -537,8 +537,15 @@ $("analyze").addEventListener("click", async () => {
     const form = new FormData();
     if (copy) form.append("photo", copy, "meal.jpg"); else form.append("photo", selectedFile);
     const res = await api("/api/analyze", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || `The estimate failed (${res.status}). Try again.`);
+    // A platform timeout or error page is plain text, not JSON (Safari then says
+    // "The string did not match the expected pattern"), so read it defensively.
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data) {
+      const detail = data && typeof data.detail === "string" ? data.detail : null;
+      throw new Error(detail || (res.status === 504
+        ? "The estimate took too long. Please try again in a minute."
+        : `The estimate failed (${res.status}). Try again.`));
+    }
     if (!data.is_food) {
       setStatus("No food found in this photo. Try one with the plate clearly in frame.", true);
       return;

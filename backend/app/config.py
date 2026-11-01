@@ -17,15 +17,22 @@ OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "300"))
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 # Model names and free-tier quotas change often; run scripts/list_models.py to see what your key can use.
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
-# Tried in order when the main model is overloaded (503), out of quota (429) or retired (404).
+# Not gemini-flash-latest: in Nov 2026 it took 49-233 s per meal photo, past Vercel's 60 s limit;
+# gemini-3.5-flash took 9-14 s with similar estimates.
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+# Tried in order when the main model is overloaded (503), out of quota (429), retired (404) or too slow.
 GEMINI_FALLBACK_MODELS = [
     m.strip()
-    for m in os.getenv("GEMINI_FALLBACK_MODELS", "gemini-3.5-flash,gemini-flash-lite-latest").split(",")
+    for m in os.getenv("GEMINI_FALLBACK_MODELS", "gemini-flash-lite-latest").split(",")
     if m.strip()
 ]
 # Retries per model for transient errors (503/500/504), with 1s, 2s, ... backoff.
 GEMINI_RETRIES = int(os.getenv("GEMINI_RETRIES", "2"))
+# Seconds one call may take before the next model is tried, and for all attempts together.
+# The deadline keeps the request inside Vercel's 60 s maxDuration (with upload and start-up),
+# so the user gets a clear error instead of the platform's plain-text timeout page.
+GEMINI_ATTEMPT_TIMEOUT = float(os.getenv("GEMINI_ATTEMPT_TIMEOUT", "25"))
+GEMINI_DEADLINE = float(os.getenv("GEMINI_DEADLINE", "45"))
 
 # Supabase project URL, e.g. https://xyz.supabase.co (used to fetch the JWKS for ES256/RS256 tokens).
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")

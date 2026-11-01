@@ -84,9 +84,11 @@ re-running an import with it adds every meal a second time. The SQLite file is l
 | `OLLAMA_MODEL` | `gemma4:26b` | Must support vision (`ollama show <model>` lists "vision") |
 | `OLLAMA_TIMEOUT` | `300` | Seconds; the first request also loads the model |
 | `GEMINI_API_KEY` | | Only for `gemini`, from https://aistudio.google.com/apikey |
-| `GEMINI_MODEL` | `gemini-flash-latest` | `.venv/bin/python scripts/list_models.py` lists options |
-| `GEMINI_FALLBACK_MODELS` | `gemini-3.5-flash,gemini-flash-lite-latest` | Tried in order if the main model is overloaded (503), out of quota (429) or retired (404) |
+| `GEMINI_MODEL` | `gemini-3.5-flash` | `.venv/bin/python scripts/list_models.py` lists options. Avoid `gemini-flash-latest`: it took 49–233 s per photo (Nov 2026), past Vercel's 60 s limit |
+| `GEMINI_FALLBACK_MODELS` | `gemini-flash-lite-latest` | Tried in order if the main model is overloaded (503), out of quota (429), retired (404) or too slow |
 | `GEMINI_RETRIES` | `2` | Retries per model on 500/503/504, with 1s, 2s backoff |
+| `GEMINI_ATTEMPT_TIMEOUT` | `25` | Seconds one call may take before the next model is tried |
+| `GEMINI_DEADLINE` | `45` | Seconds for all attempts together; keeps `/api/analyze` inside Vercel's 60 s `maxDuration` |
 
 ### Ollama on Windows, backend in WSL
 
