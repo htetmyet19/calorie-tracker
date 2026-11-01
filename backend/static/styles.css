@@ -38,6 +38,10 @@
 
 body {
   margin: 0;
+  /* Clear of the notch and rounded corners (viewport-fit=cover); 0 where there are none */
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
   min-height: 100vh;
   min-height: 100dvh;
   /* Two faint meal-colour washes at the top, as on the login page */
@@ -644,6 +648,8 @@ button { cursor: pointer; }
 .settings-head .section-title { margin-bottom: 0; }
 .settings .settings-unit { margin-top: 18px; }
 .settings-reminders { margin-top: 18px; }
+.settings-install { margin-top: 18px; }
+.settings-install .btn { padding: 8px 16px; }
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 600; }
 .switch {
   appearance: none;

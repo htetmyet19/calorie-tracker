@@ -153,6 +153,10 @@ Automated tests cannot cover these. Push needs HTTPS: use a Vercel preview, or o
 - [ ] 360 px wide layout in light and dark on Today, Progress and Check-in.
 - [ ] Check-in with a skipped photo saves and appears in the timeline.
 - [ ] Compare on Progress shows two check-ins side by side.
+- [ ] Install: Android Chrome shows "Install" in Settings, the app opens full-screen from its home-screen icon;
+      on iPhone, Share > Add to Home Screen does the same. Nothing sits under the notch or the home bar.
+- [ ] iPhone, installed app: turning on reminders works and a check-in push arrives (iOS 16.4+ only sends web push
+      to home-screen apps). Google sign-in inside the installed iPhone app ends logged in to the app, not Safari.
 
 Known follow-ups: timeline thumbnails are the full stored photos (data cost; store small thumbnails later), and the
 checks above are still pending on a real device.
@@ -172,6 +176,7 @@ checks above are still pending on a real device.
 | `scripts/import_sqlite.py` | One-off import of the old SQLite meals |
 | `app/cron.py`, `app/reminders.py` | Daily job (service-key client) and the pure reminder rules |
 | `static/` | Plain HTML/CSS/JS frontend |
+| `static/manifest.webmanifest`, `static/icons/` | Installable app (PWA); `scripts/make_icons.py` redraws the icons |
 
 ## Using it from the Android app
 
