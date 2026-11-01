@@ -26,8 +26,8 @@ Meals and profiles live in Supabase Postgres, per user. Copy `.env.example` to `
 | `SUPABASE_JWT_SECRET` | Only if the project still signs tokens with the legacy HS256 secret; leave empty for asymmetric keys |
 | `SUPABASE_TIMEOUT` | Seconds to wait on Supabase calls (default `10`) |
 
-**Google sign-in is not set up yet.** It is a pending step: create a Google OAuth client and enable the provider in the
-Supabase dashboard (Authentication > Providers), and for the local stack in `supabase/config.toml`.
+**Google sign-in** is enabled on the hosted project (Authentication > Providers > Google, with a Google OAuth client).
+For the local stack, configure it in `supabase/config.toml`.
 
 ### Hosted Supabase setup
 
