@@ -46,9 +46,12 @@ def build_prompt(frame: Frame) -> str:
     parts = [PROMPT_HEAD.format(
         goal=frame.goal, level=inp.level, equipment=inp.equipment, minutes=inp.session_min,
         min_items=MIN_ITEMS, max_total=MAX_ITEMS, work=WORK_SEC)]
+    lose = frame.goal == "lose"
     for day in frame.days:
-        parts.append(f"Day {day.index} ({day.title}): at most {day.max_items} exercises"
-                     f"{' plus one cardio finisher' if frame.goal == 'lose' else ''}, "
+        # The finisher counts toward the 7-item limit, so lose days leave room for it.
+        cap = min(day.max_items, MAX_ITEMS - 1) if lose else day.max_items
+        parts.append(f"Day {day.index} ({day.title}): at most {cap} exercises"
+                     f"{' plus one cardio finisher' if lose else ''}, "
                      f"time budget {day.budget_sec} seconds. Exercises (id | title | category):")
         parts += [f"  {v['id']} | {v['title']} | {v['category']}" for v in day.shortlist]
     return "\n".join(parts)

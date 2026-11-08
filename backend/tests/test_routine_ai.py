@@ -92,3 +92,11 @@ def test_ask_model_dispatches_on_provider(monkeypatch, provider):
     monkeypatch.setattr(routine_ai, "_ask_ollama", fake_ollama)
     assert asyncio.run(routine_ai.ask_model("p")) == "{}"
     assert called == [provider]
+
+
+def test_lose_prompt_counts_the_finisher_within_seven():
+    frame = build_frame(Inputs(3, "intermediate", "gym", 60), "lose", FIXTURE_LIBRARY)
+    prompt = routine_ai.build_prompt(frame)
+    assert frame.days[0].max_items == 7
+    assert "at most 6 exercises plus one cardio finisher" in prompt
+    assert "at most 7 exercises plus" not in prompt
