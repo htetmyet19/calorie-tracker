@@ -1,12 +1,10 @@
 // Weekly check-in: Weight → Front → Side → Back → Done, one step per screen.
-// Needs dom.js, auth.js, units.js, images.js, push.js and nav.js loaded first.
+// Needs dom.js, auth.js, units.js, images.js, photo-upload.js, push.js and nav.js loaded first.
 // The functions up to "Browser only" are pure so Node can test them (tests/checkin.test.js).
 
 const STEPS = ["weight", "front", "side", "back", "done"];
 const PHOTO_POSES = ["front", "side", "back"];
 const POSE_NAME = { front: "Front", side: "Side", back: "Back" };
-const PHOTO_MAX_SIDE = 1600;
-const PHOTO_QUALITY = 0.8;
 
 const stepLabel = (i) => `Step ${i + 1} of ${STEPS.length}`;
 
@@ -205,7 +203,7 @@ async function photoChosen(pose, input) {
   renderPhoto(pose);
   let blob;
   try {
-    blob = await resizeImage(file, PHOTO_MAX_SIDE, PHOTO_QUALITY);
+    blob = await resizeImage(file, CHECKIN_PHOTO_MAX_SIDE, CHECKIN_PHOTO_QUALITY);
   } catch (e) {
     if (seq !== p.seq) return;
     p.state = "unreadable";
@@ -228,17 +226,7 @@ function uploadPhoto(pose) {
   const blob = p.blob;
   p.state = "uploading";
   renderPhoto(pose);
-  const run = (async () => {
-    const base = `/api/checkins/${checkin.id}/photos`;
-    const json = { "Content-Type": "application/json" };
-    const r1 = await api(`${base}/upload-url`, { method: "POST", headers: json, body: JSON.stringify({ pose }) });
-    if (!r1.ok) throw new Error("upload-url");
-    const { upload_url, path } = await r1.json();
-    const put = await fetch(upload_url, { method: "PUT", headers: { "content-type": "image/jpeg" }, body: blob });
-    if (!put.ok) throw new Error("put");
-    const r2 = await api(base, { method: "POST", headers: json, body: JSON.stringify({ pose, path }) });
-    if (r2.status !== 201) throw new Error("record");
-  })().then(() => "done", () => "failed").then((state) => {
+  const run = uploadCheckinPhoto(checkin.id, pose, blob).then(() => "done", () => "failed").then((state) => {
     if (seq !== p.seq) return; // a newer photo for this pose took over
     p.state = state;
     renderPhoto(pose);

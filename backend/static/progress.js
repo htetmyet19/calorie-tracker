@@ -1,5 +1,5 @@
 // Progress page: check-in card, weight chart, calories vs goal, check-in timeline.
-// Needs dom.js, auth.js, units.js, charts.js and nav.js loaded first.
+// Needs dom.js, auth.js, units.js, charts.js, images.js, photo-upload.js and nav.js loaded first.
 // The functions up to "Browser only" are pure so Node can test them (tests/progress.test.js).
 
 const WEIGHT_DAYS = 84;      // 12 weeks
@@ -68,6 +68,16 @@ const DELETE_PHOTO_CONFIRM = "Delete this photo? This can't be undone.";
 // 404 means it is already gone (another tab or device), which is what was wanted.
 function photoDeleteError(status) {
   return status === 204 || status === 404 ? "" : "Couldn't delete the photo. Check your connection and try again.";
+}
+
+// A photo skipped at check-in can be added later from its empty slot.
+const addPhotoLabel = (pose, date) => `Add ${pose} photo for ${shortDate(date)}`;
+
+// kind: "unreadable" (the browser couldn't decode the file) or "failed" (upload).
+function addPhotoError(kind, pose, date) {
+  return kind === "unreadable"
+    ? `Couldn't read that ${pose} photo for ${shortDate(date)}. Choose another one.`
+    : `Couldn't add the ${pose} photo for ${shortDate(date)}. Check your connection and try again.`;
 }
 
 
@@ -148,8 +158,14 @@ function thumb(checkin, pose) {
     open.addEventListener("click", () => openPhoto(checkin, p));
     img.addEventListener("error", () => open.replaceWith(el("span", { className: "thumb-missing" }, "Couldn't load")), { once: true });
     fig.append(open);
+  } else if (adding.has(slotKey(checkin, pose))) {
+    fig.append(el("span", { className: "thumb-missing is-busy", role: "status" }, "Uploading…"));
   } else {
-    fig.append(el("span", { className: "thumb-missing" }, "No photo"));
+    // Skipped at check-in: tap to take or choose it now.
+    const add = el("button", { className: "thumb-missing thumb-add", type: "button",
+      ariaLabel: addPhotoLabel(pose, checkin.checked_on) }, "+ Add");
+    add.addEventListener("click", () => pickPhoto(checkin, pose));
+    fig.append(add);
   }
   fig.append(el("figcaption", {}, POSE_LABEL[pose]));
   return fig;
@@ -166,6 +182,54 @@ function renderTimeline() {
       el("time", { dateTime: c.checked_on }, shortDate(c.checked_on)));
     if (c.weight_kg != null) head.append(el("span", { className: "timeline-weight" }, formatWeight(c.weight_kg, unit)));
     list.append(el("li", {}, head, el("div", { className: "timeline-photos" }, ...POSES.map((p) => thumb(c, p)))));
+  }
+}
+
+// ---------- Add a missing photo ----------
+
+const adding = new Set();  // "checkinId:pose" slots uploading now
+let picking = null;        // the slot the file picker was opened for
+const slotKey = (checkin, pose) => `${checkin.id}:${pose}`;
+
+function pickPhoto(checkin, pose) {
+  picking = { checkin, pose };
+  setMsg("timeline-status", "");
+  $("add-photo-input").click();
+}
+
+async function addPhoto(input) {
+  const file = input.files && input.files[0];
+  input.value = ""; // choosing the same file again still fires change
+  const target = picking;
+  picking = null;
+  if (!file || !target) return;
+  const { checkin, pose } = target;
+  const key = slotKey(checkin, pose);
+  if (adding.has(key)) return;
+  adding.add(key);
+  renderTimeline();
+  let error = "";
+  try {
+    let blob;
+    try {
+      blob = await resizeImage(file, CHECKIN_PHOTO_MAX_SIDE, CHECKIN_PHOTO_QUALITY);
+    } catch (e) {
+      error = addPhotoError("unreadable", pose, checkin.checked_on);
+      return;
+    }
+    try {
+      await uploadCheckinPhoto(checkin.id, pose, blob);
+    } catch (e) {
+      error = addPhotoError("failed", pose, checkin.checked_on);
+    }
+  } finally {
+    adding.delete(key);
+    if (error) {
+      renderTimeline();
+      setMsg("timeline-status", error);
+    } else {
+      await loadCheckins(); // fresh signed links, including the new photo
+    }
   }
 }
 
@@ -446,6 +510,7 @@ function wire() {
     setMsg("photo-dialog-status", "Couldn't load this photo. Close it and reload the page to try again.");
   });
   $("photo-delete").addEventListener("click", deleteViewedPhoto);
+  $("add-photo-input").addEventListener("change", (e) => addPhoto(e.target));
 
   $("compare-open").addEventListener("click", openCompare);
   $("compare-close").addEventListener("click", () => $("compare").close());
@@ -495,7 +560,7 @@ async function start() {
 
 if (typeof module !== "undefined") {
   module.exports = { checkinText, weightSummary, weightLabel, caloriesLabel, weightError, dateError, photoFor, missingPhotoText,
-    photoViewTitle, DELETE_PHOTO_CONFIRM, photoDeleteError };
+    photoViewTitle, DELETE_PHOTO_CONFIRM, photoDeleteError, addPhotoLabel, addPhotoError };
 } else {
   initNav("progress");
   wire();
