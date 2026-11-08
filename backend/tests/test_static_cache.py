@@ -15,3 +15,19 @@ def test_static_files_must_be_revalidated():
 def test_api_responses_keep_their_own_headers():
     r = TestClient(app).get("/api/health")
     assert r.headers.get("cache-control") != "no-cache"
+
+
+def test_pages_load_scripts_and_styles_at_versioned_addresses():
+    # Copies saved before no-cache existed are reused without asking; a new address escapes them.
+    import pathlib
+    import re
+    pages = sorted(pathlib.Path("static").glob("*.html"))
+    assert pages
+    for page in pages:
+        refs = re.findall(r'(?:src|href)="(/[^"]+\.(?:js|css)[^"]*)"', page.read_text())
+        assert refs, page.name
+        for ref in refs:
+            assert ref.endswith(f"?v={ASSET_VERSION}"), (page.name, ref)
+
+
+ASSET_VERSION = 2
