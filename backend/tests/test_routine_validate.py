@@ -105,7 +105,7 @@ def test_rejects_reps_or_seconds():
 def test_rejects_over_budget():
     def heavy(p):
         for it in p["days"][0]["items"]:
-            it.update(sets=5, rest_sec=120, reps=10, seconds=None)
+            it.update(sets=5, rest_sec=120)
     assert _bad(heavy) == "over_budget"
 
 
@@ -152,3 +152,20 @@ def test_rejects_more_than_one_cardio():
     with pytest.raises(PlanInvalid) as exc:
         validate_plan(plan, lose)
     assert exc.value.reason == "cardio_count"
+
+
+def test_rejects_wrong_dose_type():
+    # Core and cardio are done for time; everything else by reps.
+    core = next(i for i, it in enumerate(GOOD["days"][0]["items"]) if it["seconds"] is not None)
+    def reps_for_core(p):
+        p["days"][0]["items"][core].update(reps=10, seconds=None)
+    assert _bad(reps_for_core) == "wrong_dose_type"
+    assert _bad(lambda p: p["days"][0]["items"][0].update(reps=None, seconds=40)) == "wrong_dose_type"
+
+
+def test_malformed_shapes_are_plan_invalid():
+    for raw in ({"days": [{"index": [0]}, {"index": 1}, {"index": 2}]},
+                {"days": [{"index": {}}, {"index": 1}, {"index": 2}]}):
+        with pytest.raises(PlanInvalid) as exc:
+            validate_plan(raw, FRAME)
+        assert exc.value.reason == "not_json_object"

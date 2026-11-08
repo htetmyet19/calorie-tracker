@@ -217,11 +217,11 @@ def _in(v, lo: int, hi: int) -> bool:
     return _int(v) and lo <= v <= hi
 
 
-def _clean_item(it, shortlist: set[int], in_day: set[int]) -> dict:
+def _clean_item(it, category: dict[int, str], in_day: set[int]) -> dict:
     if not isinstance(it, dict):
         raise PlanInvalid("not_json_object")
     vid = it.get("video_id")
-    if not _int(vid) or vid not in shortlist:
+    if not _int(vid) or vid not in category:
         raise PlanInvalid("unknown_video")
     if vid in in_day:
         raise PlanInvalid("repeat_video")
@@ -237,6 +237,8 @@ def _clean_item(it, shortlist: set[int], in_day: set[int]) -> dict:
         raise PlanInvalid("seconds_range")
     if not _in(it.get("rest_sec"), 30, 120):
         raise PlanInvalid("rest_range")
+    if (category[vid] in TIMED) != (seconds is not None):
+        raise PlanInvalid("wrong_dose_type")  # core and cardio for time, the rest by reps
     return {"video_id": vid, "sets": it["sets"], "reps": reps, "seconds": seconds,
             "rest_sec": it["rest_sec"]}
 
@@ -254,7 +256,9 @@ def validate_plan(raw: object, frame: Frame) -> dict:
     if not isinstance(raw, dict) or not isinstance(raw.get("days"), list) \
             or not all(isinstance(d, dict) for d in raw["days"]):
         raise PlanInvalid("not_json_object")
-    by_index = {d.get("index"): d for d in raw["days"]}
+    if not all(_int(d.get("index")) for d in raw["days"]):
+        raise PlanInvalid("not_json_object")
+    by_index = {d["index"]: d for d in raw["days"]}
     if len(raw["days"]) != len(frame.days) or set(by_index) != {d.index for d in frame.days}:
         raise PlanInvalid("wrong_day_count")
     limit = frame.inputs.session_min * 60 * BUDGET_SLACK - WARM_UP_SEC
@@ -267,7 +271,7 @@ def validate_plan(raw: object, frame: Frame) -> dict:
             raise PlanInvalid("item_count")
         category = {v["id"]: v["category"] for v in day.shortlist}
         in_day = set()
-        items = [_clean_item(it, set(category), in_day) for it in d["items"]]
+        items = [_clean_item(it, category, in_day) for it in d["items"]]
         cats = [category[i["video_id"]] for i in items]
         if not set(cats) & set(_main(day.categories)):
             raise PlanInvalid("no_main_exercise")

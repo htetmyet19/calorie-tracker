@@ -100,3 +100,14 @@ def test_lose_prompt_counts_the_finisher_within_seven():
     assert frame.days[0].max_items == 7
     assert "at most 6 exercises plus one cardio finisher" in prompt
     assert "at most 7 exercises plus" not in prompt
+
+
+def test_validation_bugs_are_not_blamed_on_the_provider(monkeypatch):
+    def boom(raw, frame):
+        raise KeyError("x")
+    monkeypatch.setattr(routine_ai, "validate_plan", boom)
+    assert _run(monkeypatch, "{}")[2] == "invalid_shape"
+
+
+def test_null_reply_is_not_json(monkeypatch):
+    assert _run(monkeypatch, None)[2] == "not_json"

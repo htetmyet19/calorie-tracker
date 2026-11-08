@@ -92,18 +92,22 @@ async def ask_model(prompt: str) -> str:
 
 async def build_plan(frame: Frame) -> tuple[dict, str, str | None]:
     """(plan, source, fallback_reason): the AI's plan if it passes every check, else rules."""
+    reason = None
     try:
         raw = await asyncio.wait_for(ask_model(build_prompt(frame)), AI_TIMEOUT_SEC)
-        plan = validate_plan(json.loads(raw), frame)
-        return plan, "ai", None
     except asyncio.TimeoutError:
         reason = "timeout"
-    except json.JSONDecodeError:
-        reason = "not_json"
-    except PlanInvalid as e:
-        reason = e.reason
     except Exception:  # any provider failure: the client still gets a routine
         reason = "provider_error"
+    if reason is None:
+        try:
+            return validate_plan(json.loads(raw), frame), "ai", None
+        except (json.JSONDecodeError, TypeError):  # TypeError: the reply was not text
+            reason = "not_json"
+        except PlanInvalid as e:
+            reason = e.reason
+        except Exception:  # a shape validate_plan didn't foresee: still the AI's fault
+            reason = "invalid_shape"
     log.warning("routine_ai_fallback reason=%s", reason)
     return rules_plan(frame), "rules", reason
 
