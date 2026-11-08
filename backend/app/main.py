@@ -11,8 +11,10 @@ from . import config, cron
 from .analysis import AnalysisError, analyze_meal
 from .auth import User, current_user
 from .checkin_rules import is_due, next_due_on
-from .schemas import (AnalyzeResponse, CheckinIn, CheckinList, CheckinOut, DailyTotal, DayLog, MealIn, MealOut, PhotoOut, PhotoRecordIn, PhotoUploadIn, ProfileOut, PushEndpointIn, PushSubscriptionIn, RoleIn,
-                      SettingsIn, SettingsOut, WeightIn, WeightOut)
+from .routine_ai import build_plan
+from .routine_rules import Inputs, NotEnoughExercises, build_frame, finalize_plan, week_start
+from .schemas import (ActiveRoutineOut, AnalyzeResponse, CheckinIn, CheckinList, CheckinOut, DailyTotal, DayLog, MealIn, MealOut, PhotoOut, PhotoRecordIn, PhotoUploadIn, ProfileOut, PushEndpointIn, PushSubscriptionIn, RoleIn,
+                      RoutineIn, RoutineOut, SettingsIn, SettingsOut, WeightIn, WeightOut)
 from .storage import Storage, StorageError, UploadRejected, new_path
 from .store import EndpointTaken, ProfileExists, SettingsExist, Store, StoreUnavailable, get_store
 
@@ -349,6 +351,93 @@ def remove_progress_photo(photo_id: int, store: Store = Depends(require_profile)
         storage.remove(PROGRESS_BUCKET, [row["photo_path"]])
     except Exception as e:
         log.warning("progress_photo_delete_failed photo_id=%s error=%s", photo_id, type(e).__name__)
+    return Response(status_code=204)
+
+
+# ---- workout routines ----
+
+ROUTINES_PER_DAY = 5
+NOT_ENOUGH_EXERCISES = "Not enough exercises for these choices yet. Try other equipment."
+ROUTINE_LIMIT = "You've made 5 routines today. Try again tomorrow."
+
+
+def _routine_out(row: dict, videos: dict[int, dict]) -> RoutineOut:
+    days = []
+    for d in row["plan"]["days"]:
+        items = []
+        for it in d["items"]:
+            v = videos.get(it["video_id"])
+            items.append({
+                **{k: it[k] for k in ("video_id", "sets", "reps", "seconds", "rest_sec")},
+                "warm_up": bool(it.get("warm_up")),
+                "youtube_id": v["youtube_id"] if v else "",
+                "title": v["title"] if v else "Exercise",
+                "channel": v["channel"] if v else "",
+                "category": v["category"] if v else "",
+                "available": bool(v and v.get("active", True)),
+            })
+        days.append({**{k: d[k] for k in ("index", "type", "title", "why", "est_min")}, "items": items})
+    return RoutineOut(
+        id=row["id"], created_at=str(row["created_at"]), days_per_week=row["days_per_week"],
+        level=row["level"], equipment=row["equipment"], session_min=row["session_min"],
+        goal=row["goal"], source=row["source"], note=row["plan"].get("note"), days=days)
+
+
+@app.post("/api/routines", response_model=RoutineOut, status_code=201)
+async def create_routine(body: RoutineIn, store: Store = Depends(require_profile)):
+    since = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=24)
+    if await run_in_threadpool(store.routines_created_since, since) >= ROUTINES_PER_DAY:
+        raise HTTPException(429, ROUTINE_LIMIT)
+    settings = await run_in_threadpool(store.get_settings)
+    goal = (settings or {}).get("weight_goal") or "maintain"
+    videos = await run_in_threadpool(store.active_videos)
+    inputs = Inputs(body.days_per_week, body.level, body.equipment, body.session_min)
+    try:
+        frame = build_frame(inputs, goal, videos)
+        plan, source, reason = await build_plan(frame)
+    except NotEnoughExercises:
+        raise HTTPException(409, NOT_ENOUGH_EXERCISES)
+    row = await run_in_threadpool(store.create_routine, {
+        "days_per_week": inputs.days_per_week, "level": inputs.level,
+        "equipment": inputs.equipment, "session_min": inputs.session_min, "goal": goal,
+        "source": source, "fallback_reason": reason, "plan": finalize_plan(plan, frame)})
+    return _routine_out(row, {v["id"]: v for v in videos})
+
+
+@app.get("/api/routines/active", response_model=ActiveRoutineOut)
+def active_routine(today: str = Query(..., description="YYYY-MM-DD, the browser's local date"),
+                   store: Store = Depends(require_profile)):
+    day = parse_day(today, "today")
+    row = store.active_routine()
+    if row is None:
+        return ActiveRoutineOut(routine=None, done=[], week_start=None)
+    ids = [it["video_id"] for d in row["plan"]["days"] for it in d["items"]]
+    start = week_start(day)
+    done = store.sessions_between(row["id"], start, start + datetime.timedelta(days=6))
+    return ActiveRoutineOut(routine=_routine_out(row, store.videos_by_ids(ids)),
+                            done=done, week_start=start.isoformat())
+
+
+def _tick_target(store: Store, routine_id: int, day_index: int, day: str) -> datetime.date:
+    row = store.get_routine(routine_id)
+    if row is None or not row["active"] or not 0 <= day_index < len(row["plan"]["days"]):
+        raise HTTPException(404, "Routine day not found")
+    d = parse_day(day, "day")
+    # The browser sends its local date, at most one day ahead of UTC.
+    if d > utc_today() + datetime.timedelta(days=1):
+        raise HTTPException(400, "day is in the future")
+    return d
+
+
+@app.put("/api/routines/{routine_id}/days/{day_index}/done/{day}", status_code=204)
+def mark_day_done(routine_id: int, day_index: int, day: str, store: Store = Depends(require_profile)):
+    store.mark_done(routine_id, day_index, _tick_target(store, routine_id, day_index, day))
+    return Response(status_code=204)
+
+
+@app.delete("/api/routines/{routine_id}/days/{day_index}/done/{day}", status_code=204)
+def unmark_day_done(routine_id: int, day_index: int, day: str, store: Store = Depends(require_profile)):
+    store.unmark_done(routine_id, day_index, _tick_target(store, routine_id, day_index, day))
     return Response(status_code=204)
 
 
