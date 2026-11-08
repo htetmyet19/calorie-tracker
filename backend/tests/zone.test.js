@@ -36,3 +36,28 @@ test("a missing or unknown goal type behaves like lose/maintain", () => {
   assert.equal(z(1800, 2000, undefined), "yellow");
   assert.equal(z(1800, 2000, null), "yellow");
 });
+
+const { ringColor, ZONE_RGB } = require("../static/zone.js");
+const rgb = (c) => `rgb(${c.join(", ")})`;
+
+test("ring colour is green early, yellow near the goal, red past it", () => {
+  assert.equal(ringColor(0, "lose"), rgb(ZONE_RGB.green));
+  assert.equal(ringColor(0.5, "lose"), rgb(ZONE_RGB.green));
+  assert.equal(ringColor(0.85, "lose"), rgb(ZONE_RGB.yellow));
+  assert.equal(ringColor(1.0, "maintain"), rgb(ZONE_RGB.yellow));
+  assert.equal(ringColor(1.05, "lose"), rgb(ZONE_RGB.red));
+  assert.equal(ringColor(1.6, "lose"), rgb(ZONE_RGB.red));
+});
+
+test("between stops the colour blends", () => {
+  const mid = ringColor(0.675, "lose");          // halfway from 50% to 85%
+  const expect = ZONE_RGB.green.map((g, i) => Math.round((g + ZONE_RGB.yellow[i]) / 2));
+  assert.equal(mid, rgb(expect));
+});
+
+test("gain goals blend later: green to 80%, yellow by 110%, red past 125%", () => {
+  assert.equal(ringColor(0.8, "gain"), rgb(ZONE_RGB.green));
+  assert.equal(ringColor(1.1, "gain"), rgb(ZONE_RGB.yellow));
+  assert.equal(ringColor(1.2, "gain"), rgb(ZONE_RGB.yellow));
+  assert.equal(ringColor(1.25, "gain"), rgb(ZONE_RGB.red));
+});
