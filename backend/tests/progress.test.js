@@ -89,6 +89,7 @@ test("photoDeleteError: 204 and 404 (already gone) succeed, anything else explai
 
 test("a skipped photo can be added later: button label and error text", () => {
   assert.equal(P.addPhotoLabel("front", "2026-11-01"), "Add front photo for 1 Nov");
+  assert.equal(P.takePhotoLabel("front", "2026-11-01"), "Take front photo for 1 Nov");
   assert.equal(P.addPhotoError("unreadable", "side", "2026-11-01"),
     "Couldn't read that side photo for 1 Nov. Choose another one.");
   assert.equal(P.addPhotoError("failed", "back", "2026-11-01"),
