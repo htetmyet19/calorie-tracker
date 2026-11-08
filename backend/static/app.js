@@ -530,7 +530,8 @@ async function loadDay() {
 
 // ---------- Photo & estimate ----------
 
-$("photo").addEventListener("change", (e) => {
+// Two ways in: the gallery picker (#photo) and the camera (#photo-camera).
+function photoPicked(e) {
   selectedFile = e.target.files[0] || null;
   $("analyze").disabled = !selectedFile;
   $("result").hidden = true;
@@ -540,7 +541,9 @@ $("photo").addEventListener("change", (e) => {
   $("preview").hidden = false;
   $("drop-empty").hidden = true;
   $("drop").classList.add("has-photo");
-});
+}
+$("photo").addEventListener("change", photoPicked);
+$("photo-camera").addEventListener("change", photoPicked);
 
 $("analyze").addEventListener("click", async () => {
   if (!selectedFile) return;
@@ -657,6 +660,7 @@ function resetLogger() {
   resetAdvice();
   selectedFile = null;
   $("photo").value = "";
+  $("photo-camera").value = "";
   $("preview").hidden = true;
   $("drop-empty").hidden = false;
   $("drop").classList.remove("has-photo");
