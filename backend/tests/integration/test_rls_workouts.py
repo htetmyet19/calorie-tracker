@@ -110,3 +110,12 @@ def test_routines_only_active_is_editable(make_user, rest):
     assert r.status_code in (401, 403) or r.json() == []
     assert rest(a.token).patch("/routines", params={"id": f"eq.{rid}"},
                                json={"active": False}).status_code == 204
+
+
+def test_routine_limit_is_not_revealed_to_other_users(make_user, rest):
+    a, b = make_user("client"), make_user("client")
+    for _ in range(5):
+        assert rest(a.token).post("/routine_builds", json={"user_id": a.id}).status_code == 201
+    # Inserting for someone else is refused by RLS, not answered with their limit status.
+    r = rest(b.token).post("/routine_builds", json={"user_id": a.id})
+    assert r.status_code in (401, 403)

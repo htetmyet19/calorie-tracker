@@ -221,3 +221,26 @@ class ActiveRoutineOut(BaseModel):
     routine: RoutineOut | None
     done: list[DoneOut]
     week_start: str | None
+
+
+# ---- meal advice ----
+
+class AdviceItem(BaseModel):
+    """A food as shown on the result screen. Items added by hand have no confidence."""
+    name: str = Field(min_length=1, max_length=80)
+    calories: float = Field(ge=0, le=5000)
+    protein_g: float = Field(default=0, ge=0, le=500)
+    carbs_g: float = Field(default=0, ge=0, le=1000)
+    fat_g: float = Field(default=0, ge=0, le=500)
+
+
+class AdviceIn(BaseModel):
+    items: list[AdviceItem] = Field(min_length=1, max_length=20)
+    eaten: bool
+    date: str
+
+
+class AdviceOut(BaseModel):
+    text: str
+    verdict: str
+    source: str

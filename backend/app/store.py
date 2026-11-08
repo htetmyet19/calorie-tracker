@@ -459,6 +459,15 @@ class Store:
             raise RoutineLimit()
         self._check(resp)
 
+    def record_advice(self) -> bool:
+        """Count one meal-advice request; False when the trigger refuses the 31st in 24 hours."""
+        resp = self._request("POST", "/advice_requests", write=True, prefer="return=minimal",
+                             json={"user_id": self.user.id})
+        if resp.status_code == 400 and resp.json().get("message") == "advice_limit":
+            return False
+        self._check(resp)
+        return True
+
     def create_routine(self, row: dict) -> dict:
         """Replace the active routine: deactivate it, then insert the new one as active.
 
