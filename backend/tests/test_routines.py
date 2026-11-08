@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from app import routine_ai
 from app.auth import User, current_user
 from app.main import app
-from app.store import get_store
+from app.store import RoutineLimit, get_store
 from tests.test_routine_rules import FIXTURE_LIBRARY
 
 PROFILE = {"id": "u1", "role": "client", "display_name": "Asha"}
@@ -24,6 +24,7 @@ class FakeRoutineStore:
         self.routines = {}
         self.sessions = set()   # (routine_id, day_index, done_on iso)
         self.next_id = 1
+        self.builds = 0
 
     def get_profile(self):
         return PROFILE
@@ -37,9 +38,11 @@ class FakeRoutineStore:
     def videos_by_ids(self, ids):
         return {v["id"]: v for v in self.videos if v["id"] in set(ids)}
 
-    def routines_created_since(self, ts):
-        return sum(1 for r in self.routines.values()
-                   if datetime.datetime.fromisoformat(r["created_at"]) >= ts)
+    def record_build(self):
+        # Like the database trigger: the 6th build in 24 hours is refused.
+        if self.builds >= 5:
+            raise RoutineLimit()
+        self.builds += 1
 
     def create_routine(self, row):
         for r in self.routines.values():
@@ -226,3 +229,21 @@ def test_busy_store_is_409_not_500():
     client, _ = _env(Busy())
     r = client.post("/api/routines", json=BODY)
     assert r.status_code == 409 and r.json()["detail"] == "Another routine was just built. Reload to see it."
+
+
+def test_failed_save_still_counts_toward_the_limit():
+    class FailingSave(FakeRoutineStore):
+        def create_routine(self, row):
+            raise RuntimeError("Supabase returned 400")
+    store = FailingSave()
+    client, _ = _env(store)
+    client = TestClient(app, raise_server_exceptions=False)
+    assert client.post("/api/routines", json=BODY).status_code == 500
+    assert store.builds == 1
+
+
+def test_empty_library_does_not_count():
+    store = FakeRoutineStore(videos=[])
+    client, _ = _env(store)
+    client.post("/api/routines", json=BODY)
+    assert store.builds == 0

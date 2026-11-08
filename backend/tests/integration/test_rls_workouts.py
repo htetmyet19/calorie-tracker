@@ -81,3 +81,31 @@ def test_sessions_owner_and_routine_owner(make_user, rest):
     assert r.status_code in (401, 403)
     r = rest(b.token).get("/workout_sessions", params={"routine_id": f"eq.{rid}"})
     assert r.status_code == 200 and r.json() == []
+
+
+def test_routine_builds_limit_and_no_tampering(make_user, rest):
+    a = make_user("client")
+    for _ in range(5):
+        assert rest(a.token).post("/routine_builds", json={"user_id": a.id}).status_code == 201
+    r = rest(a.token).post("/routine_builds", json={"user_id": a.id})
+    assert r.status_code == 400 and r.json()["message"] == "routine_limit"
+    # The count can't be reset: no delete, no update, no backdated insert.
+    r = rest(a.token).delete("/routine_builds", params={"user_id": f"eq.{a.id}"}, headers=REP)
+    assert r.status_code in (401, 403) or r.json() == []
+    r = rest(a.token).patch("/routine_builds", params={"user_id": f"eq.{a.id}"},
+                            json={"created_at": "2000-01-01T00:00:00Z"}, headers=REP)
+    assert r.status_code in (401, 403) or r.json() == []
+    b = make_user("client")
+    r = rest(b.token).post("/routine_builds", json={"user_id": b.id, "created_at": "2000-01-01T00:00:00Z"})
+    assert r.status_code in (401, 403)
+
+
+def test_routines_only_active_is_editable(make_user, rest):
+    a = make_user("client")
+    rid = _routine(rest, a).json()[0]["id"]
+    r = rest(a.token).patch("/routines", params={"id": f"eq.{rid}"}, json={"plan": {"days": [1]}})
+    assert r.status_code in (401, 403)
+    r = rest(a.token).delete("/routines", params={"id": f"eq.{rid}"}, headers=REP)
+    assert r.status_code in (401, 403) or r.json() == []
+    assert rest(a.token).patch("/routines", params={"id": f"eq.{rid}"},
+                               json={"active": False}).status_code == 204

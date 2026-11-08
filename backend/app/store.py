@@ -47,6 +47,10 @@ class SettingsExist(Exception):
     """A settings row already exists for this user."""
 
 
+class RoutineLimit(Exception):
+    """The database refused the build: 5 already in the last 24 hours."""
+
+
 class RoutineBusy(Exception):
     """Another build saved its routine at the same moment, twice in a row."""
 
@@ -447,11 +451,13 @@ class Store:
         self._check(resp)
         return {v["id"]: v for v in resp.json()}
 
-    def routines_created_since(self, ts: datetime.datetime) -> int:
-        resp = self._request("GET", "/routines", params={
-            "user_id": f"eq.{self.user.id}", "created_at": f"gte.{ts.isoformat()}", "select": "id"})
+    def record_build(self) -> None:
+        """Count one routine build. A trigger refuses the 6th in 24 hours (locked per user)."""
+        resp = self._request("POST", "/routine_builds", write=True, prefer="return=minimal",
+                             json={"user_id": self.user.id})
+        if resp.status_code == 400 and resp.json().get("message") == "routine_limit":
+            raise RoutineLimit()
         self._check(resp)
-        return len(resp.json())
 
     def create_routine(self, row: dict) -> dict:
         """Replace the active routine: deactivate it, then insert the new one as active.

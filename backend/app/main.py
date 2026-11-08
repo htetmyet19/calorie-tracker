@@ -16,7 +16,7 @@ from .routine_rules import Inputs, NotEnoughExercises, build_frame, finalize_pla
 from .schemas import (ActiveRoutineOut, AnalyzeResponse, CheckinIn, CheckinList, CheckinOut, DailyTotal, DayLog, MealIn, MealOut, PhotoOut, PhotoRecordIn, PhotoUploadIn, ProfileOut, PushEndpointIn, PushSubscriptionIn, RoleIn,
                       RoutineIn, RoutineOut, SettingsIn, SettingsOut, WeightIn, WeightOut)
 from .storage import Storage, StorageError, UploadRejected, new_path
-from .store import (EndpointTaken, ProfileExists, RoutineBusy, SettingsExist, Store, StoreUnavailable,
+from .store import (EndpointTaken, ProfileExists, RoutineBusy, RoutineLimit, SettingsExist, Store, StoreUnavailable,
                     get_store)
 
 log = logging.getLogger("calorie_tracker")
@@ -357,7 +357,6 @@ def remove_progress_photo(photo_id: int, store: Store = Depends(require_profile)
 
 # ---- workout routines ----
 
-ROUTINES_PER_DAY = 5
 NOT_ENOUGH_EXERCISES = "Not enough exercises for these choices yet. Try other equipment."
 ROUTINE_LIMIT = "You've made 5 routines today. Try again tomorrow."
 ROUTINE_BUSY = "Another routine was just built. Reload to see it."
@@ -387,15 +386,20 @@ def _routine_out(row: dict, videos: dict[int, dict]) -> RoutineOut:
 
 @app.post("/api/routines", response_model=RoutineOut, status_code=201)
 async def create_routine(body: RoutineIn, store: Store = Depends(require_profile)):
-    since = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=24)
-    if await run_in_threadpool(store.routines_created_since, since) >= ROUTINES_PER_DAY:
-        raise HTTPException(429, ROUTINE_LIMIT)
     settings = await run_in_threadpool(store.get_settings)
     goal = (settings or {}).get("weight_goal") or "maintain"
     videos = await run_in_threadpool(store.active_videos)
     inputs = Inputs(body.days_per_week, body.level, body.equipment, body.session_min)
     try:
         frame = build_frame(inputs, goal, videos)
+    except NotEnoughExercises:
+        raise HTTPException(409, NOT_ENOUGH_EXERCISES)
+    # Counted before the AI call, so a build whose save later fails still counts.
+    try:
+        await run_in_threadpool(store.record_build)
+    except RoutineLimit:
+        raise HTTPException(429, ROUTINE_LIMIT)
+    try:
         plan, source, reason = await build_plan(frame)
     except NotEnoughExercises:
         raise HTTPException(409, NOT_ENOUGH_EXERCISES)

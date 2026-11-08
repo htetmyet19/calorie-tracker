@@ -3,7 +3,7 @@
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0b0f14,50:1a2a12,100:c6f36b&height=210&section=header&text=Calorie%20Tracker&fontSize=58&fontColor=ffffff&fontAlignY=36&animation=fadeIn&desc=Snap%20a%20meal%20%C2%B7%20see%20your%20day%20%C2%B7%20reach%20your%20goal&descAlignY=58&descSize=17" alt="Calorie Tracker" width="100%">
 
 <a href="https://github.com/htetmyet19/calorie-tracker">
-  <img src="https://readme-typing-svg.demolab.com?font=Inter&weight=600&size=20&duration=3000&pause=900&color=C6F36B&center=true&vCenter=true&width=560&lines=%F0%9F%93%B8+Photo+%E2%86%92+foods+%2B+calories+in+seconds;%F0%9F%8E%AF+A+daily+goal+that+adapts+as+you+change;%F0%9F%93%88+Weight%2C+check-ins+and+progress+photos;%F0%9F%A4%9D+Built+for+trainers+and+their+clients+in+Myanmar" alt="Typing tagline">
+  <img src="https://readme-typing-svg.demolab.com?font=Inter&weight=600&size=20&duration=3000&pause=900&color=C6F36B&center=true&vCenter=true&width=560&lines=%F0%9F%93%B8+Photo+%E2%86%92+foods+%2B+calories+in+seconds;%F0%9F%8E%AF+A+daily+goal+that+adapts+as+you+change;%F0%9F%93%88+Weight%2C+check-ins+and+progress+photos;%F0%9F%8F%8B%EF%B8%8F+Weekly+workouts+from+curated+exercise+demos" alt="Typing tagline">
 </a>
 
 <p>
@@ -156,7 +156,7 @@ If the main Gemini model is overloaded or out of quota, the backend retries and 
 - **Private photo buckets.** Photos are stored per user and served only through signed access.
 - **The service-role key never reaches the browser.** Only the daily job (`app/cron.py`) may read it, and a unit test enforces that.
 - **Data minimisation.** No phone number, national ID or location is collected.
-- **Tested at two layers.** 300 unit tests and 100 frontend tests run without a database; 77 integration tests run against a real local Supabase and check that one user cannot read another's data.
+- **Tested at two layers.** 319 unit tests and 100 frontend tests run without a database; 79 integration tests run against a real local Supabase and check that one user cannot read another's data.
 
 ## 🚀 Run it locally
 

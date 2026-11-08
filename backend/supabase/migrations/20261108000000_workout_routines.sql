@@ -31,6 +31,32 @@ create table public.routines (
 create unique index routines_one_active on public.routines(user_id) where active;
 create index routines_user_created on public.routines(user_id, created_at desc);
 
+-- One row per routine build (each may call the AI). The 5-per-24-hours limit is
+-- enforced here, not by counting routines, so it holds even if a save fails or a
+-- client talks to PostgREST directly.
+create table public.routine_builds (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+create index routine_builds_user_created on public.routine_builds(user_id, created_at desc);
+
+create function public.enforce_routine_limit() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  -- Serialise one user's builds so two at once can't both see 4.
+  perform pg_advisory_xact_lock(hashtext('routine_builds:' || new.user_id::text));
+  if (select count(*) from public.routine_builds
+      where user_id = new.user_id and created_at > now() - interval '24 hours') >= 5 then
+    raise exception 'routine_limit' using errcode = 'P0001';
+  end if;
+  new.created_at := now();
+  return new;
+end $$;
+revoke execute on function public.enforce_routine_limit() from public;
+create trigger routine_builds_limit before insert on public.routine_builds
+  for each row execute function public.enforce_routine_limit();
+
 create table public.workout_sessions (
   id bigint generated always as identity primary key,
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -45,6 +71,7 @@ create index workout_sessions_user_done on public.workout_sessions(user_id, done
 alter table public.exercise_videos enable row level security;
 alter table public.routines enable row level security;
 alter table public.workout_sessions enable row level security;
+alter table public.routine_builds enable row level security;
 
 -- exercise_videos: anyone signed in may read (old routines still show inactive
 -- videos); only the service role (scripts/sync_videos.py) writes.
@@ -58,8 +85,17 @@ create policy routines_insert on public.routines for insert to authenticated
   with check (user_id = (select auth.uid()));
 create policy routines_update on public.routines for update to authenticated
   using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
-create policy routines_delete on public.routines for delete to authenticated
+-- Owners may only change `active` (the one-active index still holds); plans are written by the API, never edited.
+revoke update, delete on public.routines from authenticated;
+grant update (active) on public.routines to authenticated;
+
+-- routine_builds: insert your own (the trigger stamps created_at), read your own; nothing else.
+create policy builds_select on public.routine_builds for select to authenticated
   using (user_id = (select auth.uid()));
+create policy builds_insert on public.routine_builds for insert to authenticated
+  with check (user_id = (select auth.uid()));
+revoke insert, update, delete on public.routine_builds from authenticated;
+grant insert (user_id) on public.routine_builds to authenticated;
 
 -- workout_sessions: owner only, and only on the owner's own routine
 create policy sessions_select on public.workout_sessions for select to authenticated

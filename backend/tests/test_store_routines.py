@@ -60,11 +60,14 @@ def test_videos_by_ids_skips_empty(monkeypatch):
     assert seen[0][2]["id"] == "in.(3)"
 
 
-def test_routines_created_since(monkeypatch):
-    s, seen = _mock(monkeypatch, [httpx.Response(200, json=[{"id": 1}, {"id": 2}])])
-    ts = datetime.datetime(2026, 11, 8, 10, 0, tzinfo=datetime.timezone.utc)
-    assert s.routines_created_since(ts) == 2
-    assert seen[0][2]["created_at"] == "gte.2026-11-08T10:00:00+00:00"
+def test_record_build(monkeypatch):
+    import pytest
+    s, seen = _mock(monkeypatch, [httpx.Response(201), httpx.Response(
+        400, json={"code": "P0001", "message": "routine_limit"})])
+    s.record_build()
+    assert seen[0][:2] == ("POST", "/rest/v1/routine_builds") and seen[0][4] == {"user_id": "u1"}
+    with pytest.raises(store.RoutineLimit):
+        s.record_build()
 
 
 def test_create_routine_retries_once_when_another_build_wins(monkeypatch):
