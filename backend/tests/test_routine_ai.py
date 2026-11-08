@@ -111,3 +111,32 @@ def test_validation_bugs_are_not_blamed_on_the_provider(monkeypatch):
 
 def test_null_reply_is_not_json(monkeypatch):
     assert _run(monkeypatch, None)[2] == "not_json"
+
+
+def test_gemini_is_held_to_the_plan_schema(monkeypatch):
+    from types import SimpleNamespace
+
+    from app import gemini_client
+    seen = {}
+
+    async def generate_content(model, contents, config):
+        seen.update(model=model, config=config)
+        return SimpleNamespace(text='{"days": []}')
+    fake = SimpleNamespace(aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate_content)))
+    monkeypatch.setattr(gemini_client, "_get_client", lambda: fake)
+    monkeypatch.setattr(gemini_client, "_models", lambda: ["m1"])
+    assert asyncio.run(routine_ai._ask_gemini("p")) == '{"days": []}'
+    assert seen["config"].response_schema is routine_ai.AIPlan
+    assert seen["config"].response_mime_type == "application/json"
+
+
+def test_ollama_is_held_to_the_plan_schema():
+    payload = routine_ai._ollama_payload("p")
+    assert payload["format"] == routine_ai.AIPlan.model_json_schema()
+    assert payload["messages"] == [{"role": "user", "content": "p"}]
+
+
+def test_plan_schema_matches_what_validation_reads():
+    plan = routine_ai.AIPlan.model_validate(RULES)
+    item = plan.days[0].items[0]
+    assert {"video_id", "sets", "reps", "seconds", "rest_sec"} == set(item.model_dump())

@@ -10,12 +10,33 @@ import json
 import logging
 
 import httpx
+from pydantic import BaseModel
 
 from . import config
 from .routine_rules import (MAX_ITEMS, MIN_ITEMS, WORK_SEC, Frame, PlanInvalid, rules_plan,
                             validate_plan)
 
 log = logging.getLogger(__name__)
+
+
+# The reply's shape, given to the model as a JSON schema. Only the shape: the
+# ranges and shortlist rules are still checked by validate_plan.
+class AIItem(BaseModel):
+    video_id: int
+    sets: int
+    reps: int | None
+    seconds: int | None
+    rest_sec: int
+
+
+class AIDay(BaseModel):
+    index: int
+    why: str
+    items: list[AIItem]
+
+
+class AIPlan(BaseModel):
+    days: list[AIDay]
 
 AI_TIMEOUT_SEC = 20
 
@@ -68,16 +89,21 @@ async def _ask_gemini(prompt: str) -> str:
             resp = await client.aio.models.generate_content(
                 model=model, contents=[prompt],
                 config=types.GenerateContentConfig(response_mime_type="application/json",
-                                                   temperature=0.4))
+                                                   response_schema=AIPlan, temperature=0.4))
             return resp.text or ""
         except errors.APIError as e:  # overloaded, out of quota, retired: try the next model
             last = e
     raise RuntimeError(f"all Gemini models failed ({type(last).__name__})")
 
 
+def _ollama_payload(prompt: str) -> dict:
+    return {"model": config.OLLAMA_MODEL, "messages": [{"role": "user", "content": prompt}],
+            "format": AIPlan.model_json_schema(), "think": False, "stream": False,
+            "options": {"temperature": 0.4}}
+
+
 async def _ask_ollama(prompt: str) -> str:
-    payload = {"model": config.OLLAMA_MODEL, "messages": [{"role": "user", "content": prompt}],
-               "format": "json", "think": False, "stream": False, "options": {"temperature": 0.4}}
+    payload = _ollama_payload(prompt)
     async with httpx.AsyncClient(base_url=config.OLLAMA_URL, timeout=AI_TIMEOUT_SEC) as client:
         r = await client.post("/api/chat", json=payload)
     r.raise_for_status()
