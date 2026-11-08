@@ -161,6 +161,8 @@ const TABS = [
     icon: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/>' },
   { id: "progress", href: "/progress.html", label: "Progress",
     icon: '<path d="M4 18l5-6 4 3 7-9"/><path d="M4 21h16"/>' },
+  { id: "workout", href: "/workout.html", label: "Workout",
+    icon: '<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>' },
 ];
 
 function renderTabbar(active) {
