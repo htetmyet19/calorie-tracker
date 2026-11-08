@@ -6,8 +6,8 @@ Mockup: https://claude.ai/artifact/LAcpePLSmn9Lv6uxtimidt (approved)
 
 ## Goal
 
-A small coach character, **Coach Ollie** (an original otter), sits in a card under the calorie
-ring on the Today page and shows one short message at a time about the user's day. It makes the
+A small coach character, **Coach Ollie** (an original otter), floats in the bottom-right corner of
+the Today page and shows one short message at a time about the user's day. It makes the
 numbers on the page easier to act on, in a friendly voice, without nagging or shaming.
 
 Success: users read the bubble (taps on Ollie, few "hide for today" taps) and log meals on more
@@ -43,26 +43,39 @@ order; the first match wins.
 - Which variant shows first is fixed per day (day of month: even → A, odd → B), so a reload
   doesn't flicker. Tapping Ollie switches to the other variant.
 
-## The card
+## Ollie in the corner (revised 2026-11-08, replaces the card under the ring)
 
-- Placement: between the calorie ring and **Snap a meal**, as in the mockup.
-- Fits the phone: no sideways scrolling at any phone width (320 px and up), and on a 390×844
-  screen the ring, Ollie's card and **Snap a meal** are all visible without scrolling. The ring
-  shrinks on short screens to make room; the meals list below may still scroll.
-- Contents: the otter (inline SVG, five moods: happy, open, calm, sleepy, wave), the label
-  "Coach Ollie", the speech bubble, an optional action link, and an **×** button.
-- The otter is a `<button>` labelled "Tap Ollie for another message". The bubble text is real
-  text in a `role="status"` element so screen readers announce changes.
-- **×** ("Hide coach for today") hides the card until the next calendar day. Stored in
-  `localStorage` as the hidden date; a failed storage read just shows the card.
-- Settings panel gains a **Show coach** switch (default on), stored per device in
-  `localStorage`. Per device keeps v1 free of a database change; if users want it to follow
-  their account, it can move to `/api/settings` later.
-- Motion: a slow bob, and the paw waves in the wave mood; both off under
-  `prefers-reduced-motion: reduce`.
-- The card refreshes whenever the day re-renders (after load, saving or deleting a meal, goal
-  change). The check-in "due" fact is fetched once per page load; if that request fails, rule 1
-  is skipped.
+Mockup: the "Ollie in the corner (3D look)" screen at the link above (approved).
+
+- Ollie floats bottom-right, just above the tab bar (`position: fixed`). The bubble pops out to
+  his left: the name, the line, an optional action link, and a **×** that folds it away.
+- The bubble opens for each new line. **×** folds it; that exact line stays folded for the rest of
+  the day, across reloads (`localStorage` `coach-folded` = `{ date, text }`, see
+  `bubbleStartsOpen`). Folded, a lime ring pulses around Ollie; tapping him opens the line again.
+  Tapping him while open shows the other line. "Hide for today" is gone: folding replaces it.
+- Ollie is a `<button>` labelled "Coach Ollie: tap for another message" (open) or "Coach Ollie:
+  show message" (folded). The line is real text in a `role="status"` element.
+- Settings has a **Show coach** switch (default on), stored per device in `localStorage`.
+- 3D look: shaded fur, cream and paws (radial gradients lit from the top left), a shiny nose,
+  eyes and metal whistle, a drop shadow, and a slow float that turns him left and right in 3D
+  while his ground shadow shrinks as he rises.
+- The card refreshes whenever the day re-renders. The check-in "due" fact is fetched once per
+  page load; if that request fails, rule 1 is skipped. Ollie shows only on today.
+
+## Today fits the phone screen
+
+Below 900 px wide the Today page is one screen with no page scroll: it fills the height between
+the top and the tab bar, and only the meals list scrolls, in its own box (with room at the bottom
+so the last meal scrolls out from under Ollie). To make room on phones:
+
+- The ring is at most 30% of the screen height (25% when the screen is under 720 px tall), and
+  the text inside it scales with the ring.
+- The breakfast / lunch / dinner legend is hidden: the meals list shows the same split.
+- The protein / carbs / fat boxes are tighter.
+- If something extra (the goal card) makes the top too tall, the page area scrolls as a fallback
+  instead of clipping.
+
+Wide screens keep the two-column layout.
 
 ## Units
 

@@ -40,9 +40,9 @@ test("check-in photos can use the camera as well as the gallery", () => {
 test("the Today page has Coach Ollie's card, and loads coach.js after zone.js and before app.js", () => {
   const html = fs.readFileSync(path.join(STATIC, "index.html"), "utf8");
   assert.match(html, /<section[^>]*id="coach"[^>]*hidden/);
-  assert.match(html, /<button[^>]*id="coach-otter"[^>]*aria-label="Tap Ollie for another message"/);
+  assert.match(html, /<button[^>]*id="coach-otter"[^>]*aria-label="Coach Ollie: tap for another message"/);
   assert.match(html, /id="coach-text"[^>]*role="status"/);
-  assert.match(html, /<button[^>]*id="coach-hide"[^>]*aria-label="Hide coach for today"/);
+  assert.match(html, /<button[^>]*id="coach-fold"[^>]*aria-label="Fold the message away"/);
   const order = ["/zone.js", "/coach.js", "/app.js"].map((s) => html.indexOf(`src="${s}?v=2"`));
   assert.ok(order.every((i) => i > 0) && order[0] < order[1] && order[1] < order[2], String(order));
 });
@@ -51,4 +51,15 @@ test("settings have a Show coach switch", () => {
   const nav = fs.readFileSync(path.join(STATIC, "nav.js"), "utf8");
   assert.match(nav, /id="coach-switch"/);
   assert.match(nav, /Show coach/);
+});
+
+test("on phones the Today page fits the screen: only the meals list scrolls, and Ollie floats in the corner", () => {
+  const html = fs.readFileSync(path.join(STATIC, "index.html"), "utf8");
+  assert.match(html, /<body[^>]*class="[^"]*\bapp-today\b/);
+  const css = fs.readFileSync(path.join(STATIC, "styles.css"), "utf8");
+  const phone = css.slice(css.indexOf("@media (max-width: 899px)"));
+  assert.ok(css.includes("@media (max-width: 899px)"), "a phone layout block");
+  assert.match(phone, /body\.app-today\s*\{[^}]*height:\s*100dvh[^}]*overflow:\s*hidden/);
+  assert.match(phone, /\.app-today \.meals-section\s*\{[^}]*overflow-y:\s*auto/);
+  assert.match(css, /\.coach\s*\{[^}]*position:\s*fixed/);
 });

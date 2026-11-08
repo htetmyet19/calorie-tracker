@@ -37,4 +37,16 @@ function coachMessage(f) {
   return { mood, text: COACH_LINES[key][variant].replace("{left}", left), action };
 }
 
-if (typeof module !== "undefined") module.exports = { coachMessage, COACH_LINES };
+// How long the "…" typing dots show before a line appears: a little longer for longer lines.
+function typingMs(text, reducedMotion) {
+  if (reducedMotion) return 0;
+  return Math.min(1100, Math.max(500, 300 + text.length * 10));
+}
+
+// The bubble opens for each new line; one the user folded away today stays folded.
+// folded: { date, text } from the last fold, or null.
+function bubbleStartsOpen(text, folded, today) {
+  return !(folded && folded.date === today && folded.text === text);
+}
+
+if (typeof module !== "undefined") module.exports = { coachMessage, COACH_LINES, typingMs, bubbleStartsOpen };
