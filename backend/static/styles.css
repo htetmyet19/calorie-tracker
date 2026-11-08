@@ -1127,3 +1127,12 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 .video-frame { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: #000; }
 .video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .video-credit { margin: 10px 0 0; }
+
+/* ---------- Meal advice card (result screen) ---------- */
+.advice { margin-top: 18px; padding: 14px; border-radius: 16px; background: var(--raised); }
+.advice .meal-type-options { margin-top: 2px; }
+.advice-text { margin-top: 12px; color: var(--ink); line-height: 1.45; }
+.advice-text:empty { display: none; }
+.advice-text.is-error { color: var(--chili); }
+.advice.is-loading .advice-text { color: var(--muted); }
+.advice-note { margin: 10px 0 0; }

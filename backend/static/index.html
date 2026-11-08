@@ -127,6 +127,17 @@
         <ul class="warnings" id="warnings"></ul>
         <p class="notes" id="notes"></p>
 
+        <!-- Advice on this meal: never blocks saving -->
+        <fieldset class="meal-type advice" id="advice">
+          <legend>Have you eaten this yet?</legend>
+          <div class="meal-type-options">
+            <label><input type="radio" name="advice-eaten" value="no">Not yet</label>
+            <label><input type="radio" name="advice-eaten" value="yes">Already eaten</label>
+          </div>
+          <p class="advice-text" id="advice-text" role="status" aria-live="polite"></p>
+          <p class="hint advice-note" id="advice-note"></p>
+        </fieldset>
+
         <fieldset class="meal-type">
           <legend>Which meal is this?</legend>
           <div class="meal-type-options" id="meal-type"></div>
@@ -212,6 +223,7 @@
   <script src="/push.js"></script>
   <script src="/install.js"></script>
   <script src="/nav.js"></script>
+  <script src="/advice.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
