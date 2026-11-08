@@ -11,6 +11,7 @@ let justSavedId = null;  // the segment to draw in after a save
 let loadError = null;    // the message loadDay last showed, if any
 const DEFAULT_GOAL = 2000;
 let savedGoal = DEFAULT_GOAL; // the goal the server last confirmed
+let goalType = null;          // lose / maintain / gain from settings; sets the ring's zones
 let userId = null;            // for telling the user's own goal from a trainer's
 
 const localDateTime = (d) => `${isoDate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -72,6 +73,8 @@ $("log-date").addEventListener("change", (e) => e.target.value && setDate(e.targ
 // Saves the goal (plus any calculator details) to the server; on failure the
 // field goes back to the saved goal.
 async function saveGoal(goal, extra = {}) {
+  const prevType = goalType;
+  if (extra.weight_goal) goalType = extra.weight_goal;
   $("goal").value = goal;
   loadDay();
   try {
@@ -79,6 +82,7 @@ async function saveGoal(goal, extra = {}) {
   } catch (err) {
     setStatus(err.message, true);
     $("goal").value = savedGoal;
+    goalType = prevType;
     loadDay();
     return;
   }
@@ -228,6 +232,9 @@ function renderPlate(day) {
   const goal = parseFloat($("goal").value) || 2000;
   const total = day.total_calories;
   const scale = Math.max(goal, total); // past the goal the ring is full and segments share it
+  // The whole ring takes the zone colour; the legend below keeps the per-meal split.
+  const zone = calorieZone(total, goal, goalType);
+  $("plate").dataset.zone = zone.zone;
   const ring = $("ring");
   ring.replaceChildren();
 
@@ -253,7 +260,7 @@ function renderPlate(day) {
   for (const { meal, start: s, len } of segments) {
     const visible = Math.max(len - GAP, 0.5);
     const seg = svgEl("circle", {
-      class: `seg seg-${meal.meal_type}`, cx: 120, cy: 120, r: R, "stroke-width": STROKE,
+      class: "seg", cx: 120, cy: 120, r: R, "stroke-width": STROKE,
       "stroke-dasharray": `${visible} ${CIRC}`, "stroke-dashoffset": -s,
     });
     // A wider invisible stroke makes thin segments easy to hover.
@@ -276,15 +283,17 @@ function renderPlate(day) {
 
   $("day-total").textContent = fmt(total);
   const remaining = $("remaining");
-  remaining.classList.toggle("is-over", total > goal);
   if (total > goal) {
-    remaining.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l7 13H1zM7.2 6v4h1.6V6zm0 5.2v1.6h1.6v-1.6z"/></svg>';
+    remaining.innerHTML = zone.zone !== "red" ? "" :
+      '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l7 13H1zM7.2 6v4h1.6V6zm0 5.2v1.6h1.6v-1.6z"/></svg>';
     remaining.append(`${fmt(total - goal)} kcal over goal`);
   } else {
     remaining.textContent = total === 0 ? "" : `${fmt(goal - total)} kcal left`;
   }
+  $("zone-label").textContent = zone.label;
   $("plate-summary").textContent =
-    `${fmt(total)} of ${fmt(goal)} kcal eaten on ${dayLabel(day.date)} across ${day.meals.length} meals.`;
+    `${fmt(total)} of ${fmt(goal)} kcal eaten on ${dayLabel(day.date)} across ${day.meals.length} meals.` +
+    (zone.label ? ` ${zone.label}.` : "");
 }
 
 function showTooltip(e, text) {
@@ -737,6 +746,7 @@ async function start() {
     // Also moves old browser settings to the server, once.
     const settings = await loadSettings();
     savedGoal = settings.goal_kcal || DEFAULT_GOAL;
+    goalType = settings.weight_goal || null;
     renderGoalNudge(settings);
   } catch (err) {
     setStatus(err.message, true); // the day still loads, against the default goal
