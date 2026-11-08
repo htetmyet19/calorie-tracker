@@ -68,6 +68,8 @@
         <button class="btn btn-outline btn-small" type="button" id="compare-open" aria-haspopup="dialog" hidden>Compare</button>
       </div>
       <ol class="timeline" id="timeline"></ol>
+      <!-- One shared picker for every "+ Add" slot: a photo skipped at check-in can be added later -->
+      <input type="file" id="add-photo-input" accept="image/*" class="visually-hidden" tabindex="-1" aria-hidden="true">
       <p class="empty" id="timeline-empty" hidden>Your check-in photos will appear here</p>
       <p class="status is-error" id="timeline-status" role="status" aria-live="polite"></p>
     </section>
@@ -137,6 +139,8 @@
   <script src="/auth.js"></script>
   <script src="/units.js"></script>
   <script src="/charts.js"></script>
+  <script src="/images.js"></script>
+  <script src="/photo-upload.js"></script>
   <script src="/push.js"></script>
   <script src="/install.js"></script>
   <script src="/nav.js"></script>
