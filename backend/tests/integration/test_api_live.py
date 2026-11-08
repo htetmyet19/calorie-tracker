@@ -99,3 +99,45 @@ def test_daily_totals_sum_my_meals_only(api, make_user):
     ]
     r = api.get("/api/meals/daily-totals", headers=other, params={"from": "2026-10-31", "to": "2026-10-31"})
     assert r.json() == [{"date": "2026-10-31", "total_calories": 150.0}]
+
+
+def _seed_videos(service):
+    """Enough beginner/no-equipment videos for a 3-day full-body routine."""
+    import uuid
+    for cat in ("warm_up", "legs", "push", "pull", "core"):
+        for n in range(2):
+            r = service.post("/exercise_videos", json={
+                "youtube_id": uuid.uuid4().hex[:11], "title": f"{cat} {n}", "channel": "Ch",
+                "category": cat, "level": "beginner", "equipment": "none", "duration_sec": 60})
+            assert r.status_code == 201, r.text
+
+
+def test_routine_round_trip(api, make_user, service, monkeypatch):
+    from app import routine_ai
+
+    async def no_ai(prompt):
+        raise RuntimeError("no AI in tests")
+    monkeypatch.setattr(routine_ai, "ask_model", no_ai)
+    _seed_videos(service)
+    me, other = auth(make_user()), auth(make_user())
+    body = {"days_per_week": 3, "level": "beginner", "equipment": "none", "session_min": 30}
+    r = api.post("/api/routines", headers=me, json=body)
+    assert r.status_code == 201, r.text
+    rid = r.json()["id"]
+    assert r.json()["source"] == "rules"
+
+    r = api.put(f"/api/routines/{rid}/days/0/done/2026-11-09", headers=me)
+    assert r.status_code == 204
+    assert api.put(f"/api/routines/{rid}/days/0/done/2026-11-09", headers=me).status_code == 204
+    r = api.get("/api/routines/active", headers=me, params={"today": "2026-11-11"})
+    assert r.json()["routine"]["id"] == rid
+    assert r.json()["done"] == [{"day_index": 0, "done_on": "2026-11-09"}]
+
+    # Another user can neither see nor tick it.
+    r = api.get("/api/routines/active", headers=other, params={"today": "2026-11-11"})
+    assert r.json()["routine"] is None
+    assert api.put(f"/api/routines/{rid}/days/0/done/2026-11-09", headers=other).status_code == 404
+
+    assert api.delete(f"/api/routines/{rid}/days/0/done/2026-11-09", headers=me).status_code == 204
+    r = api.get("/api/routines/active", headers=me, params={"today": "2026-11-11"})
+    assert r.json()["done"] == []

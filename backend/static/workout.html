@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b1114">
+  <!-- Installable app: manifest and icons; full-screen on iPhone too -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Tracker">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>Tracker: workout</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="masthead">
+    <p class="wordmark">Tracker</p>
+    <!-- nav.js adds the Settings button here, the Settings panel and the bottom bar -->
+  </header>
+
+  <main class="progress workout">
+    <h1 class="visually-hidden">Workout</h1>
+    <p class="status is-error" id="page-status" role="alert"></p>
+
+    <!-- No routine yet -->
+    <section class="card" id="intro" aria-labelledby="intro-title" aria-busy="true">
+      <h2 class="section-title" id="intro-title">Your workout routine</h2>
+      <p class="card-sub">Tell us how often you can train. You get a weekly plan of short exercise demos, picked for your goal.</p>
+      <button class="btn btn-primary" type="button" id="intro-build" hidden>Build my routine</button>
+    </section>
+
+    <!-- Builder: safety question, then the four inputs -->
+    <section class="card" id="builder" aria-labelledby="builder-title" hidden>
+      <h2 class="section-title" id="builder-title" tabindex="-1">Build your routine</h2>
+
+      <fieldset class="meal-type" id="safety">
+        <legend>Any injury, pain, or medical condition that affects exercise?</legend>
+        <div class="meal-type-options">
+          <label><input type="radio" name="safety" value="yes">Yes</label>
+          <label><input type="radio" name="safety" value="no">No</label>
+        </div>
+      </fieldset>
+      <p class="status is-error" id="safety-stop" role="status" aria-live="polite"></p>
+
+      <form id="builder-form" novalidate hidden>
+        <fieldset class="meal-type">
+          <legend>Days per week</legend>
+          <div class="meal-type-options">
+            <label><input type="radio" name="days_per_week" value="2">2</label>
+            <label><input type="radio" name="days_per_week" value="3">3</label>
+            <label><input type="radio" name="days_per_week" value="4">4</label>
+            <label><input type="radio" name="days_per_week" value="5">5</label>
+            <label><input type="radio" name="days_per_week" value="6">6</label>
+          </div>
+        </fieldset>
+        <fieldset class="meal-type">
+          <legend>Experience</legend>
+          <div class="meal-type-options">
+            <label><input type="radio" name="level" value="beginner">Beginner</label>
+            <label><input type="radio" name="level" value="intermediate">Intermediate</label>
+            <label><input type="radio" name="level" value="advanced">Advanced</label>
+          </div>
+        </fieldset>
+        <fieldset class="meal-type">
+          <legend>Equipment</legend>
+          <div class="meal-type-options">
+            <label><input type="radio" name="equipment" value="none">None (home)</label>
+            <label><input type="radio" name="equipment" value="dumbbells">Dumbbells</label>
+            <label><input type="radio" name="equipment" value="gym">Full gym</label>
+          </div>
+        </fieldset>
+        <fieldset class="meal-type">
+          <legend>Time per session</legend>
+          <div class="meal-type-options">
+            <label><input type="radio" name="session_min" value="20">20 min</label>
+            <label><input type="radio" name="session_min" value="30">30 min</label>
+            <label><input type="radio" name="session_min" value="45">45 min</label>
+            <label><input type="radio" name="session_min" value="60">60 min</label>
+          </div>
+        </fieldset>
+        <p class="status" id="builder-status" role="status" aria-live="polite"></p>
+        <div class="save-row">
+          <button class="btn btn-quiet" type="button" id="builder-cancel">Cancel</button>
+          <button class="btn btn-primary" type="submit" id="builder-submit">Build routine</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- The routine -->
+    <section class="card" id="routine" aria-labelledby="routine-title" hidden>
+      <div class="card-head">
+        <h2 class="section-title" id="routine-title">Your routine</h2>
+        <button class="btn btn-outline btn-small" type="button" id="routine-new">New routine</button>
+      </div>
+      <p class="week-done" id="week-done" aria-live="polite"></p>
+      <p class="hint" id="routine-note" hidden></p>
+      <p class="status is-error" id="routine-status" role="status" aria-live="polite"></p>
+    </section>
+    <ol class="workout-days" id="days"></ol>
+
+    <p class="private-note">Exercise demos play from YouTube. Stop if anything hurts.</p>
+  </main>
+
+  <!-- One exercise demo -->
+  <dialog class="calc photo-view video-view" id="video-dialog" aria-labelledby="video-title">
+    <div class="settings-head">
+      <h2 id="video-title" class="section-title"></h2>
+      <button class="btn btn-quiet" type="button" id="video-close">Close</button>
+    </div>
+    <div class="video-frame" id="video-frame"></div>
+    <p class="hint video-credit" id="video-credit"></p>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" integrity="sha384-GFr3yTh5lJznCbZfpTtXnwboFsxqtTQoeTZCRHhE0579KrRmlCzen5AA8ohaB5ug" crossorigin="anonymous"></script>
+  <script src="/dom.js"></script>
+  <script src="/auth.js"></script>
+  <script src="/units.js"></script>
+  <script src="/push.js"></script>
+  <script src="/install.js"></script>
+  <script src="/nav.js"></script>
+  <script src="/workout.js"></script>
+</body>
+</html>

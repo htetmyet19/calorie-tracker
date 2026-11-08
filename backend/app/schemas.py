@@ -165,3 +165,59 @@ class PushSubscriptionIn(BaseModel):
 
 class PushEndpointIn(BaseModel):
     endpoint: HttpUrl
+
+
+# ---- workout routines ----
+
+class RoutineIn(BaseModel):
+    days_per_week: int = Field(ge=2, le=6)
+    level: Literal["beginner", "intermediate", "advanced"]
+    equipment: Literal["none", "dumbbells", "gym"]
+    session_min: Literal[20, 30, 45, 60]
+
+
+class RoutineItemOut(BaseModel):
+    video_id: int
+    youtube_id: str
+    title: str
+    channel: str
+    category: str
+    sets: int
+    reps: int | None
+    seconds: int | None
+    rest_sec: int
+    warm_up: bool = False
+    available: bool
+
+
+class RoutineDayOut(BaseModel):
+    index: int
+    type: str
+    title: str
+    why: str
+    est_min: int
+    items: list[RoutineItemOut]
+
+
+class RoutineOut(BaseModel):
+    id: int
+    created_at: str
+    days_per_week: int
+    level: str
+    equipment: str
+    session_min: int
+    goal: str
+    source: str
+    note: str | None
+    days: list[RoutineDayOut]
+
+
+class DoneOut(BaseModel):
+    day_index: int
+    done_on: str
+
+
+class ActiveRoutineOut(BaseModel):
+    routine: RoutineOut | None
+    done: list[DoneOut]
+    week_start: str | None

@@ -3,7 +3,8 @@
 !.env.example
 **/.venv/
 **/__pycache__/
-backend/data/
+backend/data/*
+!backend/data/exercise_videos.json
 **/.vercel/
 mobile/.gradle/
 mobile/build/

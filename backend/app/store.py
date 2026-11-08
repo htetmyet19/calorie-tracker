@@ -47,6 +47,14 @@ class SettingsExist(Exception):
     """A settings row already exists for this user."""
 
 
+class RoutineLimit(Exception):
+    """The database refused the build: 5 already in the last 24 hours."""
+
+
+class RoutineBusy(Exception):
+    """Another build saved its routine at the same moment, twice in a row."""
+
+
 class EndpointTaken(Exception):
     """The push endpoint is registered to another user."""
 
@@ -425,6 +433,86 @@ class Store:
             self._check(self._request(
                 "PATCH", "/client_settings", write=True, json={"reminders_enabled": False},
                 params={"user_id": f"eq.{self.user.id}"}, prefer="return=minimal"))
+
+    # ---- workout routines ----
+
+    def active_videos(self) -> list[dict]:
+        resp = self._request("GET", "/exercise_videos", params={"active": "is.true", "order": "id.asc"})
+        self._check(resp)
+        return resp.json()
+
+    def videos_by_ids(self, ids: list[int]) -> dict[int, dict]:
+        """Videos by id, active or not (old routines still show hidden ones)."""
+        ids = sorted(set(ids))
+        if not ids:
+            return {}
+        resp = self._request("GET", "/exercise_videos",
+                             params={"id": f"in.({','.join(map(str, ids))})"})
+        self._check(resp)
+        return {v["id"]: v for v in resp.json()}
+
+    def record_build(self) -> None:
+        """Count one routine build. A trigger refuses the 6th in 24 hours (locked per user)."""
+        resp = self._request("POST", "/routine_builds", write=True, prefer="return=minimal",
+                             json={"user_id": self.user.id})
+        if resp.status_code == 400 and resp.json().get("message") == "routine_limit":
+            raise RoutineLimit()
+        self._check(resp)
+
+    def create_routine(self, row: dict) -> dict:
+        """Replace the active routine: deactivate it, then insert the new one as active.
+
+        If another build inserts between our two calls, the one-active index rejects
+        ours (409); deactivating again and retrying once lets the newer build win.
+        """
+        for _ in range(2):
+            resp = self._request("PATCH", "/routines", write=True, json={"active": False},
+                                 params={"user_id": f"eq.{self.user.id}", "active": "is.true"},
+                                 prefer="return=minimal")
+            self._check(resp)
+            resp = self._request("POST", "/routines", write=True,
+                                 json={**row, "user_id": self.user.id, "active": True})
+            if resp.status_code != 409:
+                self._check(resp)
+                return resp.json()[0]
+        raise RoutineBusy()
+
+    def active_routine(self) -> dict | None:
+        resp = self._request("GET", "/routines", params={
+            "user_id": f"eq.{self.user.id}", "active": "is.true", "limit": "1"})
+        self._check(resp)
+        rows = resp.json()
+        return rows[0] if rows else None
+
+    def get_routine(self, routine_id: int) -> dict | None:
+        resp = self._request("GET", "/routines", params={
+            "id": f"eq.{routine_id}", "user_id": f"eq.{self.user.id}"})
+        self._check(resp)
+        rows = resp.json()
+        return rows[0] if rows else None
+
+    def sessions_between(self, routine_id: int, start: datetime.date, end: datetime.date) -> list[dict]:
+        resp = self._request("GET", "/workout_sessions", params={
+            "user_id": f"eq.{self.user.id}", "routine_id": f"eq.{routine_id}",
+            "and": f"(done_on.gte.{start.isoformat()},done_on.lte.{end.isoformat()})",
+            "select": "day_index,done_on", "order": "done_on.asc,day_index.asc"})
+        self._check(resp)
+        return resp.json()
+
+    def mark_done(self, routine_id: int, day_index: int, day: datetime.date) -> None:
+        resp = self._request(
+            "POST", "/workout_sessions", write=True,
+            params={"on_conflict": "routine_id,day_index,done_on"},
+            prefer="resolution=ignore-duplicates,return=minimal",
+            json={"user_id": self.user.id, "routine_id": routine_id, "day_index": day_index,
+                  "done_on": day.isoformat()})
+        self._check(resp)
+
+    def unmark_done(self, routine_id: int, day_index: int, day: datetime.date) -> None:
+        resp = self._request("DELETE", "/workout_sessions", write=True, prefer="return=minimal",
+                             params={"user_id": f"eq.{self.user.id}", "routine_id": f"eq.{routine_id}",
+                                     "day_index": f"eq.{day_index}", "done_on": f"eq.{day.isoformat()}"})
+        self._check(resp)
 
 
 def get_store(user: User = Depends(current_user)) -> Store:
