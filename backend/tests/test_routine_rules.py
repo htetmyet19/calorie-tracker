@@ -5,7 +5,7 @@ from itertools import product
 import pytest
 
 from app.routine_rules import (BEGINNER_NOTE, Inputs, NotEnoughExercises, build_frame,
-                               item_cost_sec, rules_plan, split_for, week_start)
+                               item_cost_sec, rules_plan, split_for, validate_plan, week_start)
 from app.video_library import CATEGORIES, EQUIPMENT, LEVELS
 
 
@@ -70,6 +70,7 @@ def test_rules_plan_within_bounds():
     for inputs, goal in product(ALL_INPUTS, GOALS):
         frame = build_frame(inputs, goal, FIXTURE_LIBRARY)
         plan = rules_plan(frame)
+        assert validate_plan(plan, frame) == plan
         assert len(plan["days"]) == len(frame.days)
         for day, pd in zip(frame.days, plan["days"]):
             items = pd["items"]

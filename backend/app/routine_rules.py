@@ -186,3 +186,94 @@ def rules_plan(frame: Frame) -> dict:
         days.append({"index": day.index, "type": day.type, "title": day.title,
                      "why": why, "items": items})
     return {"days": days}
+
+
+# ---- checking a plan (the AI's, or our own) ----
+
+BUDGET_SLACK = 1.1
+
+
+class PlanInvalid(Exception):
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
+
+
+def _int(v) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool)
+
+
+def _in(v, lo: int, hi: int) -> bool:
+    return _int(v) and lo <= v <= hi
+
+
+def _clean_item(it, shortlist: set[int], in_day: set[int]) -> dict:
+    if not isinstance(it, dict):
+        raise PlanInvalid("not_json_object")
+    vid = it.get("video_id")
+    if not _int(vid) or vid not in shortlist:
+        raise PlanInvalid("unknown_video")
+    if vid in in_day:
+        raise PlanInvalid("repeat_video")
+    in_day.add(vid)
+    if not _in(it.get("sets"), 1, 5):
+        raise PlanInvalid("sets_range")
+    reps, seconds = it.get("reps"), it.get("seconds")
+    if (reps is None) == (seconds is None):
+        raise PlanInvalid("reps_or_seconds")
+    if reps is not None and not _in(reps, 5, 20):
+        raise PlanInvalid("reps_range")
+    if seconds is not None and not _in(seconds, 20, 60):
+        raise PlanInvalid("seconds_range")
+    if not _in(it.get("rest_sec"), 30, 120):
+        raise PlanInvalid("rest_range")
+    return {"video_id": vid, "sets": it["sets"], "reps": reps, "seconds": seconds,
+            "rest_sec": it["rest_sec"]}
+
+
+def _why_ok(why) -> bool:
+    if not isinstance(why, str):
+        return False
+    why = why.strip()
+    low = why.lower()
+    return 1 <= len(why) <= 140 and "http" not in low and "www." not in low
+
+
+def validate_plan(raw: object, frame: Frame) -> dict:
+    """The cleaned plan, or PlanInvalid naming the first broken rule."""
+    if not isinstance(raw, dict) or not isinstance(raw.get("days"), list) \
+            or not all(isinstance(d, dict) for d in raw["days"]):
+        raise PlanInvalid("not_json_object")
+    by_index = {d.get("index"): d for d in raw["days"]}
+    if len(raw["days"]) != len(frame.days) or set(by_index) != {d.index for d in frame.days}:
+        raise PlanInvalid("wrong_day_count")
+    limit = frame.inputs.session_min * 60 * BUDGET_SLACK - WARM_UP_SEC
+    days = []
+    for day in frame.days:
+        d = by_index[day.index]
+        if not isinstance(d.get("items"), list):
+            raise PlanInvalid("not_json_object")
+        if not MIN_ITEMS <= len(d["items"]) <= MAX_ITEMS:
+            raise PlanInvalid("item_count")
+        shortlist, in_day = {v["id"] for v in day.shortlist}, set()
+        items = [_clean_item(it, shortlist, in_day) for it in d["items"]]
+        if sum(item_cost_sec(i) for i in items) > limit:
+            raise PlanInvalid("over_budget")
+        if not _why_ok(d.get("why")):
+            raise PlanInvalid("why_invalid")
+        days.append({"index": day.index, "type": day.type, "title": day.title,
+                     "why": d["why"].strip(), "items": items})
+    return {"days": days}
+
+
+def finalize_plan(plan: dict, frame: Frame) -> dict:
+    """Add the warm-up, the time estimate and the beginner note; the plan as stored."""
+    days = []
+    for day, d in zip(frame.days, plan["days"]):
+        items = list(d["items"])
+        est = round((WARM_UP_SEC + sum(item_cost_sec(i) for i in items)) / 60)
+        if day.warm_up:
+            items.insert(0, {"video_id": day.warm_up["id"], "sets": 1, "reps": None,
+                             "seconds": None, "rest_sec": 0, "warm_up": True})
+        days.append({**d, "items": items, "est_min": est})
+    return {"days": days, "note": frame.note}
