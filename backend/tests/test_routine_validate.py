@@ -135,3 +135,20 @@ def test_finalize_without_warm_up_video():
     out = finalize_plan(rules_plan(frame), frame)
     assert all(not i.get("warm_up") for d in out["days"] for i in d["items"])
     assert out["note"] == frame.note and out["note"]
+
+
+def test_rejects_day_without_main_exercise():
+    core = [v["id"] for v in FRAME.days[0].shortlist if v["category"] == "core"][:3]
+    assert _bad(lambda p: p["days"][0].__setitem__("items", [
+        {"video_id": i, "sets": 3, "reps": None, "seconds": 40, "rest_sec": 60} for i in core])) == "no_main_exercise"
+
+
+def test_rejects_more_than_one_cardio():
+    lose = build_frame(Inputs(3, "intermediate", "gym", 60), "lose", FIXTURE_LIBRARY)
+    plan = rules_plan(lose)
+    cardio = [v["id"] for v in lose.days[0].shortlist if v["category"] == "cardio"][:2]
+    plan["days"][0]["items"] = plan["days"][0]["items"][:2] + [
+        {"video_id": i, "sets": 3, "reps": None, "seconds": 40, "rest_sec": 45} for i in cardio]
+    with pytest.raises(PlanInvalid) as exc:
+        validate_plan(plan, lose)
+    assert exc.value.reason == "cardio_count"

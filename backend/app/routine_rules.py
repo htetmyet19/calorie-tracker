@@ -96,6 +96,10 @@ def week_start(day: datetime.date) -> datetime.date:
     return day - datetime.timedelta(days=day.weekday())
 
 
+def _main(categories: list[str]) -> list[str]:
+    return [c for c in categories if c != "core"]
+
+
 def _titles(types: list[str]) -> list[str]:
     if types == ["full", "full"]:
         return ["Full body A", "Full body B"]
@@ -122,6 +126,12 @@ def build_frame(inputs: Inputs, goal: str, videos: list[dict]) -> Frame:
         for c in cats + (["cardio"] if goal == "lose" else []):
             shortlist += [v for v in pool if v["category"] == c][:PER_CATEGORY_CAP]
         if sum(1 for v in shortlist if v["category"] in cats) < MIN_ITEMS:
+            raise NotEnoughExercises(t)
+        # Core may be dropped and, on full days, legs or push may stand in for a missing
+        # category; nothing may stand in for a push, pull or legs day's own exercises.
+        have = {v["category"] for v in shortlist}
+        main = _main(cats)
+        if (t == "full" and not have & set(main)) or (t != "full" and not set(main) <= have):
             raise NotEnoughExercises(t)
         fresh = [v for v in warm_ups if v["id"] not in used_warm_ups]
         warm_up = (fresh or warm_ups or [None])[0]
@@ -255,8 +265,14 @@ def validate_plan(raw: object, frame: Frame) -> dict:
             raise PlanInvalid("not_json_object")
         if not MIN_ITEMS <= len(d["items"]) <= MAX_ITEMS:
             raise PlanInvalid("item_count")
-        shortlist, in_day = {v["id"] for v in day.shortlist}, set()
-        items = [_clean_item(it, shortlist, in_day) for it in d["items"]]
+        category = {v["id"]: v["category"] for v in day.shortlist}
+        in_day = set()
+        items = [_clean_item(it, set(category), in_day) for it in d["items"]]
+        cats = [category[i["video_id"]] for i in items]
+        if not set(cats) & set(_main(day.categories)):
+            raise PlanInvalid("no_main_exercise")
+        if cats.count("cardio") > 1:
+            raise PlanInvalid("cardio_count")
         if sum(item_cost_sec(i) for i in items) > limit:
             raise PlanInvalid("over_budget")
         if not _why_ok(d.get("why")):

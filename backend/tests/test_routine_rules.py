@@ -147,3 +147,20 @@ def test_rules_plan_is_deterministic():
 def test_week_start_sunday_and_monday():
     assert week_start(datetime.date(2026, 11, 8)) == datetime.date(2026, 11, 2)
     assert week_start(datetime.date(2026, 11, 9)) == datetime.date(2026, 11, 9)
+
+
+def test_day_without_its_main_category_is_409():
+    # Core must not stand in for a missing main category (spec §4.1 only allows dropping core).
+    lib = [v for v in FIXTURE_LIBRARY if v["category"] != "pull"]
+    with pytest.raises(NotEnoughExercises):
+        build_frame(Inputs(3, "intermediate", "none", 30), "maintain", lib)   # push/pull/legs
+    with pytest.raises(NotEnoughExercises):
+        build_frame(Inputs(2, "intermediate", "none", 30), "maintain", lib)   # upper needs pull
+
+
+def test_full_day_without_pull_uses_legs_and_push():
+    lib = [v for v in FIXTURE_LIBRARY if v["category"] != "pull"]
+    plan = rules_plan(build_frame(Inputs(3, "beginner", "none", 45), "maintain", lib))
+    for d in plan["days"]:
+        cats = [BY_ID[i["video_id"]]["category"] for i in d["items"]]
+        assert "pull" not in cats and {"legs", "push"} <= set(cats)
