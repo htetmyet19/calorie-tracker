@@ -56,7 +56,7 @@ Take a photo or pick one from the gallery. A vision model names each food, estim
 <td width="33%" valign="top">
 
 #### 🍩 Your day at a glance
-A ring shows calories eaten against your goal and changes colour by zone: green while there's room (under 85%), yellow near the goal, red once over it. Weight-gain goals stay green up to 110% and turn red only past 125%. The zone is also named in words. The split into breakfast, lunch, dinner and snacks is listed below the ring, with protein, carbs and fat.
+A ring shows calories eaten against your goal as a gradient that runs from green through yellow to red past the goal, so the tip shows where you are. Under the number, the zone is named: green while there's room (under 85%), yellow near the goal, red once over it. Weight-gain goals stay green up to 110% and turn red only past 125%. The zone is also named in words. The split into breakfast, lunch, dinner and snacks is listed below the ring, with protein, carbs and fat.
 
 </td>
 <td width="33%" valign="top">
@@ -159,7 +159,7 @@ If the main Gemini model is overloaded or out of quota, the backend retries and 
 - **Private photo buckets.** Photos are stored per user and served only through signed access.
 - **The service-role key never reaches the browser.** Only the daily job (`app/cron.py`) may read it, and a unit test enforces that.
 - **Data minimisation.** No phone number, national ID or location is collected.
-- **Tested at two layers.** 388 unit tests and 113 frontend tests run without a database; 81 integration tests run against a real local Supabase and check that one user cannot read another's data.
+- **Tested at two layers.** 389 unit tests and 116 frontend tests run without a database; 81 integration tests run against a real local Supabase and check that one user cannot read another's data.
 
 ## 🚀 Run it locally
 

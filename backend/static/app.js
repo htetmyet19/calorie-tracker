@@ -227,6 +227,8 @@ const R = 103;               // ring radius in viewBox units (viewBox is 240)
 const STROKE = 16;
 const GAP = 2.5;             // surface gap between segments
 const CIRC = 2 * Math.PI * R;
+const SLICE = CIRC / 240;    // the gradient is drawn as short slices (SVG strokes can't follow a conic gradient)
+const SEAM = 0.6;            // each slice overlaps the next so no hairline shows between them
 
 function renderPlate(day) {
   const goal = parseFloat($("goal").value) || 2000;
@@ -259,10 +261,18 @@ function renderPlate(day) {
 
   for (const { meal, start: s, len } of segments) {
     const visible = Math.max(len - GAP, 0.5);
-    const seg = svgEl("circle", {
-      class: "seg", cx: 120, cy: 120, r: R, "stroke-width": STROKE,
-      "stroke-dasharray": `${visible} ${CIRC}`, "stroke-dashoffset": -s,
-    });
+    // Each slice is coloured by its own position against the goal: green → yellow → red.
+    const seg = svgEl("g", { class: "seg" });
+    for (let o = 0; o < visible; o += SLICE) {
+      const piece = Math.min(SLICE + SEAM, visible - o);
+      const share = ((s + o + piece / 2) / CIRC) * scale / goal;
+      const slice = svgEl("circle", {
+        cx: 120, cy: 120, r: R, "stroke-width": STROKE,
+        "stroke-dasharray": `${piece} ${CIRC}`, "stroke-dashoffset": -(s + o),
+      });
+      slice.style.stroke = ringColor(share, goalType);
+      seg.append(slice);
+    }
     // A wider invisible stroke makes thin segments easy to hover.
     const hit = svgEl("circle", {
       class: "hit", cx: 120, cy: 120, r: R, "stroke-width": STROKE + 16,
@@ -274,9 +284,8 @@ function renderPlate(day) {
     ring.append(seg, hit);
 
     if (meal.id === justSavedId) {
-      seg.setAttribute("stroke-dasharray", `0 ${CIRC}`);
-      requestAnimationFrame(() => requestAnimationFrame(() =>
-        seg.setAttribute("stroke-dasharray", `${visible} ${CIRC}`)));
+      seg.style.opacity = "0";
+      requestAnimationFrame(() => requestAnimationFrame(() => { seg.style.opacity = ""; }));
     }
   }
   justSavedId = null;
