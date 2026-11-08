@@ -164,3 +164,18 @@ def test_full_day_without_pull_uses_legs_and_push():
     for d in plan["days"]:
         cats = [BY_ID[i["video_id"]]["category"] for i in d["items"]]
         assert "pull" not in cats and {"legs", "push"} <= set(cats)
+
+
+def test_shortlist_puts_the_closest_level_and_equipment_first():
+    # Many easy videos used to fill the per-category cap, so advanced gym users got push-ups.
+    easy = [{"id": i, "youtube_id": f"e{i:010d}", "title": f"easy push {i}", "channel": "Ch",
+             "category": c, "level": "beginner", "equipment": "none", "duration_sec": 60, "active": True}
+            for i, c in enumerate(["push"] * 10 + ["pull", "pull", "legs", "legs", "core"], start=1)]
+    hard = {"id": 100, "youtube_id": "h0000000100", "title": "weighted dip", "channel": "Ch",
+            "category": "push", "level": "advanced", "equipment": "gym", "duration_sec": 60, "active": True}
+    mid = {**hard, "id": 101, "youtube_id": "h0000000101", "title": "bench press", "level": "intermediate"}
+    frame = build_frame(Inputs(3, "advanced", "gym", 45), "maintain", easy + [mid, hard])
+    push = [v["title"] for v in frame.days[0].shortlist if v["category"] == "push"]
+    assert push[:2] == ["weighted dip", "bench press"]
+    plan = rules_plan(frame)
+    assert plan["days"][0]["items"][0]["video_id"] == 100

@@ -268,5 +268,293 @@
     "level": "intermediate",
     "equipment": "none",
     "duration_sec": 30
+  },
+  {
+    "youtube_id": "oB3lpMSis_4",
+    "title": "Leg press",
+    "channel": "Acacia Training Sports",
+    "category": "legs",
+    "level": "beginner",
+    "equipment": "gym",
+    "duration_sec": 149
+  },
+  {
+    "youtube_id": "iW83kMs0OHw",
+    "title": "Leg extension",
+    "channel": "Personal Trainer",
+    "category": "legs",
+    "level": "beginner",
+    "equipment": "gym",
+    "duration_sec": 172
+  },
+  {
+    "youtube_id": "AOpi-p0cJkc",
+    "title": "Lat pulldown",
+    "channel": "SilverSneakers",
+    "category": "pull",
+    "level": "beginner",
+    "equipment": "gym",
+    "duration_sec": 137
+  },
+  {
+    "youtube_id": "oFtfkSElE0s",
+    "title": "Seated cable row",
+    "channel": "Hammer Fitness",
+    "category": "pull",
+    "level": "beginner",
+    "equipment": "gym",
+    "duration_sec": 138
+  },
+  {
+    "youtube_id": "4YpxZXFADmc",
+    "title": "Machine chest press",
+    "channel": "Fitness 19",
+    "category": "push",
+    "level": "beginner",
+    "equipment": "gym",
+    "duration_sec": 235
+  },
+  {
+    "youtube_id": "e5gJP7quyGk",
+    "title": "Machine shoulder press",
+    "channel": "Vivian Ngo",
+    "category": "push",
+    "level": "beginner",
+    "equipment": "gym",
+    "duration_sec": 269
+  },
+  {
+    "youtube_id": "LA6Uc5yIV1c",
+    "title": "Pallof press",
+    "channel": "FITBODY with Julie Lohre",
+    "category": "core",
+    "level": "beginner",
+    "equipment": "gym",
+    "duration_sec": 173
+  },
+  {
+    "youtube_id": "4zWu1yuJ0_g",
+    "title": "Rowing machine",
+    "channel": "concept2usa",
+    "category": "cardio",
+    "level": "beginner",
+    "equipment": "gym",
+    "duration_sec": 113
+  },
+  {
+    "youtube_id": "T_t85kQEDWk",
+    "title": "Barbell back squat",
+    "channel": "Women's Health UK",
+    "category": "legs",
+    "level": "intermediate",
+    "equipment": "gym",
+    "duration_sec": 79
+  },
+  {
+    "youtube_id": "_oyxCn2iSjU",
+    "title": "Romanian deadlift",
+    "channel": "Jeff Nippard",
+    "category": "legs",
+    "level": "intermediate",
+    "equipment": "gym",
+    "duration_sec": 381
+  },
+  {
+    "youtube_id": "gRVjAtPip0Y",
+    "title": "Barbell bench press",
+    "channel": "Buff Dudes",
+    "category": "push",
+    "level": "intermediate",
+    "equipment": "gym",
+    "duration_sec": 177
+  },
+  {
+    "youtube_id": "i3Y9ZE7H-J8",
+    "title": "Barbell overhead press",
+    "channel": "Seriously Strong Training",
+    "category": "push",
+    "level": "intermediate",
+    "equipment": "gym",
+    "duration_sec": 126
+  },
+  {
+    "youtube_id": "ZtTwgJTBjOQ",
+    "title": "Barbell bent-over row",
+    "channel": "Human Kinetics",
+    "category": "pull",
+    "level": "intermediate",
+    "equipment": "gym",
+    "duration_sec": 86
+  },
+  {
+    "youtube_id": "TMnxKjdYcME",
+    "title": "Pull-up",
+    "channel": "Myprotein",
+    "category": "pull",
+    "level": "intermediate",
+    "equipment": "gym",
+    "duration_sec": 184
+  },
+  {
+    "youtube_id": "MRcpnl4G3YA",
+    "title": "Hanging knee raise",
+    "channel": "The Health Alchemist",
+    "category": "core",
+    "level": "intermediate",
+    "equipment": "gym",
+    "duration_sec": 154
+  },
+  {
+    "youtube_id": "cclUh49qOww",
+    "title": "Conventional deadlift",
+    "channel": "BELLS OF STEEL",
+    "category": "legs",
+    "level": "advanced",
+    "equipment": "gym",
+    "duration_sec": 127
+  },
+  {
+    "youtube_id": "wyDbagKS7Rg",
+    "title": "Front squat",
+    "channel": "CanditoTrainingHQ",
+    "category": "legs",
+    "level": "advanced",
+    "equipment": "gym",
+    "duration_sec": 146
+  },
+  {
+    "youtube_id": "EGxz6M0ABKY",
+    "title": "Weighted pull-up",
+    "channel": "Steph Gaudreau - Fuel Your Strength",
+    "category": "pull",
+    "level": "advanced",
+    "equipment": "gym",
+    "duration_sec": 35
+  },
+  {
+    "youtube_id": "OH5iSZRzkso",
+    "title": "Weighted dip",
+    "channel": "Horton Barbell",
+    "category": "push",
+    "level": "advanced",
+    "equipment": "gym",
+    "duration_sec": 55
+  },
+  {
+    "youtube_id": "NxFx5Trfv6Q",
+    "title": "Hanging leg raise",
+    "channel": "Catalyst Athletics",
+    "category": "core",
+    "level": "advanced",
+    "equipment": "gym",
+    "duration_sec": 36
+  },
+  {
+    "youtube_id": "tZSYZdtbONc",
+    "title": "Jump squat",
+    "channel": "National Academy of Sports Medicine (NASM)",
+    "category": "legs",
+    "level": "intermediate",
+    "equipment": "none",
+    "duration_sec": 18
+  },
+  {
+    "youtube_id": "G2hv_NYhM-A",
+    "title": "Burpee",
+    "channel": "BuiltLean®",
+    "category": "cardio",
+    "level": "intermediate",
+    "equipment": "none",
+    "duration_sec": 69
+  },
+  {
+    "youtube_id": "PPksQCbeVZw",
+    "title": "Pistol squat",
+    "channel": "Fitness on the Run",
+    "category": "legs",
+    "level": "advanced",
+    "equipment": "none",
+    "duration_sec": 215
+  },
+  {
+    "youtube_id": "jiA3RnMxFU0",
+    "title": "Archer push-up",
+    "channel": "Michael Vazquez",
+    "category": "push",
+    "level": "advanced",
+    "equipment": "none",
+    "duration_sec": 124
+  },
+  {
+    "youtube_id": "shEnAXgc9y4",
+    "title": "Pike push-up",
+    "channel": "Calixpert",
+    "category": "push",
+    "level": "advanced",
+    "equipment": "none",
+    "duration_sec": 109
+  },
+  {
+    "youtube_id": "MY6_stJuy7M",
+    "title": "Hollow body hold",
+    "channel": "Unity Gym",
+    "category": "core",
+    "level": "advanced",
+    "equipment": "none",
+    "duration_sec": 60
+  },
+  {
+    "youtube_id": "-bnJGikRGsM",
+    "title": "Tuck jump",
+    "channel": "National Academy of Sports Medicine (NASM)",
+    "category": "cardio",
+    "level": "advanced",
+    "equipment": "none",
+    "duration_sec": 27
+  },
+  {
+    "youtube_id": "-IpkZv8tZYM",
+    "title": "Bulgarian split squat",
+    "channel": "Horton Barbell",
+    "category": "legs",
+    "level": "intermediate",
+    "equipment": "dumbbells",
+    "duration_sec": 64
+  },
+  {
+    "youtube_id": "hQgFixeXdZo",
+    "title": "Dumbbell Romanian deadlift",
+    "channel": "J2FIT Strength & Conditioning",
+    "category": "legs",
+    "level": "intermediate",
+    "equipment": "dumbbells",
+    "duration_sec": 78
+  },
+  {
+    "youtube_id": "bVCsBdAv8SQ",
+    "title": "Dumbbell bench press",
+    "channel": "Tim Bullici",
+    "category": "push",
+    "level": "intermediate",
+    "equipment": "dumbbells",
+    "duration_sec": 224
+  },
+  {
+    "youtube_id": "_I98ircIcpE",
+    "title": "Renegade row",
+    "channel": "Get Healthy U - with Chris Freytag",
+    "category": "pull",
+    "level": "advanced",
+    "equipment": "dumbbells",
+    "duration_sec": 58
+  },
+  {
+    "youtube_id": "1KYPZ-Jzo3w",
+    "title": "Dumbbell thruster",
+    "channel": "Rogue Fitness",
+    "category": "cardio",
+    "level": "advanced",
+    "equipment": "dumbbells",
+    "duration_sec": 48
   }
 ]
