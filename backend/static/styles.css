@@ -23,6 +23,9 @@
   --dinner: #7f97e6;
   --snack: #d9719d;
   --track: rgba(255, 255, 255, 0.07);
+  --zone-green: #6fd08a;  /* calorie ring zones */
+  --zone-yellow: #e8c15a;
+  --zone-red: #ef7a6c;
 
   --radius: 20px;
   --font: "Familjen Grotesk", "Segoe UI", system-ui, sans-serif;
@@ -212,12 +215,14 @@ button { cursor: pointer; }
 
 .ring circle { fill: none; }
 .ring .track { stroke: var(--track); }
-.ring .seg { transition: stroke-dasharray 0.8s cubic-bezier(0.3, 0.7, 0.2, 1); filter: drop-shadow(0 0 5px var(--c)); }
+.ring .seg { transition: stroke-dasharray 0.8s cubic-bezier(0.3, 0.7, 0.2, 1), stroke 0.4s ease; filter: drop-shadow(0 0 5px var(--c)); }
 .ring .hit { stroke: transparent; cursor: default; pointer-events: stroke; }
-.ring .seg-breakfast { --c: var(--breakfast); stroke: var(--breakfast); }
-.ring .seg-lunch { --c: var(--lunch); stroke: var(--lunch); }
-.ring .seg-dinner { --c: var(--dinner); stroke: var(--dinner); }
-.ring .seg-snack { --c: var(--snack); stroke: var(--snack); }
+/* Zone colour for the whole ring, the "left" line and the label (zone.js). */
+.plate { --zone: var(--accent); }
+.plate[data-zone="green"] { --zone: var(--zone-green); }
+.plate[data-zone="yellow"] { --zone: var(--zone-yellow); }
+.plate[data-zone="red"] { --zone: var(--zone-red); }
+.ring .seg { --c: var(--zone); stroke: var(--zone); }
 
 .plate-well {
   position: absolute;
@@ -253,8 +258,10 @@ button { cursor: pointer; }
 #goal::-webkit-inner-spin-button, #goal::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 #goal:focus { border-bottom-style: solid; }
 
-.remaining { font-size: var(--step--1); color: var(--accent); font-weight: 600; margin-top: 10px; min-height: 1.5em; }
-.remaining.is-over { color: var(--chili); font-weight: 600; }
+.remaining { font-size: var(--step--1); color: var(--zone); font-weight: 600; margin-top: 10px; min-height: 1.5em; }
+.zone-label { font-size: var(--step--1); color: var(--zone); margin-top: 2px; min-height: 1.5em; }
+.zone-label:not(:empty)::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--zone); margin-right: 6px; vertical-align: 1px; }
 .remaining svg { width: 14px; height: 14px; vertical-align: -2px; margin-right: 3px; fill: currentColor; }
 
 .tooltip {
