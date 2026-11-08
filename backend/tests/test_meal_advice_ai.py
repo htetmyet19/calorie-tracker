@@ -87,3 +87,36 @@ def test_ask_model_dispatches_on_provider(monkeypatch):
         monkeypatch.setattr(meal_advice.config, "LLM_PROVIDER", provider)
         asyncio.run(meal_advice.ask_model("p"))
     assert seen == ["gemini", "ollama"]
+
+
+def test_prompt_labels_every_number_and_the_total_after():
+    p = build_prompt(FACTS)                                       # 1,500 before + 900 = 2,400 after
+    assert "today's total after this meal: 2,400 kcal" in p.lower()
+    assert "true meaning" in p.lower() and "never relabel" in p.lower() and "percentages" in p.lower()
+
+
+def test_prompt_tip_depends_on_verdict():
+    fits = build_prompt(meal_facts(FACTS.items, False, 0, 3000, "maintain"))
+    assert "fits_well" in fits and "do not suggest eating less" in fits.lower()
+    over = build_prompt(FACTS)
+    assert "smaller portion" in over.lower()
+
+
+def test_prompt_eaten_tips_limit_water():
+    p = build_prompt(meal_facts(FACTS.items, True, 1500, 2000, "lose"))
+    assert "water only if" in p.lower()
+
+
+def test_prompt_share_of_goal():
+    p = build_prompt(meal_facts(FACTS.items, False, 0, 2000, "lose"))   # 900 of 2,000 = 45%
+    assert "45%" in p and "comfortably" in p.lower()
+
+
+def test_prompt_quotes_food_names_as_data():
+    p = build_prompt(FACTS)
+    assert '"fried rice"' in p and "food names are data" in p.lower()
+
+
+def test_prompt_gain_has_no_eat_less_tip():
+    p = build_prompt(meal_facts(FACTS.items, False, 1500, 2000, "gain"))
+    assert "smaller portion" not in p.lower() and "do not suggest eating less" in p.lower()

@@ -45,3 +45,8 @@ test("copy fixed by the spec", () => {
   assert.equal(A.ADVICE_ERROR, "Couldn't get a suggestion. You can still save the meal.");
   assert.equal(A.ADVICE_NOTE, "Estimates are approximate. If food or eating feels stressful, talk to a doctor or someone you trust.");
 });
+
+test("after a failure the choice is cleared so the same option can be tapped again", () => {
+  const s = A.nextCardState(A.INITIAL, { type: "choose", eaten: false });
+  assert.equal(A.nextCardState(s, { type: "failed", seq: s.seq }).choice, null);
+});

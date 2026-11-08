@@ -28,7 +28,8 @@ function nextCardState(state, event) {
     case "loaded":
       return event.seq === state.seq ? { ...state, status: "shown", text: event.text } : state;
     case "failed":
-      return event.seq === state.seq ? { ...state, status: "error", text: ADVICE_ERROR } : state;
+      // The choice is cleared so tapping the same option again retries.
+      return event.seq === state.seq ? { ...state, choice: null, status: "error", text: ADVICE_ERROR } : state;
     case "reset":
       return { ...INITIAL, seq: state.seq + 1 };
     default:

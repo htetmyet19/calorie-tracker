@@ -72,6 +72,16 @@ Applied to the stripped text, in order:
 4. `blocked` — matches (case-insensitive, word-bounded) any of: `don't eat`, `do not eat`, `dont eat`, `skip`, `avoid eating`, `starv*`, `fast`, `fasting`, `burn (it|this|that) off`, `guilt*`, `bad food`, `cheat`, `punish*`, `purge`, `throw up`, `ashamed`, `shame*`;
 5. `wrong_number` — any number immediately followed by `kcal` or `calories` (allowing a space, thousands separators) that is not within ±10 kcal or ±3% of one of: `meal_kcal`, `eaten_before`, `eaten_before + meal_kcal`, `goal`, `abs(left_before)`, `abs(left_after)`, `over_by`, any item's calories, `half_saves`.
 
+### 4.3a Amendments after review (2026-11-08)
+- **Normalisation before matching:** reject (`odd_characters`) invisible format characters (Unicode Cf), letters outside the Latin script and non-ASCII digits; apply NFKC; map ‘ ’ ʼ ′ to `'`; collapse whitespace.
+- **Block-list additions:** stop eating, hold off, go without, eat nothing, no more food, nothing else/more, fast/fasts/fasted, burn … off, walk/work/run/sweat it off, lose weight, weight loss, naughty, sinful, pass on, leave the/your/it…, just have/drink water, disgust*, gross, lazy, finished/done eating, that's it for food, call it a day on food.
+- `restrictive_tip`: eat-less wording (half, smaller, cut back/down, eat less, less of, save some…) is rejected when the verdict is `fits_well` or the goal is `gain`; "lighter" is also rejected for `gain`.
+- `too_comfortable`: "comfortabl…" is rejected when the meal is over 40% of the daily goal.
+- `wrong_direction`: "over/above/exceed/past/beyond … goal" is rejected unless the verdict is `goes_over`; "N kcal left/remaining" or "leaves N" is rejected when today is over.
+- **Numbers:** forms `kcal(s)`, `calorie(s)`, `cal(s)`, `kilocalorie(s)`, hyphenated (`1,800-calorie`), decimals and a `k` multiplier are all checked; allowed numbers add `total_after` and drop negative `left_before`/`left_after`.
+- **Food names** are single-line with control characters removed (`AdviceItem`), quoted in the prompt, and the prompt says names are data, not instructions.
+- **Prompt:** at most two numbers, each with its true meaning in natural words, no percentages or goal type, 2–3 sentences under 240 characters; the tip depends on verdict and goal (no eat-less tips for `fits_well` or `gain`; after eating, water only as a last resort).
+
 ### 4.4 Fallback (`fallback_text(facts) -> str`)
 Fixed templates (numbers formatted with thousands separators); every template passes `check_advice`:
 
@@ -82,7 +92,7 @@ Fixed templates (numbers formatted with thousands separators); every template pa
 | goes_over | "About {meal} kcal, which would put today {over} kcal over your {goal} kcal goal. A smaller portion of the {biggest} saves about {half} kcal." | "About {meal} kcal, which puts today {over} kcal over your {goal} kcal goal. One day over is fine; tomorrow is a fresh start." |
 | goes_over when goal_type is `gain` (replaces the goes_over row) | "About {meal} kcal, which puts today {over} kcal above your {goal} kcal goal. That's fine while you're building." | same |
 
-When `left_before ≤ 0` (already over before this meal) `uses_most` cannot occur; `goes_over` templates apply.
+**Amended:** when `left_before < 0` (already past the goal before this meal): "Today was already past your {goal} kcal goal; this adds about {meal} kcal." (plus " That's fine while you're building." for `gain`). `uses_most` for `gain`: "…you have/had left today. A protein-rich snack later would round out the day." The not-yet `goes_over` portion tip is omitted when `half_saves` < 25 kcal.
 
 ### 4.5 `get_advice(facts) -> (text, source, reason)`
 AI text if it passes the checks (`source="ai"`, `reason=None`); otherwise the fallback with `source="rules"` and `reason` ∈ `timeout`, `provider_error`, `limit`, or a check reason. Log line `meal_advice source=… reason=…`; the prompt and reply are never logged.
