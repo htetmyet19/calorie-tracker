@@ -60,41 +60,53 @@ def _today(offset=0):
 
 def test_advice_happy_path(_ai):
     store = FakeStore(settings={"goal_kcal": 1800, "weight_goal": "lose"}, meals=[500, 400])
-    r = _client(store).post("/api/meals/advice", json={"items": [ITEM], "eaten": False, "date": _today()})
+    r = _client(store).post("/api/meals/advice", json={"items": [ITEM], "date": _today()})
     assert r.status_code == 200
     assert r.json() == {"text": "About 900 kcal. A smaller portion of the fried rice saves about 450 kcal.",
-                        "verdict": "uses_most", "source": "ai"}       # 1800 − 900 eaten = 900 left
+                        "verdict": "big_meal", "source": "ai"}        # 900 is half of the 1,800 goal
     assert store.days == [datetime.date.fromisoformat(_today())] and store.recorded == 1
     assert "lose" in _ai[0] and "1,800" in _ai[0]
 
 
 def test_advice_defaults_without_settings():
+    small = {**ITEM, "calories": 600}
+    r = _client(FakeStore()).post("/api/meals/advice", json={"items": [small], "date": _today()})
+    assert r.json()["verdict"] == "fits_well"                         # 600 of the default 2,000
+
+
+def test_big_lunch_gets_big_meal_advice():
+    chicken = {"name": "fried chicken (8 pieces)", "calories": 1200, "protein_g": 90}
+    r = _client(FakeStore()).post("/api/meals/advice", json={"items": [chicken], "date": _today()})
+    assert r.json()["verdict"] == "big_meal"                          # 60% of the day in one meal
+
+
+def test_old_clients_sending_eaten_still_work():
     r = _client(FakeStore()).post("/api/meals/advice", json={"items": [ITEM], "eaten": True, "date": _today()})
-    assert r.json()["verdict"] == "fits_well"                         # 900 of the default 2,000
+    assert r.status_code == 200
 
 
 def test_advice_date_checks():
     c = _client(FakeStore())
     for bad in ("2026-13-01", "11/08/2026", _today(2)):
-        assert c.post("/api/meals/advice", json={"items": [ITEM], "eaten": True, "date": bad}).status_code == 400
-    assert c.post("/api/meals/advice", json={"items": [ITEM], "eaten": True, "date": _today(1)}).status_code == 200
+        assert c.post("/api/meals/advice", json={"items": [ITEM], "date": bad}).status_code == 400
+    assert c.post("/api/meals/advice", json={"items": [ITEM], "date": _today(1)}).status_code == 200
 
 
 def test_advice_bad_items_422():
     c = _client(FakeStore())
     for items in ([], [ITEM] * 21, [{**ITEM, "calories": -5}], [{**ITEM, "name": ""}], [{"name": "x"}]):
-        assert c.post("/api/meals/advice", json={"items": items, "eaten": True, "date": _today()}).status_code == 422
+        assert c.post("/api/meals/advice", json={"items": items, "date": _today()}).status_code == 422
 
 
 def test_hand_added_item_without_confidence_is_fine():
     item = {"name": "egg", "calories": 80, "protein_g": 6, "carbs_g": 0, "fat_g": 5}
-    r = _client(FakeStore()).post("/api/meals/advice", json={"items": [item], "eaten": False, "date": _today()})
+    r = _client(FakeStore()).post("/api/meals/advice", json={"items": [item], "date": _today()})
     assert r.status_code == 200
 
 
 def test_over_limit_returns_fallback_without_ai(_ai):
     store = FakeStore(allowed=False)
-    r = _client(store).post("/api/meals/advice", json={"items": [ITEM], "eaten": False, "date": _today()})
+    r = _client(store).post("/api/meals/advice", json={"items": [ITEM], "date": _today()})
     assert r.status_code == 200 and r.json()["source"] == "rules" and _ai == []
 
 

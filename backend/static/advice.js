@@ -1,40 +1,49 @@
-// Meal advice card on the result screen: "Have you eaten this yet?" → a short suggestion.
-// Needs dom.js and auth.js loaded first; app.js calls initAdviceCard() and resetAdvice().
+// Meal advice card on the result screen: a short suggestion, asked for as soon as the
+// photo is analysed. Needs dom.js and auth.js loaded first; app.js calls initAdviceCard(),
+// requestAdvice(), mealChanged() and resetAdvice().
 // The functions up to "Browser only" are pure so Node can test them (tests/advice.test.js).
 
 const ADVICE_NOTE = "Estimates are approximate. If food or eating feels stressful, talk to a doctor or someone you trust.";
 const ADVICE_ERROR = "Couldn't get a suggestion. You can still save the meal.";
+const ADVICE_STALE = "You changed the meal, so this suggestion is out of date.";
 const ADVICE_LOADING = "Thinking…";
 
 // Only what the server reads. Items added by hand may have no name yet.
-function adviceBody(items, eaten, today) {
+function adviceBody(items, today) {
   return {
     items: items.map((i) => ({
       name: (i.name || "").trim() || "Food item",
       calories: i.calories, protein_g: i.protein_g, carbs_g: i.carbs_g, fat_g: i.fat_g,
     })),
-    eaten,
     date: today,
   };
 }
 
-// seq grows with every choice and reset, so a late answer for an older one is ignored.
-const INITIAL = Object.freeze({ choice: null, status: "idle", text: "", seq: 0 });
+// seq grows with every request, edit and reset, so a late answer for an older meal is ignored.
+const INITIAL = Object.freeze({ status: "idle", text: "", seq: 0 });
 
 function nextCardState(state, event) {
   switch (event.type) {
-    case "choose":
-      return { choice: event.eaten, status: "loading", text: "", seq: state.seq + 1 };
+    case "request":
+      return { status: "loading", text: "", seq: state.seq + 1 };
     case "loaded":
       return event.seq === state.seq ? { ...state, status: "shown", text: event.text } : state;
     case "failed":
-      // The choice is cleared so tapping the same option again retries.
-      return event.seq === state.seq ? { ...state, choice: null, status: "error", text: ADVICE_ERROR } : state;
+      return event.seq === state.seq ? { ...state, status: "error", text: ADVICE_ERROR } : state;
+    case "changed":
+      // Not re-asked by itself: every request counts toward the daily limit.
+      return state.status === "idle" ? state : { status: "stale", text: ADVICE_STALE, seq: state.seq + 1 };
     case "reset":
       return { ...INITIAL, seq: state.seq + 1 };
     default:
       return state;
   }
+}
+
+function refreshLabel(state) {
+  if (state.status === "stale") return "Update suggestion";
+  if (state.status === "error") return "Try again";
+  return null;
 }
 
 
@@ -45,14 +54,15 @@ let adviceItems = () => [];
 
 function renderAdvice() {
   const s = adviceState;
+  $("advice").hidden = s.status === "idle";
   const text = $("advice-text");
   text.textContent = s.status === "loading" ? ADVICE_LOADING : s.text;
   text.classList.toggle("is-error", s.status === "error");
+  text.classList.toggle("is-stale", s.status === "stale");
   $("advice").classList.toggle("is-loading", s.status === "loading");
-  for (const r of document.querySelectorAll('input[name="advice-eaten"]')) {
-    r.checked = s.choice !== null && (r.value === "yes") === s.choice;
-    r.disabled = s.status === "loading";
-  }
+  const label = refreshLabel(s);
+  $("advice-refresh").hidden = !label;
+  if (label) $("advice-refresh").textContent = label;
 }
 
 function dispatchAdvice(event) {
@@ -60,13 +70,15 @@ function dispatchAdvice(event) {
   renderAdvice();
 }
 
-async function askAdvice(eaten) {
-  dispatchAdvice({ type: "choose", eaten });
+async function requestAdvice() {
+  const items = adviceItems();
+  if (!items.length) return resetAdvice();
+  dispatchAdvice({ type: "request" });
   const seq = adviceState.seq;
   try {
     const res = await api("/api/meals/advice", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(adviceBody(adviceItems(), eaten, isoDate(new Date()))),
+      body: JSON.stringify(adviceBody(items, isoDate(new Date()))),
     });
     const data = res.ok ? await res.json().catch(() => null) : null;
     if (!data || typeof data.text !== "string") throw new Error("advice");
@@ -76,7 +88,11 @@ async function askAdvice(eaten) {
   }
 }
 
-// Any change to the meal makes the shown advice describe a different meal: clear it.
+// Any change to the meal makes the shown advice describe a different meal.
+function mealChanged() {
+  dispatchAdvice({ type: "changed" });
+}
+
 function resetAdvice() {
   if (adviceState.status !== "idle") dispatchAdvice({ type: "reset" });
 }
@@ -84,12 +100,10 @@ function resetAdvice() {
 function initAdviceCard(getItems) {
   adviceItems = getItems;
   $("advice-note").textContent = ADVICE_NOTE;
-  for (const r of document.querySelectorAll('input[name="advice-eaten"]')) {
-    r.addEventListener("change", () => { if (r.checked) askAdvice(r.value === "yes"); });
-  }
+  $("advice-refresh").addEventListener("click", requestAdvice);
   renderAdvice();
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { adviceBody, nextCardState, INITIAL, ADVICE_NOTE, ADVICE_ERROR };
+  module.exports = { adviceBody, nextCardState, refreshLabel, INITIAL, ADVICE_NOTE, ADVICE_ERROR, ADVICE_STALE };
 }

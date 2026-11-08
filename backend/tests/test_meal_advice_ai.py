@@ -6,7 +6,7 @@ from app import meal_advice
 from app.meal_advice import build_prompt, fallback_text, meal_facts
 
 FACTS = meal_facts([{"name": "fried rice", "calories": 900, "protein_g": 12, "carbs_g": 120, "fat_g": 30}],
-                   False, 1500, 2000, "lose")
+                   1500, 2000, "lose")
 
 
 def _run(monkeypatch, reply=None, exc=None, delay=0.0, allow_ai=True):
@@ -65,10 +65,13 @@ def test_prompt_has_facts_and_rules():
     p = build_prompt(FACTS)
     for fact in ("900", "1,500", "2,000", "400", "goes_over", "lose", "fried rice", "450"):
         assert fact in p, fact
-    assert "not eaten" in p.lower() and "this plate" in p.lower()
     assert "never tell" in p.lower() and "not to eat" in p.lower()
-    eaten = build_prompt(meal_facts(FACTS.items, True, 1500, 2000, "lose"))
-    assert "already eaten" in eaten.lower() and "rest of today" in eaten.lower()
+
+
+def test_prompt_says_it_may_or_may_not_be_eaten():
+    p = build_prompt(FACTS).lower()
+    assert "does not know whether" in p and "works either way" in p
+    assert "already eaten" not in p and "not eaten" not in p
 
 
 def test_ask_model_dispatches_on_provider(monkeypatch):
@@ -96,20 +99,26 @@ def test_prompt_labels_every_number_and_the_total_after():
 
 
 def test_prompt_tip_depends_on_verdict():
-    fits = build_prompt(meal_facts(FACTS.items, False, 0, 3000, "maintain"))
+    fits = build_prompt(meal_facts(FACTS.items, 0, 3000, "maintain"))
     assert "fits_well" in fits and "do not suggest eating less" in fits.lower()
     over = build_prompt(FACTS)
     assert "smaller portion" in over.lower()
 
 
-def test_prompt_eaten_tips_limit_water():
-    p = build_prompt(meal_facts(FACTS.items, True, 1500, 2000, "lose"))
+def test_prompt_tips_limit_water():
+    p = build_prompt(FACTS)
     assert "water only if" in p.lower()
 
 
 def test_prompt_share_of_goal():
-    p = build_prompt(meal_facts(FACTS.items, False, 0, 2000, "lose"))   # 900 of 2,000 = 45%
+    p = build_prompt(meal_facts(FACTS.items, 0, 2000, "lose"))   # 900 of 2,000 = 45%
     assert "45%" in p and "comfortably" in p.lower()
+
+
+def test_prompt_big_meal():
+    p = build_prompt(meal_facts(FACTS.items, 0, 2000, "lose")).lower()   # 45% of the day, day still has room
+    assert "big_meal" in p and "big share of the whole day" in p
+    assert "smaller portion" in p and "do not suggest eating less" not in p
 
 
 def test_prompt_quotes_food_names_as_data():
@@ -118,5 +127,5 @@ def test_prompt_quotes_food_names_as_data():
 
 
 def test_prompt_gain_has_no_eat_less_tip():
-    p = build_prompt(meal_facts(FACTS.items, False, 1500, 2000, "gain"))
+    p = build_prompt(meal_facts(FACTS.items, 1500, 2000, "gain"))
     assert "smaller portion" not in p.lower() and "do not suggest eating less" in p.lower()

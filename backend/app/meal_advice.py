@@ -19,13 +19,12 @@ log = logging.getLogger(__name__)
 DEFAULT_GOAL = 2000
 DEFAULT_GOAL_TYPE = "maintain"
 USES_MOST = 0.8
-LARGE_SHARE = 40   # % of the daily goal above which a meal is never "comfortable"
+LARGE_SHARE = 40   # % of the daily goal above which one meal is a "big meal", never "comfortable"
 
 
 @dataclass
 class Facts:
     items: list[dict]
-    eaten: bool
     meal_kcal: int
     eaten_before: int
     goal: int
@@ -41,7 +40,7 @@ class Facts:
     share_pct: int = 0     # meal_kcal as a % of the goal
 
 
-def meal_facts(items: list[dict], eaten: bool, eaten_today_kcal: float,
+def meal_facts(items: list[dict], eaten_today_kcal: float,
                goal_kcal: int | None, goal_type: str | None) -> Facts:
     meal = round(sum(i["calories"] for i in items))
     before = round(eaten_today_kcal)
@@ -51,12 +50,14 @@ def meal_facts(items: list[dict], eaten: bool, eaten_today_kcal: float,
     big = max(items, key=lambda i: i["calories"]) if items else None  # max keeps the first on ties
     if left_after < 0:
         verdict = "goes_over"
+    elif meal > LARGE_SHARE / 100 * goal and goal_type != "gain":   # big meals help a gain goal
+        verdict = "big_meal"
     elif left_before > 0 and meal > USES_MOST * left_before:
         verdict = "uses_most"
     else:
         verdict = "fits_well"
     return Facts(
-        items=items, eaten=eaten, meal_kcal=meal, eaten_before=before, goal=goal,
+        items=items, meal_kcal=meal, eaten_before=before, goal=goal,
         goal_type=goal_type or DEFAULT_GOAL_TYPE, left_before=left_before, left_after=left_after,
         over_by=max(0, -left_after), biggest=big["name"] if big else "",
         half_saves=round(big["calories"] / 2) if big else 0,
@@ -170,24 +171,23 @@ def _fallback(f: Facts, food: str) -> str:
         return f"Today was already past your {goal} kcal goal; this adds about {meal} kcal.{tail}"
     if f.verdict == "fits_well":
         return f"About {meal} kcal. That leaves {n(f.left_after)} kcal of your {goal} kcal goal today."
+    if f.verdict == "big_meal":
+        return (f"About {meal} kcal, a big share of your {goal} kcal day in one meal. "
+                f"Saving some of {food} for later, or a lighter next meal, keeps the rest of today easy.")
     if f.verdict == "uses_most":
-        had = "had" if f.eaten else "have"
-        start = f"About {meal} kcal, most of the {n(f.left_before)} kcal you {had} left today. "
+        start = f"About {meal} kcal, most of the {n(f.left_before)} kcal left today. "
         if gain:
             return start + "A protein-rich snack later would round out the day."
-        if f.eaten:
-            return start + "A lighter next meal will keep you on track."
-        return start + f"A smaller portion of {food} would leave more room for later."
+        return start + f"A smaller portion of {food}, or a lighter next meal, keeps room for later."
     if gain:
         return (f"About {meal} kcal, which puts today {n(f.over_by)} kcal above your {goal} kcal goal. "
                 "That's fine while you're building.")
-    if f.eaten:
-        return (f"About {meal} kcal, which puts today {n(f.over_by)} kcal over your {goal} kcal goal. "
-                "One day over is fine; tomorrow is a fresh start.")
-    text = f"About {meal} kcal, which would put today {n(f.over_by)} kcal over your {goal} kcal goal."
+    text = f"About {meal} kcal, which puts today {n(f.over_by)} kcal over your {goal} kcal goal."
+    # The app doesn't know whether the meal is eaten yet, so the tip covers both.
     if f.half_saves >= MIN_TIP_KCAL:
-        text += f" A smaller portion of {food} saves about {n(f.half_saves)} kcal."
-    return text
+        return text + (f" If you haven't started, a smaller portion of {food} saves about "
+                       f"{n(f.half_saves)} kcal; if you have, one day over is fine.")
+    return text + " One day over is fine; tomorrow is a fresh start."
 
 
 def fallback_text(facts: Facts) -> str:
@@ -232,7 +232,11 @@ VERDICT_MEANING = {
     "fits_well": "It fits within what is left today.",
     "uses_most": "It uses most of what was left today.",
     "goes_over": "It puts today over the goal.",
+    "big_meal": "Today still has room, but this one meal is a big share of the whole day's goal.",
 }
+
+TIMING = ("The app does not know whether the person has eaten this meal yet: word any tip so it "
+          "works either way.")
 
 
 def _tip_rule(f: Facts) -> str:
@@ -240,17 +244,14 @@ def _tip_rule(f: Facts) -> str:
         more = " For a gain goal you may suggest adding a little more." if f.goal_type == "gain" else ""
         return ("Do not suggest eating less, a lighter meal or saving some: affirm the meal, note the "
                 "protein, or suggest adding a protein or vegetable side." + more)
-    if not f.eaten:
-        return "The tip is about this plate: a smaller portion of one item, a swap, or adding protein."
-    return ("The tip is about the rest of today: a lighter next meal, a protein-rich snack later, "
-            "or vegetables at the next meal. Mention water only if none of these fit.")
+    return ("Give one tip that works either way, for example a smaller portion of one item or saving "
+            "some for later if they haven't started, otherwise a lighter next meal. Mention water only "
+            "if nothing else fits.")
 
 
 def build_prompt(f: Facts) -> str:
     n = lambda v: f"{v:,}"  # noqa: E731
     items = "; ".join(f'"{i["name"]}" ({round(i["calories"]):,} kcal)' for i in f.items)
-    timing = ("The person has ALREADY EATEN this meal; do not suggest changing it."
-              if f.eaten else "The person has NOT EATEN this meal yet; the tip can be about this plate.")
     if f.left_after >= 0:
         left = f"{n(f.left_after)} kcal"
     else:
@@ -266,7 +267,7 @@ def build_prompt(f: Facts) -> str:
         items=items, meal=n(f.meal_kcal), share=f.share_pct, protein=f.protein_g, before=n(f.eaten_before),
         total_after=n(f.total_after), goal=n(f.goal), goal_type=f.goal_type, left_after_text=left,
         biggest=f'"{f.biggest}"', half=n(f.half_saves), verdict=f.verdict, verdict_meaning=meaning,
-        timing=timing, tip_rule=_tip_rule(f), comfort_rule=comfort, max_chars=MAX_CHARS)
+        timing=TIMING, tip_rule=_tip_rule(f), comfort_rule=comfort, max_chars=MAX_CHARS)
 
 
 async def _ask_gemini(prompt: str) -> str:

@@ -248,7 +248,6 @@ class AdviceItem(BaseModel):
 
 class AdviceIn(BaseModel):
     items: list[AdviceItem] = Field(min_length=1, max_length=20)
-    eaten: bool
     date: str
 
 

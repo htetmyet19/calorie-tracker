@@ -10,8 +10,8 @@ def item(name, kcal):
     return {"name": name, "calories": kcal, "protein_g": 10, "carbs_g": 0, "fat_g": 0}
 
 
-def F(meal=1050, before=600, goal=2000, goal_type="maintain", eaten=False, name="fried rice"):
-    return meal_facts([item(name, meal)], eaten, before, goal, goal_type)
+def F(meal=1050, before=600, goal=2000, goal_type="maintain", name="fried rice"):
+    return meal_facts([item(name, meal)], before, goal, goal_type)
 
 
 def reason(text, facts=None):
@@ -77,30 +77,34 @@ def test_numbers_without_unit_ignored():
 
 
 def test_every_fallback_passes_checks():
-    cases = [dict(meal=m, before=b) for m, b in ((400, 300), (900, 1000), (900, 1500), (300, 2100), (0, 500))]
-    for c, eaten, gt in product(cases, (False, True), ("lose", "maintain", "gain")):
-        f = F(eaten=eaten, goal_type=gt, **c)
-        assert check_advice(fallback_text(f), f) == fallback_text(f), (c, eaten, gt)
+    cases = [dict(meal=m, before=b) for m, b in
+             ((400, 300), (700, 1200), (900, 1000), (900, 1500), (300, 2100), (0, 500), (1200, 0), (1900, 0))]
+    for c, gt in product(cases, ("lose", "maintain", "gain")):
+        f = F(goal_type=gt, **c)
+        assert check_advice(fallback_text(f), f) == fallback_text(f), (c, gt)
 
 
 def test_fallback_copy():
     assert fallback_text(F(meal=900, before=1500)) == (
-        "About 900 kcal, which would put today 400 kcal over your 2,000 kcal goal. "
-        "A smaller portion of the fried rice saves about 450 kcal.")
-    assert fallback_text(F(meal=900, before=1500, eaten=True)) == (
-        "About 900 kcal, which puts today 400 kcal over your 2,000 kcal goal. "
+        "About 900 kcal, which puts today 400 kcal over your 2,000 kcal goal. If you haven't started, "
+        "a smaller portion of the fried rice saves about 450 kcal; if you have, one day over is fine.")
+    assert fallback_text(F(meal=40, before=1980)) == (
+        "About 40 kcal, which puts today 20 kcal over your 2,000 kcal goal. "
         "One day over is fine; tomorrow is a fresh start.")
     assert fallback_text(F(meal=900, before=1500, goal_type="gain")) == (
         "About 900 kcal, which puts today 400 kcal above your 2,000 kcal goal. "
         "That's fine while you're building.")
     assert fallback_text(F(meal=400, before=300)) == (
         "About 400 kcal. That leaves 1,300 kcal of your 2,000 kcal goal today.")
-    assert fallback_text(F(meal=900, before=1000)) == (
-        "About 900 kcal, most of the 1,000 kcal you have left today. "
-        "A smaller portion of the fried rice would leave more room for later.")
-    assert fallback_text(F(meal=900, before=1000, eaten=True)) == (
-        "About 900 kcal, most of the 1,000 kcal you had left today. "
-        "A lighter next meal will keep you on track.")
+    assert fallback_text(F(meal=700, before=1200)) == (
+        "About 700 kcal, most of the 800 kcal left today. "
+        "A smaller portion of the fried rice, or a lighter next meal, keeps room for later.")
+    assert fallback_text(F(meal=900, before=1000, goal_type="gain")) == (
+        "About 900 kcal, most of the 1,000 kcal left today. "
+        "A protein-rich snack later would round out the day.")
+    assert fallback_text(F(meal=1200, before=0)) == (
+        "About 1,200 kcal, a big share of your 2,000 kcal day in one meal. "
+        "Saving some of the fried rice for later, or a lighter next meal, keeps the rest of today easy.")
 
 
 def test_fallback_drops_a_name_that_trips_the_checks():
@@ -120,7 +124,9 @@ def test_fits_well_rejects_restrictive_tips():
 
 def test_portion_tips_allowed_when_it_uses_most_or_goes_over():
     assert check_advice("Half of the fried rice saves about 450 kcal.", F(meal=900, before=1500))
-    assert check_advice("A smaller portion would leave room later.", F(meal=900, before=1000))
+    assert check_advice("A smaller portion would leave room later.", F(meal=700, before=1200))
+    assert check_advice("That's 1,200 kcal in one meal; saving half for later keeps dinner easy.",
+                        F(meal=1200, before=0))   # big meal: portion tips allowed even though the day has room
 
 
 def test_large_meal_is_not_comfortable():
@@ -161,7 +167,6 @@ def test_gain_users_never_get_eat_less_tips():
             assert reason(t, f) == "restrictive_tip", t
     g = F(meal=900, before=1000, goal_type="gain")
     assert "smaller" not in fallback_text(g) and "lighter" not in fallback_text(g)
-    assert "lighter" not in fallback_text(F(meal=900, before=1000, goal_type="gain", eaten=True))
 
 
 def test_unicode_and_spacing_tricks():
@@ -179,8 +184,8 @@ def test_more_blocked_paraphrases():
 
 
 def test_already_over_day_fallback_and_tiny_meals():
-    for eaten, gt in product((False, True), ("lose", "maintain", "gain")):
-        f = F(meal=0, before=2300, eaten=eaten, goal_type=gt, name="tea")
+    for gt in ("lose", "maintain", "gain"):
+        f = F(meal=0, before=2300, goal_type=gt, name="tea")
         text = fallback_text(f)
         assert text.startswith("Today was already") and "saves about 0" not in text and "smaller" not in text
         assert check_advice(text, f) == text
@@ -189,9 +194,9 @@ def test_already_over_day_fallback_and_tiny_meals():
 
 
 def test_exactly_at_goal_before_the_meal():
-    for meal, eaten, gt in product((0, 300), (False, True), ("lose", "gain", "maintain")):
-        f = F(meal=meal, before=2000, eaten=eaten, goal_type=gt)
-        assert check_advice(fallback_text(f), f) == fallback_text(f), (meal, eaten, gt)
+    for meal, gt in product((0, 300), ("lose", "gain", "maintain")):
+        f = F(meal=meal, before=2000, goal_type=gt)
+        assert check_advice(fallback_text(f), f) == fallback_text(f), (meal, gt)
         assert not fallback_text(f).startswith("Today was already")
 
 

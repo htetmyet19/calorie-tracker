@@ -128,15 +128,12 @@
         <p class="notes" id="notes"></p>
 
         <!-- Advice on this meal: never blocks saving -->
-        <fieldset class="meal-type advice" id="advice">
-          <legend>Have you eaten this yet?</legend>
-          <div class="meal-type-options">
-            <label><input type="radio" name="advice-eaten" value="no">Not yet</label>
-            <label><input type="radio" name="advice-eaten" value="yes">Already eaten</label>
-          </div>
+        <section class="advice" id="advice" aria-labelledby="advice-title" hidden>
+          <p class="advice-title" id="advice-title">Suggestion</p>
           <p class="advice-text" id="advice-text" role="status" aria-live="polite"></p>
+          <button type="button" id="advice-refresh" class="btn btn-quiet advice-refresh" hidden>Update suggestion</button>
           <p class="hint advice-note" id="advice-note"></p>
-        </fieldset>
+        </section>
 
         <fieldset class="meal-type">
           <legend>Which meal is this?</legend>

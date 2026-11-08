@@ -136,3 +136,12 @@ Migration `20261108000001_meal_advice.sql`: table `advice_requests (id identity,
 - **Estimate error:** advice is only as good as the photo estimate, which is unmeasured on Burmese dishes. The card note says estimates are approximate.
 - **Quota:** 30 requests per user per day, fallback beyond that.
 - **Disordered eating:** mitigated by the tone rules, block-list, no stored history, and the support note; not a clinical safeguard.
+
+## Amendment (2026-11-08): no question, and a "big meal" verdict
+
+After trying it, the owner asked for two changes:
+
+- **No "Have you eaten this yet?" question.** The suggestion is asked for automatically when the photo's items are shown. `eaten` is removed from `meal_facts`, `Facts` and the request body (old clients that still send it are accepted; the field is ignored). Every tip must work either way ("if you haven't started, a smaller portion …; otherwise a lighter next meal"). Editing the items marks the suggestion out of date and shows an "Update suggestion" button; it is not re-asked by itself, since each request counts toward the 30-a-day limit. A failure shows "Try again".
+- **`big_meal` verdict.** A meal over `LARGE_SHARE` (40%) of the daily goal is a big meal even when the day still has room, so portion tips are allowed for it. Order: `goes_over` → `big_meal` → `uses_most` → `fits_well`. Gain goals never get `big_meal`. Fixed message: "About {meal} kcal, a big share of your {goal} kcal day in one meal. Saving some of {food} for later, or a lighter next meal, keeps the rest of today easy."
+
+Also: pages and their JS/CSS are sent with `Cache-Control: no-cache`, so a browser never runs old JS next to new HTML after a deploy (this is why the question buttons did nothing when first tried).

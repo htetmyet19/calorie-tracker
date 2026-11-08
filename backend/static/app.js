@@ -556,6 +556,7 @@ $("analyze").addEventListener("click", async () => {
     selectMealType(guessMealType());
     renderItems();
     $("result").hidden = false;
+    requestAdvice();
   } catch (err) {
     setStatus(err.message, true);
   } finally {
@@ -574,7 +575,7 @@ function numField(value, unit, className, onChange, label) {
 }
 
 function renderItems() {
-  resetAdvice();
+  mealChanged();
   $("items").replaceChildren(...items.map((item, idx) => {
     const name = el("input", { value: item.name, ariaLabel: "Food name" });
     name.addEventListener("change", () => { item.name = name.value.trim() || item.name; });
@@ -607,7 +608,7 @@ function renderItems() {
 }
 
 // Typing a new name, kcal or macro changes the meal too (grams and removals re-render).
-$("items").addEventListener("change", resetAdvice);
+$("items").addEventListener("change", mealChanged);
 initAdviceCard(() => items);
 
 function updateTotal() {
