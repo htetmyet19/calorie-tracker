@@ -1018,6 +1018,8 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 }
 .thumb-add:hover { color: var(--ink); border-color: var(--ink-2); }
 .thumb-missing.is-busy { color: var(--ink-2); }
+.thumb-camera { width: 100%; margin-top: 4px; }
+@media (hover: hover) and (pointer: fine) { .thumb-camera { display: none; } }
 .thumb-open { display: block; width: 100%; padding: 0; border: 0; border-radius: 8px; background: none; cursor: pointer; }
 .photo-delete { width: 100%; margin-top: 4px; color: var(--chili); }
 .thumb-pose figcaption { margin-top: 2px; color: var(--muted); font-size: var(--step--1); text-align: center; }

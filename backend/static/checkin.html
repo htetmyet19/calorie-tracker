@@ -94,12 +94,14 @@
         <img class="photo-preview" alt="" hidden>
         <span class="drop-empty">
           <svg viewBox="0 0 48 48" aria-hidden="true">
-            <circle cx="24" cy="26" r="13"/><circle cx="24" cy="26" r="7"/><path d="M6 14h7l3-5h16l3 5h7v26H6z"/>
+            <rect x="6" y="9" width="36" height="30" rx="4"/><circle cx="17" cy="19" r="4"/><path d="M6 34l11-10 9 8 6-5 10 8"/>
           </svg>
           <span class="drop-title"></span>
         </span>
         <span class="drop-busy" aria-hidden="true">Uploading…</span>
       </label>
+      <!-- The box above opens the gallery (Android shows no camera there); "Take photo" opens this one -->
+      <input type="file" accept="image/*" capture="user" class="visually-hidden photo-camera-input" tabindex="-1" aria-hidden="true">
       <p class="hint photo-tip">Same spot, same light, every week</p>
       <p class="status photo-status" role="status" aria-live="polite"></p>
       <div class="step-actions">

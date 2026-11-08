@@ -150,17 +150,19 @@ function buildPhotoSteps() {
     const title = node.querySelector(".step-title");
     title.id = `${pose}-title`;
     title.textContent = `${POSE_NAME[pose]} photo`;
-    const input = node.querySelector("input[type=file]");
+    const input = node.querySelector(".photo-drop input[type=file]");
+    const camera = node.querySelector(".photo-camera-input");
     input.id = `photo-${pose}`;
-    node.querySelector(".drop-title").textContent = `Take or choose a ${pose} photo`;
+    node.querySelector(".drop-title").textContent = `Choose a ${pose} photo`;
     node.querySelector(".photo-preview").alt = `Your ${pose} photo`;
     input.addEventListener("change", () => photoChosen(pose, input));
+    camera.addEventListener("change", () => photoChosen(pose, camera));
     node.querySelector(".photo-skip").addEventListener("click", () => showStep(k + 2));
     node.querySelector(".photo-main").addEventListener("click", () => {
       const st = photos[pose].state;
       if (st === "failed") uploadPhoto(pose);
       else if (st === "done") showStep(k + 2);
-      else input.click();
+      else camera.click();
     });
     $("photo-steps").append(node);
   }
@@ -180,7 +182,7 @@ function renderPhoto(pose) {
   drop.classList.toggle("is-busy", p.state === "uploading" || p.state === "preparing");
   drop.classList.toggle("is-failed", p.state === "failed");
   const text = {
-    preparing: "Preparing the photo…", uploading: "Uploading…", done: "Photo saved. Tap it to take it again.",
+    preparing: "Preparing the photo…", uploading: "Uploading…", done: "Photo saved. Tap it to choose another.",
     failed: NOT_UPLOADED, unreadable: UNREADABLE,
   }[p.state] || "";
   status.textContent = text;
@@ -188,7 +190,7 @@ function renderPhoto(pose) {
   const busy = p.state === "uploading" || p.state === "preparing";
   main.disabled = busy;
   // No new file while one is being prepared or sent.
-  node.querySelector("input[type=file]").disabled = busy;
+  for (const input of node.querySelectorAll("input[type=file]")) input.disabled = busy;
   main.textContent = { uploading: "Uploading…", preparing: "Uploading…", done: "Next", failed: "Retry" }[p.state] || "Take photo";
   node.querySelector(".photo-skip").hidden = p.state === "done";
 }

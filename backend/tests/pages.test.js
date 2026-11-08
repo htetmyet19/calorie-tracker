@@ -27,3 +27,12 @@ test("the meal logger also offers the camera, so Android can take a photo", () =
   const html = fs.readFileSync(path.join(STATIC, "index.html"), "utf8");
   assert.match(html, /<label[^>]*for="photo-camera"[^>]*>[\s\S]*?Take a photo/);
 });
+
+test("check-in photos can use the camera as well as the gallery", () => {
+  const checkin = fileInputs("checkin.html").filter((i) => /\bcapture="user"/.test(i));
+  assert.equal(checkin.length, 1, "the photo step template has one camera input");
+  assert.match(checkin[0], /class="[^"]*photo-camera-input/);
+  const progress = fileInputs("progress.html").filter((i) => /\bcapture="user"/.test(i));
+  assert.equal(progress.length, 1);
+  assert.match(progress[0], /id="add-photo-camera"/);
+});

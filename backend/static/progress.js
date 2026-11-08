@@ -72,6 +72,7 @@ function photoDeleteError(status) {
 
 // A photo skipped at check-in can be added later from its empty slot.
 const addPhotoLabel = (pose, date) => `Add ${pose} photo for ${shortDate(date)}`;
+const takePhotoLabel = (pose, date) => `Take ${pose} photo for ${shortDate(date)}`;
 
 // kind: "unreadable" (the browser couldn't decode the file) or "failed" (upload).
 function addPhotoError(kind, pose, date) {
@@ -164,8 +165,11 @@ function thumb(checkin, pose) {
     // Skipped at check-in: tap to take or choose it now.
     const add = el("button", { className: "thumb-missing thumb-add", type: "button",
       ariaLabel: addPhotoLabel(pose, checkin.checked_on) }, "+ Add");
-    add.addEventListener("click", () => pickPhoto(checkin, pose));
-    fig.append(add);
+    add.addEventListener("click", () => pickPhoto(checkin, pose, "add-photo-input"));
+    const take = el("button", { className: "btn btn-quiet btn-small thumb-camera", type: "button",
+      ariaLabel: takePhotoLabel(pose, checkin.checked_on) }, "Camera");
+    take.addEventListener("click", () => pickPhoto(checkin, pose, "add-photo-camera"));
+    fig.append(add, take);
   }
   fig.append(el("figcaption", {}, POSE_LABEL[pose]));
   return fig;
@@ -191,10 +195,10 @@ const adding = new Set();  // "checkinId:pose" slots uploading now
 let picking = null;        // the slot the file picker was opened for
 const slotKey = (checkin, pose) => `${checkin.id}:${pose}`;
 
-function pickPhoto(checkin, pose) {
+function pickPhoto(checkin, pose, inputId) {
   picking = { checkin, pose };
   setMsg("timeline-status", "");
-  $("add-photo-input").click();
+  $(inputId).click();
 }
 
 async function addPhoto(input) {
@@ -511,6 +515,7 @@ function wire() {
   });
   $("photo-delete").addEventListener("click", deleteViewedPhoto);
   $("add-photo-input").addEventListener("change", (e) => addPhoto(e.target));
+  $("add-photo-camera").addEventListener("change", (e) => addPhoto(e.target));
 
   $("compare-open").addEventListener("click", openCompare);
   $("compare-close").addEventListener("click", () => $("compare").close());
@@ -560,7 +565,7 @@ async function start() {
 
 if (typeof module !== "undefined") {
   module.exports = { checkinText, weightSummary, weightLabel, caloriesLabel, weightError, dateError, photoFor, missingPhotoText,
-    photoViewTitle, DELETE_PHOTO_CONFIRM, photoDeleteError, addPhotoLabel, addPhotoError };
+    photoViewTitle, DELETE_PHOTO_CONFIRM, photoDeleteError, addPhotoLabel, takePhotoLabel, addPhotoError };
 } else {
   initNav("progress");
   wire();
