@@ -1,7 +1,7 @@
 // Run from backend/: node --test "tests/*.test.js"
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { coachMessage, COACH_LINES, typingMs } = require("../static/coach.js");
+const { coachMessage, COACH_LINES, typingMs, bubbleStartsOpen } = require("../static/coach.js");
 
 // A day with an even day of month shows variant A first.
 const base = { total: 1240, goal: 1800, goalType: "lose", mealCount: 2, hour: 14, checkinDue: false, dayOfMonth: 8, flip: false };
@@ -57,4 +57,12 @@ test("typing dots show longer for longer lines, within 0.5 to 1.1 s, and not at 
   assert.equal(typingMs("x".repeat(40), false), 700);
   assert.equal(typingMs("x".repeat(200), false), 1100);
   assert.equal(typingMs("x".repeat(40), true), 0);
+});
+
+test("the bubble opens for a new line, but a line folded away today stays folded", () => {
+  const folded = { date: "2026-11-08", text: "560 kcal left. Nice pace!" };
+  assert.equal(bubbleStartsOpen("560 kcal left. Nice pace!", folded, "2026-11-08"), false);
+  assert.equal(bubbleStartsOpen("180 kcal left. Fruit or yogurt fits nicely.", folded, "2026-11-08"), true);
+  assert.equal(bubbleStartsOpen("560 kcal left. Nice pace!", folded, "2026-11-09"), true);
+  assert.equal(bubbleStartsOpen("560 kcal left. Nice pace!", null, "2026-11-08"), true);
 });

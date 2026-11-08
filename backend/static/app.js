@@ -237,16 +237,16 @@ const SEAM = 0.6;            // each slice overlaps the next so no hairline show
 
 // ---------- Coach Ollie ----------
 
-const COACH_HIDDEN_KEY = "coach-hidden-on"; // the date × was pressed
+const COACH_FOLD_KEY = "coach-folded"; // { date, text } of the line last folded away with ×
 
-function coachHiddenToday() {
-  try { return localStorage.getItem(COACH_HIDDEN_KEY) === isoDate(new Date()); } catch (e) { return false; }
+function foldedLine() {
+  try { return JSON.parse(localStorage.getItem(COACH_FOLD_KEY)); } catch (e) { return null; }
 }
 
 function renderCoach() {
   const card = $("coach");
   const now = new Date();
-  card.hidden = !coachDay || currentDate() !== isoDate(now) || !coachEnabled() || coachHiddenToday();
+  card.hidden = !coachDay || currentDate() !== isoDate(now) || !coachEnabled();
   if (card.hidden) return;
   const msg = coachMessage({
     total: coachDay.total_calories, goal: parseFloat($("goal").value) || 2000, goalType,
@@ -256,31 +256,41 @@ function renderCoach() {
   card.dataset.mood = msg.mood;
   const action = $("coach-action");
   if (msg.action) { action.textContent = msg.action.label; action.href = msg.action.href; }
-  if (msg.text !== coachLine) sayCoach(msg.text, !!msg.action);
+  coachHasAction = !!msg.action;
+  if (msg.text !== coachLine) sayCoach(msg.text, bubbleStartsOpen(msg.text, foldedLine(), isoDate(now)));
   else if (!coachTyping) action.hidden = !msg.action;
 }
 
-// A new line: the bubble pops in, "…" dots type for a moment, then the text fades in.
-let coachLine = "";      // the line being shown or typed
-let coachTyping = 0;     // the pending timer while the dots show
+let coachLine = "";        // the line being shown or typed
+let coachHasAction = false;
+let coachTyping = 0;       // the pending timer while the dots show
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-function sayCoach(text, hasAction) {
+function setBubbleOpen(open) {
+  $("coach").dataset.open = String(open);
+  $("coach-otter").setAttribute("aria-label", open ? "Coach Ollie: tap for another message" : "Coach Ollie: show message");
+}
+
+// Show a line. Open: the bubble pops in, "…" dots type for a moment, then the text fades in.
+// Folded: the text is set quietly, ready for when Ollie is tapped.
+function sayCoach(text, open) {
   coachLine = text;
   clearTimeout(coachTyping);
+  coachTyping = 0;
   const bubble = $("coach-bubble"), out = $("coach-text"), action = $("coach-action");
-  const wait = typingMs(text, reducedMotion());
+  setBubbleOpen(open);
+  bubble.classList.remove("is-pop", "is-typing");
+  if (!open) { out.textContent = text; action.hidden = !coachHasAction; return; }
   out.textContent = "";
   action.hidden = true;
-  bubble.classList.remove("is-pop", "is-typing");
   void bubble.offsetWidth; // restart the pop animation
   bubble.classList.add("is-pop", "is-typing");
   coachTyping = setTimeout(() => {
     coachTyping = 0;
     bubble.classList.remove("is-typing");
     out.textContent = text; // the live region announces it now
-    action.hidden = !hasAction;
-  }, wait);
+    action.hidden = !coachHasAction;
+  }, typingMs(text, reducedMotion()));
 }
 
 $("coach-otter").addEventListener("click", () => {
@@ -288,16 +298,22 @@ $("coach-otter").addEventListener("click", () => {
   otter.classList.remove("is-tapped");
   void otter.offsetWidth; // restart the bounce on quick repeat taps
   otter.classList.add("is-tapped");
+  if ($("coach").dataset.open !== "true") {
+    try { localStorage.removeItem(COACH_FOLD_KEY); } catch (e) { /* blocked */ }
+    sayCoach(coachLine, true); // folded: bring the same line back
+    return;
+  }
   coachFlip = !coachFlip;
   renderCoach();
 });
 $("coach-otter").addEventListener("animationend", (e) => {
   if (e.animationName === "otter-tap") $("coach-otter").classList.remove("is-tapped");
 });
-$("coach-hide").addEventListener("click", () => {
-  try { localStorage.setItem(COACH_HIDDEN_KEY, isoDate(new Date())); } catch (e) { /* blocked: hide until reload */ }
-  $("coach").hidden = true;
-  $("log-open").focus(); // focus was on the × that just disappeared
+$("coach-fold").addEventListener("click", () => {
+  try { localStorage.setItem(COACH_FOLD_KEY, JSON.stringify({ date: isoDate(new Date()), text: coachLine })); } catch (e) { /* blocked */ }
+  clearTimeout(coachTyping);
+  sayCoach(coachLine, false);
+  $("coach-otter").focus(); // focus was on the × inside the bubble that just closed
 });
 document.addEventListener("coachchange", renderCoach);
 

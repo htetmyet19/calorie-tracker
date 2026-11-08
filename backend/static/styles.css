@@ -1153,33 +1153,46 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 .advice-refresh { margin-top: 10px; }
 .advice-note { margin: 10px 0 0; }
 
-/* ---------- Coach Ollie (Today page) ---------- */
+/* ---------- Coach Ollie (Today page): floats bottom-right, above the tab bar ---------- */
 .coach {
+  position: fixed;
+  right: calc(12px + env(safe-area-inset-right));
+  bottom: calc(80px + env(safe-area-inset-bottom));
+  z-index: 4;
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  width: min(100%, 360px);
-  margin: 12px auto 14px;
-  padding: 10px 12px 0 6px;
-  border-radius: var(--radius);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  overflow: hidden;
+  gap: 6px;
+  pointer-events: none; /* only the bubble and Ollie take taps, not the gap around them */
 }
 .coach[hidden] { display: none; }
 .coach-otter {
+  pointer-events: auto;
+  position: relative;
   flex: none;
-  align-self: flex-end;
-  width: 88px;
+  width: 84px;
   height: 96px;
   padding: 0;
   border: 0;
-  border-radius: 14px 14px 0 0;
+  border-radius: 20px;
   background: none;
   cursor: pointer;
+  perspective: 420px;
 }
-.coach-otter svg { display: block; width: 100%; height: 100%; }
-.coach-otter:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.coach-otter:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.coach-float { position: absolute; inset: 0 0 6px; display: block; transform-style: preserve-3d; }
+.coach-otter svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.45)); }
+.coach-shadow {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 0;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0));
+}
+/* Folded: a soft ring pulses around Ollie to say there's a message. */
+.coach-pulse { position: absolute; inset: 14px 8px 10px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; }
+.coach[data-open="false"] .coach-pulse { animation: coach-pulse 1.8s ease-out infinite; }
 /* Each otter part lists the moods it shows in. */
 .coach [data-show] { display: none; }
 .coach[data-mood="happy"] [data-show~="happy"],
@@ -1187,13 +1200,27 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 .coach[data-mood="calm"] [data-show~="calm"],
 .coach[data-mood="sleepy"] [data-show~="sleepy"],
 .coach[data-mood="wave"] [data-show~="wave"] { display: inline; }
-.coach-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; }
-.coach-head { display: flex; align-items: center; justify-content: space-between; }
-.coach-name { margin: 0; font-size: var(--step--1); font-weight: 600; color: var(--accent); }
-.coach-hide {
-  width: 44px;
-  height: 44px;
-  margin: -12px -10px -12px 0;
+.coach-bubble {
+  pointer-events: auto;
+  position: relative;
+  width: min(236px, calc(100vw - 124px));
+  margin: 0 0 22px;
+  padding: 10px 36px 12px 12px;
+  border-radius: 16px 16px 4px 16px;
+  background: var(--raised);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4);
+  line-height: 1.35;
+  font-size: 0.9375rem;
+}
+.coach[data-open="false"] .coach-bubble { display: none; }
+.coach-name { margin: 0 0 4px; font-size: 0.75rem; font-weight: 600; color: var(--accent); }
+.coach-fold {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border: 0;
   border-radius: 999px;
@@ -1203,19 +1230,21 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
   place-items: center;
   cursor: pointer;
 }
-.coach-hide:hover { color: var(--ink); }
-.coach-hide svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
-.coach-bubble {
-  margin: 0;
-  min-height: 1.35em;
-  padding: 10px 12px;
-  border-radius: 4px 14px 14px 14px;
-  background: var(--raised);
-  border: 1px solid var(--line);
-  line-height: 1.35;
-}
-.coach-action { align-self: flex-start; text-decoration: none; }
+.coach-fold:hover { color: var(--ink); }
+.coach-fold svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+.coach-action { display: inline-flex; margin-top: 8px; text-decoration: none; }
 .coach-action[hidden] { display: none; }
+/* Room for the last meal to scroll out from under Ollie on wide screens. */
+.app-today .layout { padding-bottom: 150px; }
+/* The 3D look: Ollie slowly turns while he floats, and his shadow shrinks as he rises. */
+.coach-float { animation: coach-float 4.2s ease-in-out infinite; }
+.coach-shadow { animation: coach-shadow 4.2s ease-in-out infinite; }
+@keyframes coach-float {
+  0%, 100% { transform: translateY(0) rotateY(-14deg) rotateX(4deg); }
+  50% { transform: translateY(-6px) rotateY(14deg) rotateX(-2deg); }
+}
+@keyframes coach-shadow { 0%, 100% { transform: scale(1); opacity: 0.55; } 50% { transform: scale(0.82); opacity: 0.35; } }
+@keyframes coach-pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(1.35); opacity: 0; } }
 /* Ollie's motion. The whole otter (.otter-bob) moves by mood; parts animate on their own. */
 .otter-bob { transform-box: view-box; transform-origin: 60px 130px; animation: otter-bob 2.8s ease-in-out infinite; }
 .coach[data-mood="happy"] .otter-bob { animation: otter-hop 2.6s ease-in-out infinite; }
@@ -1254,7 +1283,7 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 @keyframes otter-spin { to { transform: rotate(360deg); } }
 
 /* The bubble pops in from Ollie's side, shows typing dots, then the text fades in. */
-.coach-bubble { transform-origin: 0 0; }
+.coach-bubble { transform-origin: 100% 100%; }
 .coach-bubble.is-pop { animation: bubble-pop 0.4s cubic-bezier(0.2, 1.5, 0.4, 1); }
 .coach-typing { display: none; gap: 5px; align-items: center; height: 1.35em; }
 .coach-typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: typing-dot 1s ease-in-out infinite; }
@@ -1265,7 +1294,7 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 .coach-text { margin: 0; animation: text-in 0.35s ease-out; }
 .coach-action:not([hidden]) { animation: text-in 0.35s ease-out; }
 @keyframes bubble-pop {
-  0% { transform: translateX(-10px) scale(0.85); opacity: 0; }
+  0% { transform: translateX(14px) scale(0.85); opacity: 0; }
   100% { transform: none; opacity: 1; }
 }
 @keyframes typing-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-4px); opacity: 1; } }
@@ -1274,7 +1303,65 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 @media (prefers-reduced-motion: reduce) {
   .otter-bob, .coach[data-mood] .otter-bob, .otter-wave, .otter-eyes, .otter-z,
   .coach-otter.is-tapped svg, .coach-otter.is-tapped .otter-whistle,
-  .coach-bubble.is-pop, .coach-typing i, .coach-text, .coach-action:not([hidden]) { animation: none; }
+  .coach-bubble.is-pop, .coach-typing i, .coach-text, .coach-action:not([hidden]),
+  .coach-float, .coach-shadow, .coach[data-open="false"] .coach-pulse { animation: none; }
+  .coach[data-open="false"] .coach-pulse { opacity: 0.6; }
 }
 .settings-coach { margin-top: 18px; }
 .settings-coach .hint { margin: 8px 0 0; }
+
+/* ---------- Today on phones: one screen, no page scroll ----------
+   The page fits between the top and the tab bar; the ring shrinks on short screens and only the
+   meals list scrolls, in its own box. If something extra (the goal card) makes the top too tall,
+   the page area scrolls as a fallback rather than clipping. */
+@media (max-width: 899px) {
+  body.app-today {
+    box-sizing: border-box;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .app-today .masthead { flex: none; width: 100%; box-sizing: border-box; padding-top: 10px; }
+  .app-today .layout {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px 16px 0;
+  }
+  .app-today .day { flex: none; }
+  .app-today .day-nav { margin-bottom: 6px; }
+  .app-today .plate { width: min(100%, 340px, 30dvh); margin-top: 0; container-type: inline-size; }
+  /* The text in the ring scales with the ring, so it stays inside on short screens. */
+  .app-today .eaten { font-size: clamp(1.6rem, 17cqi, 4rem); }
+  .app-today .goal-line { font-size: clamp(0.75rem, 5.6cqi, 1rem); margin-top: clamp(2px, 1.8cqi, 6px); }
+  .app-today .remaining, .app-today .zone-label { font-size: clamp(0.7rem, 4.6cqi, 0.8125rem); }
+  .app-today .remaining { margin-top: clamp(2px, 3cqi, 10px); }
+  .app-today .snap { margin-top: 10px; }
+  .app-today .calc-open { margin-top: 8px; }
+  .app-today .legend { display: none; } /* the meals list below shows the same split */
+  .app-today .macros { margin-top: 10px; }
+  .app-today .macros > div { padding: 6px 8px; }
+  .app-today .meals-section {
+    flex: 1 0 120px;
+    min-height: 120px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 120px; /* the last meal can scroll out from under Ollie */
+  }
+}
+/* Short phones (iPhone SE, Safari with its bars showing): a slightly smaller ring and meals box. */
+@media (max-width: 899px) and (max-height: 720px) {
+  .app-today .plate { width: min(100%, 340px, 25dvh); }
+  .app-today .day-nav { margin-bottom: 2px; }
+  .app-today .layout { gap: 8px; padding-top: 4px; }
+  .app-today .meals-section { flex-basis: 90px; min-height: 90px; }
+  .app-today .snap { padding-block: 12px; }
+}
