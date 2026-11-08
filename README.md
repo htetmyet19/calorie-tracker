@@ -89,6 +89,9 @@ Each user only sees their own data, enforced by Postgres Row Level Security, not
 <tr>
 <td valign="top" colspan="3">
 
+#### 💬 Advice on each meal
+After a photo is estimated, say whether you've eaten it yet and get a short suggestion on how it fits your day, with one practical tip. The AI writes it from numbers the server works out; the text is checked (no "don't eat"/"skip"/shaming words, no links, every kcal figure must match) and a plain fixed message is shown instead if it fails. Advice is never stored, and requests are limited to 30 a day.
+
 #### 🏋️ Workout routines
 Pick days per week, experience, equipment and session length, and get a weekly routine built from a curated library of YouTube exercise demos. Rules keep every exercise within your level, equipment and time; an AI picks and orders exercises for your goal, and if it fails or breaks a rule the rules-only routine is used. Tick off each day as you go. A safety question comes first: anyone with an injury or condition is asked to check with a doctor or physiotherapist instead.
 
@@ -156,7 +159,7 @@ If the main Gemini model is overloaded or out of quota, the backend retries and 
 - **Private photo buckets.** Photos are stored per user and served only through signed access.
 - **The service-role key never reaches the browser.** Only the daily job (`app/cron.py`) may read it, and a unit test enforces that.
 - **Data minimisation.** No phone number, national ID or location is collected.
-- **Tested at two layers.** 319 unit tests and 100 frontend tests run without a database; 79 integration tests run against a real local Supabase and check that one user cannot read another's data.
+- **Tested at two layers.** 357 unit tests and 105 frontend tests run without a database; 81 integration tests run against a real local Supabase and check that one user cannot read another's data.
 
 ## 🚀 Run it locally
 
