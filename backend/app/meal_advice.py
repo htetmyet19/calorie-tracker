@@ -4,8 +4,16 @@ The server computes every number and the verdict; the AI only words them, and
 its text is checked before it is shown. Any failure falls back to a fixed
 message built from the same facts. Advice is never stored.
 """
+import asyncio
+import logging
 import re
 from dataclasses import dataclass
+
+import httpx
+
+from . import config
+
+log = logging.getLogger(__name__)
 
 DEFAULT_GOAL = 2000
 DEFAULT_GOAL_TYPE = "maintain"
@@ -130,3 +138,97 @@ def fallback_text(facts: Facts) -> str:
         return check_advice(text, facts)
     except AdviceRejected:
         return _fallback(facts, "the largest item")
+
+
+# ---- asking the AI ----
+
+ADVICE_TIMEOUT_SEC = 10
+
+PROMPT = """You are a supportive nutrition coach in a calorie-tracking app. Write a short note
+about one meal, using ONLY the facts below. The numbers are already worked out: use them as given.
+
+Facts:
+- Meal: {items}
+- Meal total: {meal} kcal
+- Eaten earlier today: {before} kcal
+- Daily goal: {goal} kcal (goal type: {goal_type})
+- Left before this meal: {left_before} kcal; left after it: {left_after} kcal; over the goal by: {over} kcal
+- Largest item: {biggest}; half of it is about {half} kcal
+- Protein in this meal: {protein} g
+- Verdict: {verdict} (fits_well = fits comfortably, uses_most = uses most of what is left,
+  goes_over = puts today over the goal{gain_note})
+- {timing}
+
+Write 1 to 3 short sentences in plain, warm language, at most {max_chars} characters:
+say how the meal fits today, then give at most ONE practical tip: {tip_kind}
+Rules: never tell the person not to eat, to skip food or meals, or to fast. No guilt, shame
+or judging words. No medical, health or weight-loss claims, no "burn it off". No links.
+Only use the numbers above. Reply with the note only, as plain text."""
+
+
+def build_prompt(f: Facts) -> str:
+    n = lambda v: f"{v:,}"  # noqa: E731
+    items = "; ".join(f"{i['name']} ({round(i['calories']):,} kcal)" for i in f.items)
+    if f.eaten:
+        timing = "The person has ALREADY EATEN this meal, so the tip is about the rest of today."
+        tip = "a lighter next meal, more protein later, or water. Do not suggest changing this meal."
+    else:
+        timing = "The person has NOT EATEN this meal yet, so the tip is about this plate."
+        tip = "a smaller portion of one item, a swap, or adding protein."
+    return PROMPT.format(
+        items=items, meal=n(f.meal_kcal), before=n(f.eaten_before), goal=n(f.goal), goal_type=f.goal_type,
+        left_before=n(f.left_before), left_after=n(f.left_after), over=n(f.over_by), biggest=f.biggest,
+        half=n(f.half_saves), protein=f.protein_g, verdict=f.verdict, timing=timing, tip_kind=tip,
+        max_chars=MAX_CHARS,
+        gain_note="; for a gain goal going over a little is fine" if f.goal_type == "gain" else "")
+
+
+async def _ask_gemini(prompt: str) -> str:
+    from google.genai import errors, types
+
+    from .gemini_client import _get_client, _models
+    client = _get_client()
+    last: Exception | None = None
+    for model in _models():
+        try:
+            resp = await client.aio.models.generate_content(
+                model=model, contents=[prompt],
+                config=types.GenerateContentConfig(response_mime_type="text/plain", temperature=0.5))
+            return resp.text or ""
+        except errors.APIError as e:  # overloaded, out of quota, retired: try the next model
+            last = e
+    raise RuntimeError(f"all Gemini models failed ({type(last).__name__})")
+
+
+async def _ask_ollama(prompt: str) -> str:
+    payload = {"model": config.OLLAMA_MODEL, "messages": [{"role": "user", "content": prompt}],
+               "think": False, "stream": False, "options": {"temperature": 0.5}}
+    async with httpx.AsyncClient(base_url=config.OLLAMA_URL, timeout=ADVICE_TIMEOUT_SEC) as client:
+        r = await client.post("/api/chat", json=payload)
+    r.raise_for_status()
+    return r.json()["message"]["content"]
+
+
+async def ask_model(prompt: str) -> str:
+    if config.LLM_PROVIDER == "gemini":
+        return await _ask_gemini(prompt)
+    return await _ask_ollama(prompt)
+
+
+async def get_advice(facts: Facts, allow_ai: bool = True) -> tuple[str, str, str | None]:
+    """(text, source, reason): checked AI text, or the fixed message and why."""
+    reason = None if allow_ai else "limit"
+    if allow_ai:
+        try:
+            raw = await asyncio.wait_for(ask_model(build_prompt(facts)), ADVICE_TIMEOUT_SEC)
+            text = check_advice(raw if isinstance(raw, str) else "", facts)
+            log.warning("meal_advice source=ai reason=None")  # WARNING: the app sets no log level
+            return text, "ai", None
+        except asyncio.TimeoutError:
+            reason = "timeout"
+        except AdviceRejected as e:
+            reason = e.reason
+        except Exception:  # any provider failure: the client still gets advice
+            reason = "provider_error"
+    log.warning("meal_advice source=rules reason=%s", reason)
+    return fallback_text(facts), "rules", reason
