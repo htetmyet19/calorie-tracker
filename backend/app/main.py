@@ -44,6 +44,16 @@ def parse_day(value: str, field: str) -> datetime.date:
 app = FastAPI(title="Calorie Tracker")
 
 
+@app.middleware("http")
+async def revalidate_app_files(request: Request, call_next):
+    """Pages and their JS/CSS: the browser must check for a newer copy (a cheap 304 if
+    unchanged). Without this it may reuse old JS after a deploy, next to new HTML."""
+    response = await call_next(request)
+    if not request.url.path.startswith("/api/"):
+        response.headers.setdefault("Cache-Control", "no-cache")
+    return response
+
+
 @app.exception_handler(StoreUnavailable)
 async def store_unavailable_handler(request: Request, exc: StoreUnavailable):
     return JSONResponse(
@@ -118,7 +128,7 @@ async def meal_advice(body: AdviceIn, store: Store = Depends(require_profile)):
         raise HTTPException(400, "date is in the future")
     meals = await run_in_threadpool(store.meals_on, day)
     settings = await run_in_threadpool(store.get_settings) or {}
-    facts = meal_facts([i.model_dump() for i in body.items], body.eaten,
+    facts = meal_facts([i.model_dump() for i in body.items],
                        sum(m.total_calories for m in meals),
                        settings.get("goal_kcal"), settings.get("weight_goal"))
     allowed = await run_in_threadpool(store.record_advice)
