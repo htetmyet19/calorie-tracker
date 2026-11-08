@@ -13,6 +13,9 @@ const DEFAULT_GOAL = 2000;
 let savedGoal = DEFAULT_GOAL; // the goal the server last confirmed
 let goalType = null;          // lose / maintain / gain from settings; sets the ring's zones
 let userId = null;            // for telling the user's own goal from a trainer's
+let coachDay = null;          // the day the plate last drew, for Coach Ollie
+let checkinDue = false;       // from /api/checkins; stays false if that request fails
+let coachFlip = false;        // a tap on Ollie shows the other line
 
 const localDateTime = (d) => `${isoDate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const fmt = (n) => Math.round(n).toLocaleString("en-IN");
@@ -52,6 +55,8 @@ function setDate(dateStr) {
   $("day-name").textContent = dayLabel(dateStr);
   $("next-day").disabled = dateStr >= isoDate(new Date());
   $("save").textContent = dateStr === isoDate(new Date()) ? "Save to today" : `Save to ${dayLabel(dateStr)}`;
+  coachDay = null; // hide Ollie until this day's meals are in
+  renderCoach();
   loadDay();
 }
 
@@ -230,7 +235,50 @@ const CIRC = 2 * Math.PI * R;
 const SLICE = CIRC / 240;    // the gradient is drawn as short slices (SVG strokes can't follow a conic gradient)
 const SEAM = 0.6;            // each slice overlaps the next so no hairline shows between them
 
+// ---------- Coach Ollie ----------
+
+const COACH_HIDDEN_KEY = "coach-hidden-on"; // the date × was pressed
+
+function coachHiddenToday() {
+  try { return localStorage.getItem(COACH_HIDDEN_KEY) === isoDate(new Date()); } catch (e) { return false; }
+}
+
+function renderCoach() {
+  const card = $("coach");
+  const now = new Date();
+  card.hidden = !coachDay || currentDate() !== isoDate(now) || !coachEnabled() || coachHiddenToday();
+  if (card.hidden) return;
+  const msg = coachMessage({
+    total: coachDay.total_calories, goal: parseFloat($("goal").value) || 2000, goalType,
+    mealCount: coachDay.meals.length, hour: now.getHours(), checkinDue,
+    dayOfMonth: now.getDate(), flip: coachFlip,
+  });
+  card.dataset.mood = msg.mood;
+  if ($("coach-text").textContent !== msg.text) $("coach-text").textContent = msg.text;
+  const action = $("coach-action");
+  action.hidden = !msg.action;
+  if (msg.action) { action.textContent = msg.action.label; action.href = msg.action.href; }
+}
+
+$("coach-otter").addEventListener("click", () => { coachFlip = !coachFlip; renderCoach(); });
+$("coach-hide").addEventListener("click", () => {
+  try { localStorage.setItem(COACH_HIDDEN_KEY, isoDate(new Date())); } catch (e) { /* blocked: hide until reload */ }
+  $("coach").hidden = true;
+  $("log-open").focus(); // focus was on the × that just disappeared
+});
+document.addEventListener("coachchange", renderCoach);
+
+async function loadCheckinDue() {
+  try {
+    const res = await api(`/api/checkins?today=${isoDate(new Date())}&limit=1`);
+    if (!res.ok) return;
+    checkinDue = !!(await res.json()).due;
+    renderCoach();
+  } catch (e) { /* no check-in line, the rest of the coach still works */ }
+}
+
 function renderPlate(day) {
+  coachDay = day;
   const goal = parseFloat($("goal").value) || 2000;
   const total = day.total_calories;
   const scale = Math.max(goal, total); // past the goal the ring is full and segments share it
@@ -521,6 +569,7 @@ async function loadDay() {
   if (loadError && statusEl().textContent === loadError) setStatus("");
   loadError = null;
   renderPlate(day);
+  renderCoach();
   renderLegend(day);
   renderMeals(day);
   $("m-protein").textContent = fmt(day.protein_g);
@@ -766,6 +815,7 @@ async function start() {
   }
   $("goal").value = savedGoal;
   setDate(isoDate(new Date()));
+  loadCheckinDue();
 }
 
 initNav("today");
