@@ -91,6 +91,10 @@ Each item has exactly one of `reps` or `seconds`. `est_min` is computed by the s
 
 `id`, `user_id`, `routine_id` → routines (cascade), `day_index` int, `done_on` date, `created_at`. Unique `(routine_id, day_index, done_on)`.
 
+### 3.4 `routine_builds`: the daily limit
+
+`id`, `user_id`, `created_at`. The API inserts one row after the frame is built and before the AI call, so builds whose save fails still count. A `before insert` trigger takes a per-user advisory lock, refuses the 6th row in 24 hours (`routine_limit`, P0001) and stamps `created_at`. Clients may insert only `user_id`, read their own rows, and never update or delete them. On `routines`, owners may update only `active` and may not delete.
+
 RLS on `routines` and `workout_sessions`: owner-only select/insert/update/delete, same pattern as meals and check-ins (`user_id = auth.uid()`), with the `routine_id` owner checked on insert.
 
 ## 4. Building a routine
@@ -152,7 +156,7 @@ The warm-up item is always inserted by the server, not the AI.
 
 All routes need a signed-in user with a profile (`require_profile`), as elsewhere.
 
-- `POST /api/routines` body `{days_per_week: 2–6, level, equipment, session_min: 20|30|45|60}` → 201 with the routine (plan expanded with each video's `youtube_id`, `title`, `channel`, `category`). Deactivates the previous active routine. 409 when the library can't fill it. 429 "You've made 5 routines today. Try again tomorrow." when the user created 5 in the last 24 h.
+- `POST /api/routines` body `{days_per_week: 2–6, level, equipment, session_min: 20|30|45|60}` → 201 with the routine (plan expanded with each video's `youtube_id`, `title`, `channel`, `category`). Deactivates the previous active routine. 409 when the library can't fill it. 429 "You've made 5 routines today. Try again tomorrow." when the user already started 5 builds in the last 24 h (see 3.4). 409 "Another routine was just built. Reload to see it." if a simultaneous build wins twice.
 - `GET /api/routines/active?today=YYYY-MM-DD` → `{routine, done: [{day_index, done_on}], week_start}` for the Monday-based week containing `today`, or `{routine: null}`. Videos that are now inactive come back with `available: false`.
 - `PUT /api/routines/{id}/days/{day_index}/done/{date}` → 204 (idempotent; date not in the future, at most one day ahead of UTC like check-ins).
 - `DELETE` same path → 204 (idempotent; 204 if already absent).
