@@ -36,3 +36,19 @@ test("check-in photos can use the camera as well as the gallery", () => {
   assert.equal(progress.length, 1);
   assert.match(progress[0], /id="add-photo-camera"/);
 });
+
+test("the Today page has Coach Ollie's card, and loads coach.js after zone.js and before app.js", () => {
+  const html = fs.readFileSync(path.join(STATIC, "index.html"), "utf8");
+  assert.match(html, /<section[^>]*id="coach"[^>]*hidden/);
+  assert.match(html, /<button[^>]*id="coach-otter"[^>]*aria-label="Tap Ollie for another message"/);
+  assert.match(html, /id="coach-text"[^>]*role="status"/);
+  assert.match(html, /<button[^>]*id="coach-hide"[^>]*aria-label="Hide coach for today"/);
+  const order = ["/zone.js", "/coach.js", "/app.js"].map((s) => html.indexOf(`src="${s}?v=2"`));
+  assert.ok(order.every((i) => i > 0) && order[0] < order[1] && order[1] < order[2], String(order));
+});
+
+test("settings have a Show coach switch", () => {
+  const nav = fs.readFileSync(path.join(STATIC, "nav.js"), "utf8");
+  assert.match(nav, /id="coach-switch"/);
+  assert.match(nav, /Show coach/);
+});

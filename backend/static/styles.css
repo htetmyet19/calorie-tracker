@@ -1152,3 +1152,73 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 .advice.is-loading .advice-text, .advice-text.is-stale { color: var(--muted); }
 .advice-refresh { margin-top: 10px; }
 .advice-note { margin: 10px 0 0; }
+
+/* ---------- Coach Ollie (Today page) ---------- */
+.coach {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: min(100%, 360px);
+  margin: 12px auto 14px;
+  padding: 10px 12px 0 6px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.coach[hidden] { display: none; }
+.coach-otter {
+  flex: none;
+  align-self: flex-end;
+  width: 88px;
+  height: 96px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px 14px 0 0;
+  background: none;
+  cursor: pointer;
+}
+.coach-otter svg { display: block; width: 100%; height: 100%; }
+.coach-otter:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+/* Each otter part lists the moods it shows in. */
+.coach [data-show] { display: none; }
+.coach[data-mood="happy"] [data-show~="happy"],
+.coach[data-mood="open"] [data-show~="open"],
+.coach[data-mood="calm"] [data-show~="calm"],
+.coach[data-mood="sleepy"] [data-show~="sleepy"],
+.coach[data-mood="wave"] [data-show~="wave"] { display: inline; }
+.coach-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; }
+.coach-head { display: flex; align-items: center; justify-content: space-between; }
+.coach-name { margin: 0; font-size: var(--step--1); font-weight: 600; color: var(--accent); }
+.coach-hide {
+  width: 44px;
+  height: 44px;
+  margin: -12px -10px -12px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.coach-hide:hover { color: var(--ink); }
+.coach-hide svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.coach-bubble {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 4px 14px 14px 14px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  line-height: 1.35;
+}
+.coach-action { align-self: flex-start; text-decoration: none; }
+.coach-action[hidden] { display: none; }
+@keyframes otter-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes otter-wave { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-18deg); } }
+.otter-bob { animation: otter-bob 2.8s ease-in-out infinite; }
+.otter-wave { transform-box: view-box; transform-origin: 78px 92px; animation: otter-wave 0.9s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .otter-bob, .otter-wave { animation: none; } }
+.settings-coach { margin-top: 18px; }
+.settings-coach .hint { margin: 8px 0 0; }

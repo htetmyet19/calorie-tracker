@@ -212,6 +212,13 @@ const SETTINGS_HTML = `
     </label>
     <p class="hint" id="reminders-hint">A notification when your weekly check-in is due.</p>
   </div>
+  <div class="settings-coach">
+    <label class="switch-row">
+      <span>Show coach</span>
+      <input type="checkbox" role="switch" id="coach-switch" class="switch" aria-describedby="coach-hint">
+    </label>
+    <p class="hint" id="coach-hint">Coach Ollie's tips on the Today page, on this device.</p>
+  </div>
   <div class="settings-install" id="settings-install" hidden>
     <div class="switch-row">
       <span>Install app</span>
@@ -221,6 +228,16 @@ const SETTINGS_HTML = `
   </div>
   <p class="status" id="settings-status" role="status" aria-live="polite"></p>
   <button class="btn btn-outline settings-logout" type="button" id="logout">Log out</button>`;
+
+// Coach Ollie on/off is per device; blocked storage means "on".
+const COACH_OFF_KEY = "coach-off";
+function coachEnabled() {
+  try { return localStorage.getItem(COACH_OFF_KEY) !== "1"; } catch (e) { return true; }
+}
+function setCoachEnabled(on) {
+  try { if (on) localStorage.removeItem(COACH_OFF_KEY); else localStorage.setItem(COACH_OFF_KEY, "1"); } catch (e) { /* blocked */ }
+  document.dispatchEvent(new Event("coachchange"));
+}
 
 function renderSettingsPanel() {
   const dialog = document.createElement("dialog");
@@ -273,6 +290,10 @@ function renderSettingsPanel() {
       showReminders(lastSettings ? lastSettings.reminders_enabled : !want);
     }
   });
+
+  const coachSwitch = dialog.querySelector("#coach-switch");
+  coachSwitch.checked = coachEnabled();
+  coachSwitch.addEventListener("change", () => setCoachEnabled(coachSwitch.checked));
 
   // Install app: Chrome's dialog, the iPhone steps, or nothing once installed.
   const installBox = dialog.querySelector("#settings-install");
