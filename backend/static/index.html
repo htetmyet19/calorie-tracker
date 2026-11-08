@@ -108,13 +108,20 @@
         <img id="preview" alt="Your meal photo" hidden>
         <span class="drop-empty" id="drop-empty">
           <svg viewBox="0 0 48 48" aria-hidden="true">
-            <circle cx="24" cy="26" r="13"/><circle cx="24" cy="26" r="7"/><path d="M6 14h7l3-5h16l3 5h7v26H6z"/>
+            <rect x="6" y="9" width="36" height="30" rx="4"/><circle cx="17" cy="19" r="4"/><path d="M6 34l11-10 9 8 6-5 10 8"/>
           </svg>
-          <span class="drop-title">Take or choose a photo of your plate</span>
+          <span class="drop-title">Choose a photo of your plate</span>
           <span class="drop-sub">Shoot from above with the whole plate in frame. JPEG, PNG or WebP, up to 10 MB.</span>
         </span>
         <span class="drop-busy" aria-hidden="true">Reading your plate…</span>
       </label>
+
+      <!-- Android's picker for the input above shows the gallery only, so the camera gets its own button -->
+      <label class="btn btn-outline photo-camera" for="photo-camera">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13.5" r="3.5"/></svg>
+        Take a photo
+      </label>
+      <input type="file" id="photo-camera" accept="image/*" capture="environment" class="visually-hidden">
 
       <button id="analyze" class="btn btn-primary" disabled>Estimate calories</button>
       <p id="status" class="status" role="status" aria-live="polite"></p>

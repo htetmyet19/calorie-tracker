@@ -445,6 +445,12 @@ button { cursor: pointer; }
 }
 .drop.is-busy .drop-busy { display: grid; }
 
+.photo-camera { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; cursor: pointer; }
+.photo-camera svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.photo-camera:has(+ input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* A mouse-only computer has no camera flow: its gallery picker already opens files. */
+@media (hover: hover) and (pointer: fine) { .photo-camera { display: none; } }
+
 .btn {
   border: 0;
   border-radius: 999px;
