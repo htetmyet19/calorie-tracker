@@ -74,3 +74,15 @@ def test_is_live():
         is_live("aBcDeFgHiJk", _client(exc=httpx.ConnectError("down")))
     with pytest.raises(LinkCheckFailed):
         is_live("aBcDeFgHiJk", _client(500))
+
+
+def test_upsert_rows_keep_hidden_videos_hidden():
+    from app.video_library import upsert_rows
+    rows = upsert_rows([GOOD, {**GOOD, "youtube_id": "hhhhhhhhhh1", "active": False}])
+    assert [r["active"] for r in rows] == [True, False]
+    assert rows[0] == {**GOOD, "active": True}
+
+
+def test_active_must_be_true_or_false():
+    errors = validate_entries([{**GOOD, "active": "no"}])
+    assert len(errors) == 1 and "active" in errors[0]

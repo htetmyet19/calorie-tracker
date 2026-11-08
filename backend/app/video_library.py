@@ -34,6 +34,8 @@ def _entry_errors(e: dict) -> list[str]:
     for field, allowed in (("category", CATEGORIES), ("level", LEVELS), ("equipment", EQUIPMENT)):
         if e.get(field) not in allowed:
             errs.append(f"{field} must be one of {', '.join(allowed)}")
+    if "active" in e and not isinstance(e["active"], bool):
+        errs.append("active must be true or false")
     d = e.get("duration_sec")
     if not isinstance(d, int) or isinstance(d, bool) or d <= 0:
         errs.append("duration_sec must be a whole number above 0")
@@ -65,6 +67,11 @@ def load_library(path: Path = DEFAULT_PATH) -> list[dict]:
     if errors:
         raise ValueError("\n".join(errors))
     return entries
+
+
+def upsert_rows(entries: list[dict]) -> list[dict]:
+    """Rows for the database; an entry marked "active": false in the file stays hidden."""
+    return [{**e, "active": e.get("active", True)} for e in entries]
 
 
 def coverage(entries: list[dict]) -> dict[tuple[str, str, str], int]:

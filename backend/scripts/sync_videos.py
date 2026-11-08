@@ -5,7 +5,7 @@ Usage (from backend/):
     .venv/bin/python scripts/sync_videos.py --apply    # also write to Supabase
 
 Edit data/exercise_videos.json by hand; every video must be watched and
-approved first. --apply uses the service-role key (backend/.env): it upserts
+approved first. Set "active": false on an entry to hide it. --apply uses the service-role key (backend/.env): it upserts
 live videos by youtube_id and hides (active = false) rows that are dead or no
 longer in the file. Rows are never deleted, so old routines keep their titles.
 """
@@ -19,7 +19,7 @@ import httpx  # noqa: E402
 
 from app import config  # noqa: E402
 from app.video_library import (DEFAULT_PATH, EQUIPMENT, LEVELS, LinkCheckFailed,  # noqa: E402
-                               coverage, is_live, load_library)
+                               coverage, is_live, load_library, upsert_rows)
 
 # Combinations a trial client is most likely to pick; a 0 here means some routines will fail.
 GAP_LEVELS = ("beginner", "intermediate")
@@ -81,20 +81,20 @@ def main() -> int:
         if live:
             r = db.post("/exercise_videos", params={"on_conflict": "youtube_id"},
                         headers={"Prefer": "resolution=merge-duplicates,return=minimal"},
-                        json=[{**e, "active": True} for e in live])
+                        json=upsert_rows(live))
             if r.status_code >= 300:
                 return _fail(f"Upsert failed: Supabase returned {r.status_code}")
         r = db.get("/exercise_videos", params={"select": "youtube_id", "active": "is.true"})
         if r.status_code != 200:
             return _fail(f"Reading the library failed: Supabase returned {r.status_code}")
-        keep = {e["youtube_id"] for e in live}
+        keep = {e["youtube_id"] for e in live if e.get("active", True)}
         hide = sorted(row["youtube_id"] for row in r.json() if row["youtube_id"] not in keep)
         if hide:
             r = db.patch("/exercise_videos", params={"youtube_id": f"in.({','.join(hide)})"},
                          headers={"Prefer": "return=minimal"}, json={"active": False})
             if r.status_code >= 300:
                 return _fail(f"Hiding old videos failed: Supabase returned {r.status_code}")
-    print(f"Applied: {len(live)} active, {len(hide)} hidden.")
+    print(f"Applied: {len(keep)} active, {len(hide)} newly hidden.")
     return 0
 
 
