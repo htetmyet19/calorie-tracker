@@ -65,3 +65,18 @@ def test_routines_created_since(monkeypatch):
     ts = datetime.datetime(2026, 11, 8, 10, 0, tzinfo=datetime.timezone.utc)
     assert s.routines_created_since(ts) == 2
     assert seen[0][2]["created_at"] == "gte.2026-11-08T10:00:00+00:00"
+
+
+def test_create_routine_retries_once_when_another_build_wins(monkeypatch):
+    s, seen = _mock(monkeypatch, [httpx.Response(204), httpx.Response(409, json={}),
+                                  httpx.Response(204), httpx.Response(201, json=[{"id": 8}])])
+    assert s.create_routine({"goal": "lose"}) == {"id": 8}
+    assert [m for m, *_ in seen] == ["PATCH", "POST", "PATCH", "POST"]
+
+
+def test_create_routine_gives_up_after_one_retry(monkeypatch):
+    import pytest
+    s, _ = _mock(monkeypatch, [httpx.Response(204), httpx.Response(409, json={}),
+                               httpx.Response(204), httpx.Response(409, json={})])
+    with pytest.raises(store.RoutineBusy):
+        s.create_routine({"goal": "lose"})

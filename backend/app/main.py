@@ -16,7 +16,8 @@ from .routine_rules import Inputs, NotEnoughExercises, build_frame, finalize_pla
 from .schemas import (ActiveRoutineOut, AnalyzeResponse, CheckinIn, CheckinList, CheckinOut, DailyTotal, DayLog, MealIn, MealOut, PhotoOut, PhotoRecordIn, PhotoUploadIn, ProfileOut, PushEndpointIn, PushSubscriptionIn, RoleIn,
                       RoutineIn, RoutineOut, SettingsIn, SettingsOut, WeightIn, WeightOut)
 from .storage import Storage, StorageError, UploadRejected, new_path
-from .store import EndpointTaken, ProfileExists, SettingsExist, Store, StoreUnavailable, get_store
+from .store import (EndpointTaken, ProfileExists, RoutineBusy, SettingsExist, Store, StoreUnavailable,
+                    get_store)
 
 log = logging.getLogger("calorie_tracker")
 
@@ -359,6 +360,7 @@ def remove_progress_photo(photo_id: int, store: Store = Depends(require_profile)
 ROUTINES_PER_DAY = 5
 NOT_ENOUGH_EXERCISES = "Not enough exercises for these choices yet. Try other equipment."
 ROUTINE_LIMIT = "You've made 5 routines today. Try again tomorrow."
+ROUTINE_BUSY = "Another routine was just built. Reload to see it."
 
 
 def _routine_out(row: dict, videos: dict[int, dict]) -> RoutineOut:
@@ -397,10 +399,13 @@ async def create_routine(body: RoutineIn, store: Store = Depends(require_profile
         plan, source, reason = await build_plan(frame)
     except NotEnoughExercises:
         raise HTTPException(409, NOT_ENOUGH_EXERCISES)
-    row = await run_in_threadpool(store.create_routine, {
-        "days_per_week": inputs.days_per_week, "level": inputs.level,
-        "equipment": inputs.equipment, "session_min": inputs.session_min, "goal": goal,
-        "source": source, "fallback_reason": reason, "plan": finalize_plan(plan, frame)})
+    try:
+        row = await run_in_threadpool(store.create_routine, {
+            "days_per_week": inputs.days_per_week, "level": inputs.level,
+            "equipment": inputs.equipment, "session_min": inputs.session_min, "goal": goal,
+            "source": source, "fallback_reason": reason, "plan": finalize_plan(plan, frame)})
+    except RoutineBusy:
+        raise HTTPException(409, ROUTINE_BUSY)
     return _routine_out(row, {v["id"]: v for v in videos})
 
 

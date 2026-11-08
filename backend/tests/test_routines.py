@@ -215,3 +215,14 @@ def test_tick_future_date_400():
     assert client.put(f"/api/routines/{rid}/days/0/done/{_today(1)}").status_code == 204
     assert client.put(f"/api/routines/{rid}/days/0/done/{_today(2)}").status_code == 400
     assert client.put(f"/api/routines/{rid}/days/0/done/2026-13-01").status_code == 400
+
+
+def test_busy_store_is_409_not_500():
+    from app.store import RoutineBusy
+
+    class Busy(FakeRoutineStore):
+        def create_routine(self, row):
+            raise RoutineBusy()
+    client, _ = _env(Busy())
+    r = client.post("/api/routines", json=BODY)
+    assert r.status_code == 409 and r.json()["detail"] == "Another routine was just built. Reload to see it."

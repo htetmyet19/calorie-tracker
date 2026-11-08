@@ -47,6 +47,10 @@ class SettingsExist(Exception):
     """A settings row already exists for this user."""
 
 
+class RoutineBusy(Exception):
+    """Another build saved its routine at the same moment, twice in a row."""
+
+
 class EndpointTaken(Exception):
     """The push endpoint is registered to another user."""
 
@@ -450,15 +454,22 @@ class Store:
         return len(resp.json())
 
     def create_routine(self, row: dict) -> dict:
-        """Replace the active routine: deactivate it, then insert the new one as active."""
-        resp = self._request("PATCH", "/routines", write=True, json={"active": False},
-                             params={"user_id": f"eq.{self.user.id}", "active": "is.true"},
-                             prefer="return=minimal")
-        self._check(resp)
-        resp = self._request("POST", "/routines", write=True,
-                             json={**row, "user_id": self.user.id, "active": True})
-        self._check(resp)
-        return resp.json()[0]
+        """Replace the active routine: deactivate it, then insert the new one as active.
+
+        If another build inserts between our two calls, the one-active index rejects
+        ours (409); deactivating again and retrying once lets the newer build win.
+        """
+        for _ in range(2):
+            resp = self._request("PATCH", "/routines", write=True, json={"active": False},
+                                 params={"user_id": f"eq.{self.user.id}", "active": "is.true"},
+                                 prefer="return=minimal")
+            self._check(resp)
+            resp = self._request("POST", "/routines", write=True,
+                                 json={**row, "user_id": self.user.id, "active": True})
+            if resp.status_code != 409:
+                self._check(resp)
+                return resp.json()[0]
+        raise RoutineBusy()
 
     def active_routine(self) -> dict | None:
         resp = self._request("GET", "/routines", params={
