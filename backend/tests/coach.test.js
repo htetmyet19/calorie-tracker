@@ -1,7 +1,7 @@
 // Run from backend/: node --test "tests/*.test.js"
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { coachMessage, COACH_LINES } = require("../static/coach.js");
+const { coachMessage, COACH_LINES, typingMs } = require("../static/coach.js");
 
 // A day with an even day of month shows variant A first.
 const base = { total: 1240, goal: 1800, goalType: "lose", mealCount: 2, hour: 14, checkinDue: false, dayOfMonth: 8, flip: false };
@@ -50,4 +50,11 @@ test("the day picks the first variant and a tap flips to the other", () => {
 
 test("every situation has two lines", () => {
   for (const [key, lines] of Object.entries(COACH_LINES)) assert.equal(lines.length, 2, key);
+});
+
+test("typing dots show longer for longer lines, within 0.5 to 1.1 s, and not at all with reduced motion", () => {
+  assert.equal(typingMs("Hi", false), 500);
+  assert.equal(typingMs("x".repeat(40), false), 700);
+  assert.equal(typingMs("x".repeat(200), false), 1100);
+  assert.equal(typingMs("x".repeat(40), true), 0);
 });

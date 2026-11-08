@@ -254,13 +254,46 @@ function renderCoach() {
     dayOfMonth: now.getDate(), flip: coachFlip,
   });
   card.dataset.mood = msg.mood;
-  if ($("coach-text").textContent !== msg.text) $("coach-text").textContent = msg.text;
   const action = $("coach-action");
-  action.hidden = !msg.action;
   if (msg.action) { action.textContent = msg.action.label; action.href = msg.action.href; }
+  if (msg.text !== coachLine) sayCoach(msg.text, !!msg.action);
+  else if (!coachTyping) action.hidden = !msg.action;
 }
 
-$("coach-otter").addEventListener("click", () => { coachFlip = !coachFlip; renderCoach(); });
+// A new line: the bubble pops in, "…" dots type for a moment, then the text fades in.
+let coachLine = "";      // the line being shown or typed
+let coachTyping = 0;     // the pending timer while the dots show
+const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function sayCoach(text, hasAction) {
+  coachLine = text;
+  clearTimeout(coachTyping);
+  const bubble = $("coach-bubble"), out = $("coach-text"), action = $("coach-action");
+  const wait = typingMs(text, reducedMotion());
+  out.textContent = "";
+  action.hidden = true;
+  bubble.classList.remove("is-pop", "is-typing");
+  void bubble.offsetWidth; // restart the pop animation
+  bubble.classList.add("is-pop", "is-typing");
+  coachTyping = setTimeout(() => {
+    coachTyping = 0;
+    bubble.classList.remove("is-typing");
+    out.textContent = text; // the live region announces it now
+    action.hidden = !hasAction;
+  }, wait);
+}
+
+$("coach-otter").addEventListener("click", () => {
+  const otter = $("coach-otter");
+  otter.classList.remove("is-tapped");
+  void otter.offsetWidth; // restart the bounce on quick repeat taps
+  otter.classList.add("is-tapped");
+  coachFlip = !coachFlip;
+  renderCoach();
+});
+$("coach-otter").addEventListener("animationend", (e) => {
+  if (e.animationName === "otter-tap") $("coach-otter").classList.remove("is-tapped");
+});
 $("coach-hide").addEventListener("click", () => {
   try { localStorage.setItem(COACH_HIDDEN_KEY, isoDate(new Date())); } catch (e) { /* blocked: hide until reload */ }
   $("coach").hidden = true;

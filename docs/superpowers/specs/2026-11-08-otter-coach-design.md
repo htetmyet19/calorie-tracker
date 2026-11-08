@@ -58,8 +58,14 @@ order; the first match wins.
 - Settings panel gains a **Show coach** switch (default on), stored per device in
   `localStorage`. Per device keeps v1 free of a database change; if users want it to follow
   their account, it can move to `/api/settings` later.
-- Motion: a slow bob, and the paw waves in the wave mood; both off under
-  `prefers-reduced-motion: reduce`.
+- Motion (all off under `prefers-reduced-motion: reduce`, where the line shows at once):
+  - Ollie blinks every few seconds (open, wave and calm eyes).
+  - By mood: happy hops, sleepy sways with the "z" floating up, calm breathes, open and wave
+    bob, and the paw waves in the wave mood.
+  - A tap squishes and bounces Ollie and spins the whistle once.
+  - A new line: the bubble pops in from Ollie's side, "…" typing dots show for
+    `typingMs(text)` (300 ms + 10 ms per character, between 0.5 and 1.1 s), then the text and
+    any action fade in. The live region gets the text only when it appears.
 - The card refreshes whenever the day re-renders (after load, saving or deleting a meal, goal
   change). The check-in "due" fact is fetched once per page load; if that request fails, rule 1
   is skipped.

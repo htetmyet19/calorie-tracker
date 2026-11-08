@@ -1207,6 +1207,7 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 .coach-hide svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
 .coach-bubble {
   margin: 0;
+  min-height: 1.35em;
   padding: 10px 12px;
   border-radius: 4px 14px 14px 14px;
   background: var(--raised);
@@ -1215,10 +1216,65 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 }
 .coach-action { align-self: flex-start; text-decoration: none; }
 .coach-action[hidden] { display: none; }
-@keyframes otter-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-@keyframes otter-wave { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-18deg); } }
-.otter-bob { animation: otter-bob 2.8s ease-in-out infinite; }
+/* Ollie's motion. The whole otter (.otter-bob) moves by mood; parts animate on their own. */
+.otter-bob { transform-box: view-box; transform-origin: 60px 130px; animation: otter-bob 2.8s ease-in-out infinite; }
+.coach[data-mood="happy"] .otter-bob { animation: otter-hop 2.6s ease-in-out infinite; }
+.coach[data-mood="sleepy"] .otter-bob { animation: otter-sway 4.5s ease-in-out infinite; }
+.coach[data-mood="calm"] .otter-bob { animation: otter-breathe 4s ease-in-out infinite; }
 .otter-wave { transform-box: view-box; transform-origin: 78px 92px; animation: otter-wave 0.9s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .otter-bob, .otter-wave { animation: none; } }
+.otter-eyes { transform-box: fill-box; transform-origin: center; animation: otter-blink 4.6s infinite; }
+.otter-z { transform-box: fill-box; transform-origin: center; animation: otter-z 2.6s ease-out infinite; }
+.otter-whistle { transform-box: fill-box; transform-origin: center; }
+.coach-otter svg { transform-origin: 50% 100%; }
+.coach-otter.is-tapped svg { animation: otter-tap 0.55s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.coach-otter.is-tapped .otter-whistle { animation: otter-spin 0.55s ease-out; }
+
+@keyframes otter-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes otter-hop {
+  0%, 60%, 100% { transform: translateY(0) scale(1, 1); }
+  66% { transform: translateY(0) scale(1.06, 0.94); }
+  76% { transform: translateY(-9px) scale(0.97, 1.04); }
+  86% { transform: translateY(0) scale(1.04, 0.96); }
+}
+@keyframes otter-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes otter-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025); } }
+@keyframes otter-wave { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-18deg); } }
+@keyframes otter-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes otter-z {
+  0% { transform: translate(0, 4px) scale(0.7); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(6px, -10px) scale(1.15); opacity: 0; }
+}
+@keyframes otter-tap {
+  0% { transform: scale(1, 1); }
+  25% { transform: scale(1.12, 0.86); }
+  55% { transform: translateY(-10px) scale(0.94, 1.08); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes otter-spin { to { transform: rotate(360deg); } }
+
+/* The bubble pops in from Ollie's side, shows typing dots, then the text fades in. */
+.coach-bubble { transform-origin: 0 0; }
+.coach-bubble.is-pop { animation: bubble-pop 0.4s cubic-bezier(0.2, 1.5, 0.4, 1); }
+.coach-typing { display: none; gap: 5px; align-items: center; height: 1.35em; }
+.coach-typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: typing-dot 1s ease-in-out infinite; }
+.coach-typing i:nth-child(2) { animation-delay: 0.15s; }
+.coach-typing i:nth-child(3) { animation-delay: 0.3s; }
+.coach-bubble.is-typing .coach-typing { display: inline-flex; }
+.coach-bubble.is-typing .coach-text { display: none; }
+.coach-text { margin: 0; animation: text-in 0.35s ease-out; }
+.coach-action:not([hidden]) { animation: text-in 0.35s ease-out; }
+@keyframes bubble-pop {
+  0% { transform: translateX(-10px) scale(0.85); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes typing-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-4px); opacity: 1; } }
+@keyframes text-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .otter-bob, .coach[data-mood] .otter-bob, .otter-wave, .otter-eyes, .otter-z,
+  .coach-otter.is-tapped svg, .coach-otter.is-tapped .otter-whistle,
+  .coach-bubble.is-pop, .coach-typing i, .coach-text, .coach-action:not([hidden]) { animation: none; }
+}
 .settings-coach { margin-top: 18px; }
 .settings-coach .hint { margin: 8px 0 0; }

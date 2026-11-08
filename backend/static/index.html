@@ -78,8 +78,10 @@
               <path d="M22 130C22 98 38 84 60 84s38 14 38 46z" fill="#8a5a3b"/>
               <path d="M42 130c0-22 8-32 18-32s18 10 18 32z" fill="#e9cfa8"/>
               <path d="M44 88q16 20 32 0" fill="none" stroke="#c6f36b" stroke-width="2"/>
-              <rect x="55" y="102" width="12" height="7" rx="3" fill="#c3ccd1"/>
-              <circle cx="57" cy="105.5" r="4.5" fill="#c3ccd1"/>
+              <g class="otter-whistle">
+                <rect x="55" y="102" width="12" height="7" rx="3" fill="#c3ccd1"/>
+                <circle cx="57" cy="105.5" r="4.5" fill="#c3ccd1"/>
+              </g>
               <ellipse cx="36" cy="112" rx="9" ry="7" fill="#6f4630"/>
               <ellipse cx="84" cy="112" rx="9" ry="7" fill="#6f4630" data-show="happy open calm sleepy"/>
               <g class="otter-wave" data-show="wave">
@@ -91,7 +93,7 @@
               <ellipse cx="60" cy="54" rx="36" ry="33" fill="#8a5a3b"/>
               <path d="M25 40q35-18 70 0l-1 7q-34-17-68 0z" fill="#c6f36b"/>
               <ellipse cx="60" cy="66" rx="22" ry="16" fill="#e9cfa8"/>
-              <g data-show="open wave">
+              <g class="otter-eyes" data-show="open wave">
                 <circle cx="45" cy="54" r="4.2" fill="#141c21"/><circle cx="75" cy="54" r="4.2" fill="#141c21"/>
                 <circle cx="46.4" cy="52.6" r="1.3" fill="#fff"/><circle cx="76.4" cy="52.6" r="1.3" fill="#fff"/>
               </g>
@@ -101,7 +103,7 @@
               <g data-show="sleepy" fill="none" stroke="#141c21" stroke-width="2.6" stroke-linecap="round">
                 <path d="M40 55q5 3 10 0M70 55q5 3 10 0"/>
               </g>
-              <g data-show="calm">
+              <g class="otter-eyes" data-show="calm">
                 <circle cx="45" cy="55" r="3.6" fill="#141c21"/><circle cx="75" cy="55" r="3.6" fill="#141c21"/>
                 <path d="M40 52h10M70 52h10" stroke="#8a5a3b" stroke-width="4"/>
               </g>
@@ -113,7 +115,7 @@
               <path d="M52 69q8 10 16 0" fill="#4a2e1f" data-show="happy wave"/>
               <path d="M54 70q6 5 12 0" fill="none" stroke="#3a2418" stroke-width="2" stroke-linecap="round" data-show="open calm"/>
               <ellipse cx="60" cy="72" rx="3.4" ry="4" fill="#4a2e1f" data-show="sleepy"/>
-              <text x="96" y="22" fill="#93a1a9" font-size="14" font-weight="700" data-show="sleepy">z</text>
+              <text class="otter-z" x="96" y="22" fill="#93a1a9" font-size="14" font-weight="700" data-show="sleepy">z</text>
             </g>
           </svg>
         </button>
@@ -124,7 +126,10 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
             </button>
           </div>
-          <p class="coach-bubble" id="coach-text" role="status" aria-live="polite"></p>
+          <div class="coach-bubble" id="coach-bubble">
+            <span class="coach-typing" aria-hidden="true"><i></i><i></i><i></i></span>
+            <p class="coach-text" id="coach-text" role="status" aria-live="polite"></p>
+          </div>
           <a class="btn btn-primary btn-small coach-action" id="coach-action" href="/checkin.html" hidden></a>
         </div>
       </section>
