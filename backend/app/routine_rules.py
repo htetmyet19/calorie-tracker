@@ -8,7 +8,7 @@ baseline the AI is compared against. Everything here is pure.
 import datetime
 from dataclasses import dataclass
 
-from .video_library import usable
+from .video_library import EQUIPMENT, LEVELS, usable
 
 WARM_UP_SEC = 300
 WORK_SEC = 45            # assumed time for one set done by reps
@@ -114,8 +114,12 @@ def build_frame(inputs: Inputs, goal: str, videos: list[dict]) -> Frame:
         defaults["sets"] = 3  # gain at 20 min: 4 sets × 2 exercises don't fit
     max_items = max(MIN_ITEMS, min(MAX_ITEMS, budget // item_cost_sec(defaults)))
 
+    # Closest to the client's level and equipment first, so easier videos (always usable)
+    # don't fill the per-category cap ahead of the ones made for them.
+    lv, eq = LEVELS.index(inputs.level), EQUIPMENT.index(inputs.equipment)
     pool = sorted((v for v in videos if v.get("active", True)
-                   and usable(v, inputs.level, inputs.equipment)), key=lambda v: v["id"])
+                   and usable(v, inputs.level, inputs.equipment)),
+                  key=lambda v: (lv - LEVELS.index(v["level"]), eq - EQUIPMENT.index(v["equipment"]), v["id"]))
     warm_ups = [v for v in pool if v["category"] == "warm_up"]
     used_warm_ups: set[int] = set()
 
