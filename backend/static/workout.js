@@ -20,8 +20,16 @@ function weekText(done, dayCount) {
   return `This week: ${n} of ${dayCount} done`;
 }
 
-const doneToday = (done, dayIndex, today) =>
-  done.some((d) => d.day_index === dayIndex && d.done_on === today);
+// The date a day was last ticked this week (done holds only this week's ticks), or null.
+function doneDate(done, dayIndex) {
+  const dates = done.filter((d) => d.day_index === dayIndex).map((d) => d.done_on).sort();
+  return dates.length ? dates[dates.length - 1] : null;
+}
+
+function doneLabel(date, today) {
+  if (date === today) return "✓ Done today";
+  return `✓ Done ${parseDate(date).toLocaleDateString("en-IN", { weekday: "short" })}`;
+}
 
 function embedUrl(youtubeId) {
   if (typeof youtubeId !== "string" || !YOUTUBE_ID.test(youtubeId)) return null;
@@ -87,15 +95,16 @@ function render() {
 }
 
 function dayCard(day) {
-  const t = today();
-  const isDone = doneToday(done, day.index, t);
+  const doneOn = doneDate(done, day.index);
+  const isDone = doneOn !== null;
   const head = el("div", { className: "card-head" },
     el("h3", { className: "day-title" }, `Day ${day.index + 1} · ${day.title}`),
     el("span", { className: "day-est" }, `~${day.est_min} min`));
   const items = el("ol", { className: "exercises" }, ...day.items.map(exerciseRow));
   const tick = el("button", { type: "button", className: isDone ? "btn btn-outline day-done is-done" : "btn btn-primary day-done",
-    ariaPressed: String(isDone) }, isDone ? "✓ Done today" : `Mark Day ${day.index + 1} done`);
-  tick.addEventListener("click", () => toggleDone(day.index, !isDone, tick));
+    ariaPressed: String(isDone) }, isDone ? doneLabel(doneOn, today()) : `Mark Day ${day.index + 1} done`);
+  // Tapping a done day removes that tick, whichever day this week it was made.
+  tick.addEventListener("click", () => toggleDone(day.index, isDone ? doneOn : today(), !isDone, tick));
   return el("li", { className: "card workout-day" }, head, el("p", { className: "day-why" }, day.why), items, tick);
 }
 
@@ -131,13 +140,13 @@ function openVideo(item) {
 
 // ---------- Ticks ----------
 
-async function toggleDone(dayIndex, on, btn) {
+async function toggleDone(dayIndex, date, on, btn) {
   btn.disabled = true;
   setMsg("routine-status", "");
   try {
     let res;
     try {
-      res = await api(`/api/routines/${routine.id}/days/${dayIndex}/done/${today()}`, { method: on ? "PUT" : "DELETE" });
+      res = await api(`/api/routines/${routine.id}/days/${dayIndex}/done/${date}`, { method: on ? "PUT" : "DELETE" });
     } catch (e) {
       throw new Error(TICK_ERROR);
     }
@@ -248,7 +257,7 @@ async function start() {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { itemText, weekText, doneToday, embedUrl, builderDefaults, SAFETY_STOP, UNAVAILABLE, REPLACE_CONFIRM };
+  module.exports = { itemText, weekText, doneDate, doneLabel, embedUrl, builderDefaults, SAFETY_STOP, UNAVAILABLE, REPLACE_CONFIRM };
 } else {
   initNav("workout");
   wire();
