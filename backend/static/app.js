@@ -556,6 +556,7 @@ $("analyze").addEventListener("click", async () => {
     selectMealType(guessMealType());
     renderItems();
     $("result").hidden = false;
+    requestAdvice();
   } catch (err) {
     setStatus(err.message, true);
   } finally {
@@ -574,6 +575,7 @@ function numField(value, unit, className, onChange, label) {
 }
 
 function renderItems() {
+  mealChanged();
   $("items").replaceChildren(...items.map((item, idx) => {
     const name = el("input", { value: item.name, ariaLabel: "Food name" });
     name.addEventListener("change", () => { item.name = name.value.trim() || item.name; });
@@ -605,6 +607,10 @@ function renderItems() {
   updateTotal();
 }
 
+// Typing a new name, kcal or macro changes the meal too (grams and removals re-render).
+$("items").addEventListener("change", mealChanged);
+initAdviceCard(() => items);
+
 function updateTotal() {
   $("meal-total").textContent = fmt(items.reduce((s, i) => s + i.calories, 0));
   $("save").disabled = items.length === 0;
@@ -630,6 +636,7 @@ $("meal-type").append(...MEAL_TYPES.map((t) => {
 
 function resetLogger() {
   items = [];
+  resetAdvice();
   selectedFile = null;
   $("photo").value = "";
   $("preview").hidden = true;

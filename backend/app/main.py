@@ -9,11 +9,12 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 from . import config, cron
 from .analysis import AnalysisError, analyze_meal
+from .meal_advice import get_advice, meal_facts
 from .auth import User, current_user
 from .checkin_rules import is_due, next_due_on
 from .routine_ai import build_plan
 from .routine_rules import Inputs, NotEnoughExercises, build_frame, finalize_plan, week_start
-from .schemas import (ActiveRoutineOut, AnalyzeResponse, CheckinIn, CheckinList, CheckinOut, DailyTotal, DayLog, MealIn, MealOut, PhotoOut, PhotoRecordIn, PhotoUploadIn, ProfileOut, PushEndpointIn, PushSubscriptionIn, RoleIn,
+from .schemas import (ActiveRoutineOut, AdviceIn, AdviceOut, AnalyzeResponse, CheckinIn, CheckinList, CheckinOut, DailyTotal, DayLog, MealIn, MealOut, PhotoOut, PhotoRecordIn, PhotoUploadIn, ProfileOut, PushEndpointIn, PushSubscriptionIn, RoleIn,
                       RoutineIn, RoutineOut, SettingsIn, SettingsOut, WeightIn, WeightOut)
 from .storage import Storage, StorageError, UploadRejected, new_path
 from .store import (EndpointTaken, ProfileExists, RoutineBusy, RoutineLimit, SettingsExist, Store, StoreUnavailable,
@@ -41,6 +42,16 @@ def parse_day(value: str, field: str) -> datetime.date:
 
 
 app = FastAPI(title="Calorie Tracker")
+
+
+@app.middleware("http")
+async def revalidate_app_files(request: Request, call_next):
+    """Pages and their JS/CSS: the browser must check for a newer copy (a cheap 304 if
+    unchanged). Without this it may reuse old JS after a deploy, next to new HTML."""
+    response = await call_next(request)
+    if not request.url.path.startswith("/api/"):
+        response.headers.setdefault("Cache-Control", "no-cache")
+    return response
 
 
 @app.exception_handler(StoreUnavailable)
@@ -106,6 +117,23 @@ async def analyze(photo: UploadFile = File(...), user: User = Depends(current_us
         return await analyze_meal(raw)
     except AnalysisError as e:
         raise HTTPException(e.status_code, e.message)
+
+
+@app.post("/api/meals/advice", response_model=AdviceOut)
+async def meal_advice(body: AdviceIn, store: Store = Depends(require_profile)):
+    """How a just-estimated meal fits the day. Nothing about it is stored."""
+    day = parse_day(body.date, "date")
+    # The browser sends its local date, at most one day ahead of UTC.
+    if day > utc_today() + datetime.timedelta(days=1):
+        raise HTTPException(400, "date is in the future")
+    meals = await run_in_threadpool(store.meals_on, day)
+    settings = await run_in_threadpool(store.get_settings) or {}
+    facts = meal_facts([i.model_dump() for i in body.items],
+                       sum(m.total_calories for m in meals),
+                       settings.get("goal_kcal"), settings.get("weight_goal"))
+    allowed = await run_in_threadpool(store.record_advice)
+    text, source, _reason = await get_advice(facts, allow_ai=allowed)
+    return AdviceOut(text=text, verdict=facts.verdict, source=source)
 
 
 @app.post("/api/meals", response_model=MealOut, status_code=201)

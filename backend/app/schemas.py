@@ -1,4 +1,6 @@
 import datetime
+import re
+import unicodedata
 from typing import Literal
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
@@ -221,3 +223,35 @@ class ActiveRoutineOut(BaseModel):
     routine: RoutineOut | None
     done: list[DoneOut]
     week_start: str | None
+
+
+# ---- meal advice ----
+
+class AdviceItem(BaseModel):
+    """A food as shown on the result screen. Items added by hand have no confidence."""
+    name: str = Field(min_length=1, max_length=80)
+
+    @field_validator("name")
+    @classmethod
+    def _one_clean_line(cls, v: str) -> str:
+        # Names go into the AI prompt: no line breaks or control characters that could pose as rules.
+        v = re.sub(r"\s+", " ", v)
+        v = "".join(c for c in v if not unicodedata.category(c).startswith("C")).strip()
+        if not v:
+            raise ValueError("name is empty")
+        return v
+    calories: float = Field(ge=0, le=5000)
+    protein_g: float = Field(default=0, ge=0, le=500)
+    carbs_g: float = Field(default=0, ge=0, le=1000)
+    fat_g: float = Field(default=0, ge=0, le=500)
+
+
+class AdviceIn(BaseModel):
+    items: list[AdviceItem] = Field(min_length=1, max_length=20)
+    date: str
+
+
+class AdviceOut(BaseModel):
+    text: str
+    verdict: str
+    source: str

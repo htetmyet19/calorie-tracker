@@ -83,3 +83,11 @@ def test_create_routine_gives_up_after_one_retry(monkeypatch):
                                httpx.Response(204), httpx.Response(409, json={})])
     with pytest.raises(store.RoutineBusy):
         s.create_routine({"goal": "lose"})
+
+
+def test_record_advice_limit(monkeypatch):
+    s, seen = _mock(monkeypatch, [httpx.Response(201), httpx.Response(
+        400, json={"code": "P0001", "message": "advice_limit"})])
+    assert s.record_advice() is True
+    assert seen[0][:2] == ("POST", "/rest/v1/advice_requests") and seen[0][4] == {"user_id": "u1"}
+    assert s.record_advice() is False
