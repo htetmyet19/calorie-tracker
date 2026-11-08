@@ -86,6 +86,14 @@ Each user only sees their own data, enforced by Postgres Row Level Security, not
 
 </td>
 </tr>
+<tr>
+<td valign="top" colspan="3">
+
+#### 🏋️ Workout routines
+Pick days per week, experience, equipment and session length, and get a weekly routine built from a curated library of YouTube exercise demos. Rules keep every exercise within your level, equipment and time; an AI picks and orders exercises for your goal, and if it fails or breaks a rule the rules-only routine is used. Tick off each day as you go. A safety question comes first: anyone with an injury or condition is asked to check with a doctor or physiotherapist instead.
+
+</td>
+</tr>
 </table>
 
 ## 🧠 How it works
@@ -148,7 +156,7 @@ If the main Gemini model is overloaded or out of quota, the backend retries and 
 - **Private photo buckets.** Photos are stored per user and served only through signed access.
 - **The service-role key never reaches the browser.** Only the daily job (`app/cron.py`) may read it, and a unit test enforces that.
 - **Data minimisation.** No phone number, national ID or location is collected.
-- **Tested at two layers.** 228 unit tests and 82 frontend tests run without a database; 71 integration tests run against a real local Supabase and check that one user cannot read another's data.
+- **Tested at two layers.** 300 unit tests and 100 frontend tests run without a database; 77 integration tests run against a real local Supabase and check that one user cannot read another's data.
 
 ## 🚀 Run it locally
 
@@ -171,6 +179,13 @@ Open <http://localhost:8000>. Run the tests with:
 node --test "tests/*.test.js"          # frontend helpers
 ```
 
+**Workout videos.** The library is `backend/data/exercise_videos.json` (one entry per exercise demo: `youtube_id`, `title`, `channel`, `category`, `level`, `equipment`, `duration_sec`). Watch and approve every video before adding it, then:
+
+```bash
+.venv/bin/python scripts/sync_videos.py           # check labels, dead links and gaps
+.venv/bin/python scripts/sync_videos.py --apply   # write to Supabase (service-role key)
+```
+
 </details>
 
 Full setup (environment variables, hosted Supabase, cron and push keys, Ollama on WSL) is in **[`backend/README.md`](backend/README.md)**.
@@ -181,7 +196,7 @@ Full setup (environment variables, hosted Supabase, cron and push keys, Ollama o
 calorie-tracker/
 ├── backend/
 │   ├── app/                  FastAPI: routes, auth, storage, AI clients, cron
-│   ├── static/               web app: Today, Progress, Check-in, Login (no build step)
+│   ├── static/               web app: Today, Progress, Workout, Check-in, Login (no build step)
 │   ├── supabase/migrations/  schema + Row Level Security policies
 │   └── tests/                pytest (unit + integration) and node tests
 ├── docs/superpowers/         design specs and implementation plans
@@ -192,19 +207,19 @@ calorie-tracker/
 
 ```mermaid
 timeline
-    title Calorie Tracker → trainer platform
+    title Calorie Tracker
     M1 Foundations : Supabase Auth · Postgres + RLS : roles · per-user meals
     M2 Client tracking : weight · check-ins · progress photos : charts · web push reminders
     Now : live trial with 2–3 users : dark UI redesign · gallery upload
-    M3 Trainers : approved trainer directory : coaching links · trainer view of clients
-    Later : training videos : Burmese food accuracy test
+    Workouts : routines from YouTube exercise demos : rules + AI · tick off days
+    Later : weekly routine adaptation : Burmese food accuracy test
 ```
 
 - [x] **M1** — accounts, roles, per-user meals with Row Level Security
 - [x] **M2** — weight, weekly check-ins, progress photos, charts, push reminders
 - [ ] **Trial** — 2–3 real users on Android and iPhone
 - [ ] **Accuracy check** — 20–30 Burmese meals with known calories (e.g. mohinga, laphet thoke), error reported
-- [ ] **M3** — trainers: approval, client requests, viewing client progress, setting goals
+- [ ] **Workout routines** — built and tested; needs the first 40–60 curated videos before the trial
 
 > **Honest note:** calorie estimates from a photo are approximate. Accuracy on Burmese dishes has not been measured yet; that test is on the roadmap before launch.
 
