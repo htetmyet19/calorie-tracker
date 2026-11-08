@@ -1,1 +1,272 @@
-[]
+[
+  {
+    "youtube_id": "3qyWpJ34dWw",
+    "title": "Full-body dynamic warm-up",
+    "channel": "Juice & Toya",
+    "category": "warm_up",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 394
+  },
+  {
+    "youtube_id": "divaflydT7M",
+    "title": "Low-impact dynamic warm-up",
+    "channel": "TIFF x DAN",
+    "category": "warm_up",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 357
+  },
+  {
+    "youtube_id": "oW65AQDRkTM",
+    "title": "Beginner warm-up",
+    "channel": "Run and Stretch",
+    "category": "warm_up",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 311
+  },
+  {
+    "youtube_id": "eWatHIujxPM",
+    "title": "Bodyweight squat",
+    "channel": "Over The Hill Athlete",
+    "category": "legs",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 374
+  },
+  {
+    "youtube_id": "ZLJBfYF_oO0",
+    "title": "Bodyweight squat (3 cues)",
+    "channel": "Born Fitness",
+    "category": "legs",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 13
+  },
+  {
+    "youtube_id": "7LpLZOdz68A",
+    "title": "Box squat",
+    "channel": "Physio Plus Fitness",
+    "category": "legs",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 33
+  },
+  {
+    "youtube_id": "-Nr6dqEvz3Q",
+    "title": "Reverse lunge",
+    "channel": "Jack Hanrahan Fitness",
+    "category": "legs",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 501
+  },
+  {
+    "youtube_id": "ALl174GTuoY",
+    "title": "Reverse lunge (beginner)",
+    "channel": "Steve & Latifah | Fitness",
+    "category": "legs",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 29
+  },
+  {
+    "youtube_id": "KI6fjDqGZh4",
+    "title": "Glute bridge",
+    "channel": "Born Fitness",
+    "category": "legs",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 14
+  },
+  {
+    "youtube_id": "NIrcxSkwui8",
+    "title": "Dumbbell goblet squat",
+    "channel": "Bony to Bombshell",
+    "category": "legs",
+    "level": "beginner",
+    "equipment": "dumbbells",
+    "duration_sec": 74
+  },
+  {
+    "youtube_id": "zsN2WvklwDk",
+    "title": "Goblet squat: common mistakes",
+    "channel": "Janice Liang",
+    "category": "legs",
+    "level": "beginner",
+    "equipment": "dumbbells",
+    "duration_sec": 119
+  },
+  {
+    "youtube_id": "Q2k3kYbtOcI",
+    "title": "Dumbbell reverse lunge",
+    "channel": "OPEX Fitness",
+    "category": "legs",
+    "level": "intermediate",
+    "equipment": "dumbbells",
+    "duration_sec": 12
+  },
+  {
+    "youtube_id": "oUvdtkhBMZ4",
+    "title": "Push-up",
+    "channel": "Kinetorix",
+    "category": "push",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 53
+  },
+  {
+    "youtube_id": "5zvgfFqT-cQ",
+    "title": "Push-up progression",
+    "channel": "KrishNick",
+    "category": "push",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 569
+  },
+  {
+    "youtube_id": "WDIpL0pjun0",
+    "title": "Push-up (NASM)",
+    "channel": "National Academy of Sports Medicine (NASM)",
+    "category": "push",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 14
+  },
+  {
+    "youtube_id": "guW_ENwLOMI",
+    "title": "Dumbbell shoulder press",
+    "channel": "Jack Hanrahan Fitness",
+    "category": "push",
+    "level": "beginner",
+    "equipment": "dumbbells",
+    "duration_sec": 601
+  },
+  {
+    "youtube_id": "WKEl69bIGus",
+    "title": "Seated dumbbell shoulder press",
+    "channel": "All Strength Training",
+    "category": "push",
+    "level": "beginner",
+    "equipment": "dumbbells",
+    "duration_sec": 40
+  },
+  {
+    "youtube_id": "z6PJMT2y8GQ",
+    "title": "Superman",
+    "channel": "XHIT Daily",
+    "category": "pull",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 41
+  },
+  {
+    "youtube_id": "HAjQVUp9mS4",
+    "title": "Superman back extension",
+    "channel": "Becoming Limitless with Tanessa Shears",
+    "category": "pull",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 28
+  },
+  {
+    "youtube_id": "4578NyyAT5A",
+    "title": "Inverted row",
+    "channel": "Leon Thorley",
+    "category": "pull",
+    "level": "intermediate",
+    "equipment": "none",
+    "duration_sec": 258
+  },
+  {
+    "youtube_id": "dnpDUwqMX04",
+    "title": "Bodyweight row variations",
+    "channel": "Gymless Fitness",
+    "category": "pull",
+    "level": "intermediate",
+    "equipment": "none",
+    "duration_sec": 471
+  },
+  {
+    "youtube_id": "bNb2sHQsHNQ",
+    "title": "Bent-over row",
+    "channel": "BACK2BASICS",
+    "category": "pull",
+    "level": "beginner",
+    "equipment": "dumbbells",
+    "duration_sec": 32
+  },
+  {
+    "youtube_id": "cBJhxdgmNh4",
+    "title": "Bent-over dumbbell row",
+    "channel": "Operation Badass",
+    "category": "pull",
+    "level": "beginner",
+    "equipment": "dumbbells",
+    "duration_sec": 65
+  },
+  {
+    "youtube_id": "P479N4PjZkA",
+    "title": "Dumbbell bent-over row",
+    "channel": "Dumbbell Exercises",
+    "category": "pull",
+    "level": "beginner",
+    "equipment": "dumbbells",
+    "duration_sec": 82
+  },
+  {
+    "youtube_id": "ASdvN_XEl_c",
+    "title": "Plank",
+    "channel": "BowFlex",
+    "category": "core",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 205
+  },
+  {
+    "youtube_id": "UIL7VI5_EQg",
+    "title": "Dead bug (beginner)",
+    "channel": "LARPhysicalTherapy",
+    "category": "core",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 164
+  },
+  {
+    "youtube_id": "xtTIb6dC-vI",
+    "title": "Dead bug",
+    "channel": "Medbridge",
+    "category": "core",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 37
+  },
+  {
+    "youtube_id": "7L-5wpilwv4",
+    "title": "Jumping jacks",
+    "channel": "OriGym",
+    "category": "cardio",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 5
+  },
+  {
+    "youtube_id": "BNbF52zYRIM",
+    "title": "Jumping jacks (form)",
+    "channel": "Death Fitness",
+    "category": "cardio",
+    "level": "beginner",
+    "equipment": "none",
+    "duration_sec": 15
+  },
+  {
+    "youtube_id": "hq_0YlyfqGM",
+    "title": "Mountain climber",
+    "channel": "Group HIIT",
+    "category": "cardio",
+    "level": "intermediate",
+    "equipment": "none",
+    "duration_sec": 30
+  }
+]
