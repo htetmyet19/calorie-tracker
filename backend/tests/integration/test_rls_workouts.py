@@ -32,7 +32,8 @@ def test_videos_readable_not_writable(make_user, rest, service):
     hidden = _video(service, active=False)
     r = rest(a.token).get("/exercise_videos", params={"id": f"in.({v['id']},{hidden['id']})"})
     assert r.status_code == 200 and len(r.json()) == 2  # inactive rows stay readable
-    r = rest(a.token).post("/exercise_videos", json={**v, "id": None, "youtube_id": "zzzzzzzzzzz"})
+    row = {k: val for k, val in v.items() if k != "id"}
+    r = rest(a.token).post("/exercise_videos", json={**row, "youtube_id": "zzzzzzzzzzz"})
     assert r.status_code in (401, 403)
     r = rest(a.token).patch("/exercise_videos", params={"id": f"eq.{v['id']}"},
                             json={"title": "x"}, headers=REP)
