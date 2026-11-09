@@ -95,3 +95,17 @@ test("Ollie's message is a frosted-glass bubble with a name tag and a tail; tapp
   assert.match(css, /\.coach-bubble::after\s*\{/, "a tail pointing at Ollie");
   assert.match(css, /\.coach-fold\s*\{[^}]*inset:\s*0/, "the fold button covers the whole bubble");
 });
+
+test("the message box floats, glows, shimmers and brings words in one by one; reduced motion stops it", () => {
+  const css = fs.readFileSync(path.join(STATIC, "styles.css"), "utf8");
+  for (const name of ["bubble-float", "bubble-glow", "bubble-shimmer", "word-in"]) {
+    assert.match(css, new RegExp(`@keyframes ${name}\\b`), `${name} keyframes`);
+  }
+  assert.match(css, /\.coach-word\s*\{[^}]*animation:[^}]*word-in/, "each word animates in");
+  assert.match(css, /\.coach-word\s*\{[^}]*animation-delay:\s*var\(--d/, "words use their own delay");
+  const bubbleReduced = css.match(/@media \(prefers-reduced-motion: reduce\)\s*\{[^@]*\.coach-bubble[^@]*\}/);
+  assert.ok(bubbleReduced && /\.coach-word/.test(bubbleReduced[0]), "reduced motion stills the bubble and the words");
+  const js = fs.readFileSync(path.join(STATIC, "app.js"), "utf8");
+  assert.match(js, /wordDelays\(/, "app.js uses wordDelays");
+  assert.doesNotMatch(js, /coach-text[^\n]*innerHTML/, "words are built as elements, not HTML strings");
+});

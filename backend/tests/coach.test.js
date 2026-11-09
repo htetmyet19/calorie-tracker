@@ -1,7 +1,7 @@
 // Run from backend/: node --test "tests/*.test.js"
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { coachMessage, COACH_LINES, typingMs, bubbleStartsOpen, coachPlaylist, ACTIONS } = require("../static/coach.js");
+const { coachMessage, COACH_LINES, typingMs, bubbleStartsOpen, coachPlaylist, ACTIONS, wordDelays } = require("../static/coach.js");
 
 // A day with an even day of month shows variant A first.
 const base = { total: 1240, goal: 1800, goalType: "lose", mealCount: 2, hour: 14, checkinDue: false, dayOfMonth: 8, flip: false };
@@ -85,4 +85,22 @@ test("no daytime mix is mostly running, and every move in a mix can be drawn", (
     for (const a of list) assert.ok(ACTIONS.includes(a), a);
   }
   assert.ok(ACTIONS.includes("cheer") && ACTIONS.includes("eat"));
+});
+
+test("wordDelays: words come in one by one, quick lines at 70 ms a word", () => {
+  const ws = wordDelays("On track, with 560 kcal to go.", false);
+  assert.deepEqual(ws.map((w) => w.word), ["On", "track,", "with", "560", "kcal", "to", "go."]);
+  assert.deepEqual(ws.map((w) => w.delay), [0, 70, 140, 210, 280, 350, 420]);
+});
+
+test("wordDelays: a long line still finishes within about a second", () => {
+  const ws = wordDelays(Array(30).fill("word").join(" "), false);
+  assert.equal(ws.length, 30);
+  assert.ok(ws[29].delay <= 1000, `last word at ${ws[29].delay} ms`);
+  assert.ok(ws[1].delay > 0);
+});
+
+test("wordDelays: reduced motion shows every word at once; extra spaces are ignored", () => {
+  assert.deepEqual(wordDelays("  Hi   there ", true), [{ word: "Hi", delay: 0 }, { word: "there", delay: 0 }]);
+  assert.deepEqual(wordDelays("", false), []);
 });

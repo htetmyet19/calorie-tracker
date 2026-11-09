@@ -43,6 +43,14 @@ function typingMs(text, reducedMotion) {
   return Math.min(1100, Math.max(500, 300 + text.length * 10));
 }
 
+// The line comes in word by word after the typing dots: 70 ms a word, faster for long lines
+// so the last word lands within a second. Reduced motion shows them all at once.
+function wordDelays(text, reducedMotion) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const step = reducedMotion ? 0 : Math.min(70, Math.floor(1000 / Math.max(1, words.length - 1)));
+  return words.map((word, i) => ({ word, delay: i * step }));
+}
+
 // The bubble opens for each new line; one the user folded away today stays folded.
 // folded: { date, text } from the last fold, or null.
 function bubbleStartsOpen(text, folded, today) {
@@ -68,5 +76,5 @@ function coachPlaylist(mood, hour) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { coachMessage, COACH_LINES, typingMs, bubbleStartsOpen, coachPlaylist, ACTIONS };
+  module.exports = { coachMessage, COACH_LINES, typingMs, bubbleStartsOpen, coachPlaylist, ACTIONS, wordDelays };
 }

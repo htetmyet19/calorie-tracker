@@ -1248,10 +1248,6 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
   animation: name-dot 2.4s ease-in-out infinite;
 }
 @keyframes name-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-/* Without blur support the glass would be too see-through: make it solid */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .coach-bubble { background: rgb(20, 28, 33); }
-}
 .coach[data-open="false"] .coach-bubble { display: none; }
 /* A tap anywhere on the bubble folds it; the text lets taps through, the action link sits above */
 .coach-fold {
@@ -1285,7 +1281,7 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 .coach-typing i:nth-child(3) { animation-delay: 0.3s; }
 .coach-bubble.is-typing .coach-typing { display: inline-flex; }
 .coach-bubble.is-typing .coach-text { display: none; }
-.coach-text { margin: 0; animation: text-in 0.35s ease-out; }
+.coach-text { margin: 0; }
 .coach-action:not([hidden]) { animation: text-in 0.35s ease-out; }
 @keyframes bubble-pop {
   0% { transform: scale(0.4); opacity: 0; }
@@ -1295,8 +1291,56 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 @keyframes typing-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-4px); opacity: 1; } }
 @keyframes text-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 
+/* While open, the box floats with Ollie, its lime edge breathes, and a soft light sweeps over the
+   glass now and then. Float uses translate so it doesn't fight the pop's transform. */
+.coach-bubble {
+  --bubble-loop: bubble-float 4.5s ease-in-out infinite, bubble-glow 3.2s ease-in-out infinite,
+    bubble-shimmer 7s ease-in-out 0.5s infinite;
+  animation: var(--bubble-loop);
+  background-image: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.13) 50%, transparent 58%),
+    linear-gradient(160deg, rgba(40, 54, 62, 0.72), rgba(14, 21, 25, 0.78));
+  background-size: 260% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  background-position: 0% 0, 0 0;
+}
+.coach-bubble.is-pop { animation: bubble-pop 0.45s ease-out, var(--bubble-loop); }
+@keyframes bubble-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
+@keyframes bubble-glow {
+  0%, 100% {
+    border-color: rgba(198, 243, 107, 0.3);
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5), 0 0 16px rgba(198, 243, 107, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  50% {
+    border-color: rgba(198, 243, 107, 0.6);
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5), 0 0 26px rgba(198, 243, 107, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+}
+/* The light crosses in the first quarter of each loop, then rests off the edge */
+@keyframes bubble-shimmer {
+  0% { background-position: 0% 0, 0 0; }
+  25%, 100% { background-position: 100% 0, 0 0; }
+}
+/* Each word rises and sharpens on its own delay (--d, from wordDelays in coach.js) */
+.coach-word {
+  display: inline-block;
+  animation: word-in 0.32s ease-out both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes word-in {
+  from { opacity: 0; transform: translateY(6px); filter: blur(3px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+/* Without blur support the glass would be too see-through: make it solid (the shimmer stays) */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .coach-bubble {
+    background-image: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.13) 50%, transparent 58%),
+      linear-gradient(rgb(20, 28, 33), rgb(20, 28, 33));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .coach-bubble.is-pop, .coach-typing i, .coach-text, .coach-action:not([hidden]),
+  .coach-bubble, .coach-bubble.is-pop, .coach-word, .coach-typing i, .coach-text, .coach-action:not([hidden]),
   .coach-float, .coach-name::after { animation: none; }
 }
 .settings-coach { margin-top: 18px; }
