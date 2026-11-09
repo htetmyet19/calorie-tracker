@@ -49,6 +49,25 @@ function legacySettings(rawProfile, rawGoal, server) {
 }
 
 
+// The account card in Settings, from the Supabase session's user. Google fills
+// full_name/avatar_url (older sign-ins: name/picture); email accounts have neither.
+const SIGN_IN_METHODS = { google: "Signed in with Google", email: "Signed in with email" };
+function accountSummary(user) {
+  const meta = (user && user.user_metadata) || {};
+  const text = (v) => (typeof v === "string" ? v.trim() : "");
+  const email = text(user && user.email);
+  const name = text(meta.full_name) || text(meta.name);
+  const rawPhoto = text(meta.avatar_url) || text(meta.picture);
+  const provider = user && user.app_metadata && user.app_metadata.provider;
+  return {
+    name,
+    email,
+    initial: ((email || name)[0] || "?").toUpperCase(),
+    photo: rawPhoto.startsWith("https://") ? rawPhoto : "",
+    method: SIGN_IN_METHODS[provider] || "",
+  };
+}
+
 // ---------- Settings cache (browser only below) ----------
 
 const SAVE_ERROR = "Couldn't save your settings. Check your connection and try again.";
@@ -200,6 +219,17 @@ const SETTINGS_HTML = `
       <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
     </button>
   </div>
+  <div class="settings-account" id="settings-account" hidden>
+    <span class="account-avatar" aria-hidden="true">
+      <span id="account-initial"></span>
+      <img id="account-photo" alt="" referrerpolicy="no-referrer" hidden>
+    </span>
+    <div class="account-text">
+      <p class="account-name" id="account-name"></p>
+      <p class="account-email" id="account-email"></p>
+      <p class="account-method" id="account-method"></p>
+    </div>
+  </div>
   <fieldset class="meal-type settings-unit">
     <legend>Weight unit</legend>
     <div class="meal-type-options">
@@ -244,6 +274,38 @@ function setCoachEnabled(on) {
   document.dispatchEvent(new Event("coachchange"));
 }
 
+// Fills the account card from the stored session (no network call). The card
+// stays hidden if there is no session; a photo that fails shows the initial.
+async function showAccount(dialog) {
+  let user = null;
+  try {
+    const client = await initAuth();
+    const { data } = await client.auth.getSession();
+    user = data.session && data.session.user;
+  } catch (e) { /* no session to show */ }
+  if (!user) return;
+  const a = accountSummary(user);
+  const card = dialog.querySelector("#settings-account");
+  const name = dialog.querySelector("#account-name");
+  const email = dialog.querySelector("#account-email");
+  dialog.querySelector("#account-initial").textContent = a.initial;
+  name.textContent = a.name;
+  name.hidden = !a.name;
+  email.textContent = a.email;
+  email.title = a.email;
+  email.classList.toggle("is-main", !a.name);
+  const method = dialog.querySelector("#account-method");
+  method.textContent = a.method;
+  method.hidden = !a.method;
+  const photo = dialog.querySelector("#account-photo");
+  if (a.photo) {
+    photo.addEventListener("error", () => { photo.hidden = true; }, { once: true });
+    photo.addEventListener("load", () => { photo.hidden = false; }, { once: true });
+    photo.src = a.photo;
+  }
+  card.hidden = false;
+}
+
 function renderSettingsPanel() {
   const dialog = document.createElement("dialog");
   dialog.className = "calc settings";
@@ -251,6 +313,8 @@ function renderSettingsPanel() {
   dialog.setAttribute("aria-labelledby", "settings-title");
   dialog.innerHTML = SETTINGS_HTML;
   document.body.append(dialog);
+
+  showAccount(dialog);
 
   const status = dialog.querySelector("#settings-status");
   const setPanelStatus = (msg, isError) => {
@@ -388,5 +452,5 @@ function initNav(active) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { settingsBody, legacySettings, moveLegacySettings, loadSettings, saveSettings, refreshSettings, SETTINGS_DEFAULTS };
+  module.exports = { settingsBody, accountSummary, legacySettings, moveLegacySettings, loadSettings, saveSettings, refreshSettings, SETTINGS_DEFAULTS };
 }
