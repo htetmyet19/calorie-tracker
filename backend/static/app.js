@@ -30,7 +30,10 @@ function dayLabel(dateStr) {
 }
 
 // Messages show inside the log sheet while it is open, otherwise on the page.
-function statusEl() { return $("log-sheet").open ? $("status") : $("page-status"); }
+function statusEl() {
+  if ($("log-sheet").open) return $("status");
+  return $("meals-sheet").open ? $("meals-status") : $("page-status");
+}
 
 function setStatus(msg, isError = false) {
   const status = statusEl();
@@ -613,6 +616,7 @@ function photoNote(m) {
 function renderMeals(day) {
   resetThumbs();
   $("meals-empty").hidden = day.meals.length > 0;
+  renderMealSummary(day.meals);
   $("meals").replaceChildren(...day.meals.map((m) => {
     const sw = el("span", { className: "swatch" });
     sw.style.setProperty("--c", `var(--${m.meal_type})`);
@@ -646,6 +650,67 @@ function renderMeals(day) {
     li.classList.toggle("has-thumb", !!thumb);
     return li;
   }));
+}
+
+// ---------- Phones: the meals list in a slide-up card ----------
+// The one list (#meals) moves into the card while it is open and back when it closes,
+// so its delete and photo buttons work the same in both places.
+
+function renderMealSummary(meals) {
+  const sum = mealSummary(meals);
+  $("meals-open").hidden = sum.count === 0; // nothing to open: the empty note shows instead
+  $("meals-summary-text").textContent = sum.text;
+  $("meals-sheet-sub").textContent = sum.text;
+  $("meals-open").setAttribute("aria-label", `Meals: ${sum.text}. Show the list`);
+  $("meals-summary-dots").replaceChildren(...sum.types.map((t) => {
+    const dot = el("span", { className: "swatch" });
+    dot.style.setProperty("--c", `var(--${t})`);
+    return dot;
+  }));
+  if (!sum.count && $("meals-sheet").open) $("meals-sheet").close(); // the last meal was deleted
+}
+
+function openMealsSheet() {
+  $("meals-status").textContent = "";
+  $("meals-sheet-body").append($("meals"));
+  $("meals-sheet").showModal();
+}
+
+$("meals-open").addEventListener("click", openMealsSheet);
+$("meals-close").addEventListener("click", () => $("meals-sheet").close());
+$("meals-sheet").addEventListener("close", () => {
+  $("meals-sheet").style.transform = "";
+  $("meals-empty").before($("meals")); // back in the page, where wide screens show it
+  $("meals-open").focus({ preventScroll: true });
+});
+// A tap on the dimmed backdrop closes the card.
+$("meals-sheet").addEventListener("click", (e) => {
+  const box = e.currentTarget.getBoundingClientRect();
+  const outside = e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom;
+  if (e.target === e.currentTarget && outside) e.currentTarget.close();
+});
+// Swipe down to close, when the list is scrolled to the top: the card follows the finger,
+// closes past 90 px, springs back otherwise.
+{
+  const sheet = $("meals-sheet");
+  let startY = null, dy = 0;
+  sheet.addEventListener("touchstart", (e) => {
+    startY = sheet.scrollTop <= 0 && e.touches.length === 1 ? e.touches[0].clientY : null;
+    dy = 0;
+  }, { passive: true });
+  sheet.addEventListener("touchmove", (e) => {
+    if (startY === null) return;
+    dy = Math.max(0, e.touches[0].clientY - startY);
+    sheet.style.transition = "none";
+    sheet.style.transform = dy ? `translateY(${dy}px)` : "";
+  }, { passive: true });
+  sheet.addEventListener("touchend", () => {
+    if (startY === null) return;
+    startY = null;
+    sheet.style.transition = "";
+    if (dy > 90) sheet.close();
+    else sheet.style.transform = "";
+  });
 }
 
 async function loadDay() {

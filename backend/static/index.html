@@ -264,10 +264,32 @@
 
     <section class="meals-section" aria-labelledby="meals-heading">
       <h2 id="meals-heading" class="section-title">Meals</h2>
+      <!-- Phones: one summary row in place of the list; it opens the list in a slide-up card. -->
+      <button class="meals-summary" type="button" id="meals-open" aria-haspopup="dialog" hidden>
+        <span class="meals-summary-main">
+          <span class="meals-summary-title">Meals <span class="meals-summary-dots" id="meals-summary-dots" aria-hidden="true"></span></span>
+          <span class="meals-summary-text" id="meals-summary-text"></span>
+        </span>
+        <svg class="meals-summary-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg>
+      </button>
       <ul class="meals" id="meals"></ul>
       <p class="empty" id="meals-empty">Nothing logged on this day yet. Tap “Snap a meal” to add one.</p>
     </section>
   </main>
+
+  <!-- Phones: the day's meals in a slide-up card, opened from the Meals summary button. -->
+  <dialog class="sheet meals-sheet" id="meals-sheet" aria-labelledby="meals-sheet-title">
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <div>
+        <h2 id="meals-sheet-title" class="section-title">Meals</h2>
+        <p class="meals-sheet-sub" id="meals-sheet-sub"></p>
+      </div>
+      <button class="btn btn-quiet" type="button" id="meals-close">Close</button>
+    </div>
+    <p id="meals-status" class="status" role="status" aria-live="polite"></p>
+    <div id="meals-sheet-body"></div>
+  </dialog>
 
   <!-- Logging flow: photo, estimate, check, save. Opens from "Snap a meal". -->
   <dialog class="sheet" id="log-sheet" aria-labelledby="log-heading">
@@ -406,6 +428,7 @@
   <script src="/advice.js?v=2"></script>
   <script src="/zone.js?v=2"></script>
   <script src="/coach.js?v=2"></script>
+  <script src="/summary.js?v=2"></script>
   <script src="/app.js?v=2"></script>
 </body>
 </html>
