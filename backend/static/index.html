@@ -73,17 +73,15 @@
            out to his left and folds away with ×. Hidden on past days and when Settings › Show coach
            is off. data-open shows the bubble; the svg's data-action is the move he's doing. -->
       <section class="coach" id="coach" aria-label="Coach Ollie" data-mood="happy" data-open="true" hidden>
+        <!-- A speech bubble above Ollie, its tail pointing at him. The fold button covers the
+             whole bubble, so a tap anywhere on it folds it away. -->
         <div class="coach-bubble" id="coach-bubble">
-          <p class="coach-name">Coach Ollie</p>
+          <button class="coach-fold" type="button" id="coach-fold" aria-label="Fold the message away"></button>
           <span class="coach-typing" aria-hidden="true"><i></i><i></i><i></i></span>
           <p class="coach-text" id="coach-text" role="status" aria-live="polite"></p>
           <a class="btn btn-primary btn-small coach-action" id="coach-action" href="/checkin.html" hidden></a>
-          <button class="coach-fold" type="button" id="coach-fold" aria-label="Fold the message away">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-          </button>
         </div>
         <button class="coach-otter" type="button" id="coach-otter" aria-label="Coach Ollie: tap for another message">
-          <span class="coach-pulse" aria-hidden="true"></span>
           <!-- Full-body Ollie; data-action picks the move (coach.js ACTIONS), styles.css animates it -->
           <span class="coach-float">
           <svg class="ollie" id="coach-ollie" data-action="run" viewBox="0 0 160 150" aria-hidden="true">
