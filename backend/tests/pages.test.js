@@ -82,12 +82,16 @@ test("no pulsing ring around Ollie when his message is folded away", () => {
   assert.doesNotMatch(css, /coach-pulse/);
 });
 
-test("Ollie's message is a cream speech bubble with a tail; tapping it folds it", () => {
+test("Ollie's message is a frosted-glass bubble with a name tag and a tail; tapping it folds it", () => {
   const html = fs.readFileSync(path.join(STATIC, "index.html"), "utf8");
   const bubble = html.slice(html.indexOf('id="coach-bubble"'), html.indexOf('id="coach-otter"'));
-  assert.doesNotMatch(bubble, /coach-name/, "no header in the bubble");
+  assert.match(bubble, /<span class="coach-name" aria-hidden="true">Coach Ollie<\/span>/, "a small name tag, hidden from screen readers");
   assert.match(bubble, /<button[^>]*class="coach-fold"[^>]*aria-label="Fold the message away"/);
   const css = fs.readFileSync(path.join(STATIC, "styles.css"), "utf8");
+  const rule = css.match(/\.coach-bubble\s*\{[^}]*\}/)[0];
+  assert.match(rule, /backdrop-filter:\s*blur/, "frosted glass");
+  assert.match(rule, /-webkit-backdrop-filter:\s*blur/, "frosted glass on iPhone Safari");
+  assert.doesNotMatch(css, /#fff6e6/, "the cream bubble is gone");
   assert.match(css, /\.coach-bubble::after\s*\{/, "a tail pointing at Ollie");
   assert.match(css, /\.coach-fold\s*\{[^}]*inset:\s*0/, "the fold button covers the whole bubble");
 });

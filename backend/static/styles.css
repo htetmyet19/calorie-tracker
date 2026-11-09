@@ -1188,34 +1188,69 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
   overflow: visible;
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 3px rgba(0, 0, 0, 0.7)) drop-shadow(0 6px 8px rgba(0, 0, 0, 0.45));
 }
-/* Ollie's message: a cream speech bubble above him, its tail pointing at his head */
+/* Ollie's message: a frosted-glass bubble above him (dark glass, blur, thin lime edge),
+   with a small name tag and a tail pointing at his head */
 .coach-bubble {
   pointer-events: auto;
   position: absolute;
   right: 46px;
   bottom: 96px;
   width: max-content;
-  max-width: min(230px, calc(100vw - 80px));
+  max-width: min(236px, calc(100vw - 80px));
   box-sizing: border-box;
-  padding: 11px 15px 12px;
-  border-radius: 20px;
-  background: #fff6e6;
-  color: #1d2328;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.35);
-  line-height: 1.35;
+  padding: 10px 15px 12px;
+  border: 1px solid rgba(198, 243, 107, 0.35);
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(40, 54, 62, 0.72), rgba(14, 21, 25, 0.78));
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
+  color: var(--ink);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5), 0 0 22px rgba(198, 243, 107, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  line-height: 1.4;
   font-size: 0.9375rem;
   font-weight: 500;
 }
+/* The tail: a small glass square turned 45deg, sharing the bubble's lime edge */
 .coach-bubble::after {
   content: "";
   position: absolute;
-  right: 18px;
+  right: 20px;
   bottom: -7px;
-  width: 16px;
-  height: 16px;
-  background: #fff6e6;
-  border-radius: 0 0 5px 0;
-  transform: rotate(45deg) skew(8deg, 8deg);
+  width: 12px;
+  height: 12px;
+  border-right: 1px solid rgba(198, 243, 107, 0.35);
+  border-bottom: 1px solid rgba(198, 243, 107, 0.35);
+  border-bottom-right-radius: 3px;
+  background: rgb(16, 23, 27);
+  transform: rotate(45deg);
+}
+.coach-name {
+  position: relative;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+  color: var(--accent);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.coach-name::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+  animation: name-dot 2.4s ease-in-out infinite;
+}
+@keyframes name-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+/* Without blur support the glass would be too see-through: make it solid */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .coach-bubble { background: rgb(20, 28, 33); }
 }
 .coach[data-open="false"] .coach-bubble { display: none; }
 /* A tap anywhere on the bubble folds it; the text lets taps through, the action link sits above */
@@ -1245,7 +1280,7 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 .coach-bubble { transform-origin: calc(100% - 26px) calc(100% + 8px); }
 .coach-bubble.is-pop { animation: bubble-pop 0.45s ease-out; }
 .coach-typing { display: none; gap: 5px; align-items: center; height: 1.35em; }
-.coach-typing i { width: 7px; height: 7px; border-radius: 50%; background: #9a8b77; animation: typing-dot 1s ease-in-out infinite; }
+.coach-typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: typing-dot 1s ease-in-out infinite; }
 .coach-typing i:nth-child(2) { animation-delay: 0.15s; }
 .coach-typing i:nth-child(3) { animation-delay: 0.3s; }
 .coach-bubble.is-typing .coach-typing { display: inline-flex; }
@@ -1262,7 +1297,7 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 
 @media (prefers-reduced-motion: reduce) {
   .coach-bubble.is-pop, .coach-typing i, .coach-text, .coach-action:not([hidden]),
-  .coach-float { animation: none; }
+  .coach-float, .coach-name::after { animation: none; }
 }
 .settings-coach { margin-top: 18px; }
 .settings-coach .hint { margin: 8px 0 0; }
