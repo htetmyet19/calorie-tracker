@@ -1,7 +1,7 @@
 // Run from backend/: node --test "tests/*.test.js"
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { settingsBody } = require("../static/nav.js");
+const { settingsBody, accountSummary } = require("../static/nav.js");
 
 const LOADED = {
   height_cm: 170, weight_kg: 70.5, age: 30, sex: "female", activity: 1.375,
@@ -144,4 +144,61 @@ test("Settings, Close and Log out are modern icon buttons with spoken names", ()
   assert.match(css, /\.settings-logout\s*\{[^}]*color:\s*var\(--chili\)/);
   assert.match(css, /\.settings-logout\.is-confirming\s*\{/);
   assert.match(css, /prefers-reduced-motion: reduce\)\s*\{[^}]*\.gear/, "the gear doesn't spin under reduced motion");
+});
+
+// ---------- Account card ----------
+
+test("a Google user shows name, email, photo and the sign-in method", () => {
+  const user = {
+    email: "ana@gmail.com",
+    app_metadata: { provider: "google", providers: ["google"] },
+    user_metadata: { full_name: "Ana Lim", avatar_url: "https://lh3.googleusercontent.com/a/x=s96-c" },
+  };
+  assert.deepEqual(accountSummary(user), {
+    name: "Ana Lim", email: "ana@gmail.com", initial: "A",
+    photo: "https://lh3.googleusercontent.com/a/x=s96-c", method: "Signed in with Google",
+  });
+});
+
+test("an email-and-password user has no name or photo and an initial from the email", () => {
+  const user = { email: "bo@example.com", app_metadata: { provider: "email" }, user_metadata: {} };
+  assert.deepEqual(accountSummary(user), {
+    name: "", email: "bo@example.com", initial: "B", photo: "", method: "Signed in with email",
+  });
+});
+
+test("Google's `name` and `picture` fields are used when full_name/avatar_url are missing", () => {
+  const s = accountSummary({ email: "c@gmail.com", app_metadata: { provider: "google" },
+    user_metadata: { name: "  Chan  ", picture: "https://lh3.googleusercontent.com/p" } });
+  assert.equal(s.name, "Chan");
+  assert.equal(s.photo, "https://lh3.googleusercontent.com/p");
+});
+
+test("only https photos are used", () => {
+  const s = accountSummary({ email: "d@gmail.com", app_metadata: { provider: "google" },
+    user_metadata: { avatar_url: "javascript:alert(1)" } });
+  assert.equal(s.photo, "");
+});
+
+test("missing user, provider or email still gives a safe summary", () => {
+  assert.deepEqual(accountSummary(null), { name: "", email: "", initial: "?", photo: "", method: "" });
+  const s = accountSummary({ email: "e@x.io", app_metadata: {} });
+  assert.equal(s.method, "");
+  assert.equal(s.initial, "E");
+  assert.equal(accountSummary({ email: "", user_metadata: { full_name: "zoe" } }).initial, "Z");
+});
+
+test("the Settings panel has an account card above the settings", () => {
+  const fs = require("node:fs"), path = require("node:path");
+  const src = fs.readFileSync(path.join(__dirname, "../static/nav.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "../static/styles.css"), "utf8");
+  const html = src.slice(src.indexOf("const SETTINGS_HTML"), src.indexOf("</button>`;"));
+  assert.ok(html.indexOf('id="settings-account"') > html.indexOf('id="settings-title"'));
+  assert.ok(html.indexOf('id="settings-account"') < html.indexOf("settings-unit"));
+  for (const id of ["account-photo", "account-initial", "account-name", "account-email", "account-method"]) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+  assert.match(src, /accountSummary\(/);
+  assert.match(src, /addEventListener\("error"/, "a photo that fails to load falls back to the initial");
+  assert.match(css, /\.account-email\s*\{[^}]*text-overflow:\s*ellipsis/);
 });

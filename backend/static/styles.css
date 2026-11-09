@@ -690,6 +690,41 @@ button { cursor: pointer; }
 .settings { width: min(380px, calc(100vw - 32px)); }
 .settings-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .settings-head .section-title { margin-bottom: 0; }
+/* Account card: who is signed in */
+.settings-account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--raised);
+}
+.settings-account[hidden] { display: none; }
+.account-avatar {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(198, 243, 107, 0.14);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: var(--step-1);
+}
+.account-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.account-avatar img[hidden] { display: none; }
+.account-text { min-width: 0; flex: 1; }
+.account-text p { margin: 0; }
+.account-name { font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-name[hidden], .account-method[hidden] { display: none; }
+.account-email { color: var(--ink-2); font-size: var(--step--1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-email.is-main { color: var(--ink); font-size: var(--step-0); font-weight: 700; }
+.account-method { margin-top: 2px; color: var(--muted); font-size: 0.75rem; }
 .settings .settings-unit { margin-top: 18px; }
 .settings-reminders { margin-top: 18px; }
 .settings-install { margin-top: 18px; }
