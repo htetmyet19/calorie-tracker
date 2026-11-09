@@ -161,7 +161,7 @@ If the main Gemini model is overloaded or out of quota, the backend retries and 
 - **Private photo buckets.** Photos are stored per user and served only through signed access.
 - **The service-role key never reaches the browser.** Only the daily job (`app/cron.py`) may read it, and a unit test enforces that.
 - **Data minimisation.** No phone number, national ID or location is collected.
-- **Tested at two layers.** 389 unit tests and 145 frontend tests run without a database; 81 integration tests run against a real local Supabase and check that one user cannot read another's data.
+- **Tested at two layers.** 389 unit tests and 146 frontend tests run without a database; 81 integration tests run against a real local Supabase and check that one user cannot read another's data.
 
 ## 🚀 Run it locally
 
