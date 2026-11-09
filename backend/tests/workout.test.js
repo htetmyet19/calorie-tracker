@@ -50,3 +50,26 @@ test("the bottom bar links to the Workout page", () => {
   const nav = fs.readFileSync(path.join(__dirname, "..", "static", "nav.js"), "utf8");
   assert.match(nav, /id: "workout", href: "\/workout\.html", label: "Workout"/);
 });
+
+test("the first day not done this week starts open; none when all are done", () => {
+  const days = [{ index: 0 }, { index: 1 }, { index: 2 }];
+  assert.equal(W.firstOpenDay(days, []), 0);
+  assert.equal(W.firstOpenDay(days, [{ day_index: 0, done_on: "2026-11-09" }]), 1);
+  assert.equal(W.firstOpenDay(days, [{ day_index: 0, done_on: "2026-11-09" }, { day_index: 2, done_on: "2026-11-09" }]), 1);
+  assert.equal(W.firstOpenDay(days, [0, 1, 2].map((i) => ({ day_index: i, done_on: "2026-11-09" }))), null);
+  assert.equal(W.firstOpenDay([], []), null);
+});
+
+test("each day folds to a row: a button with an open/folded state that shows or hides the details", () => {
+  const js = fs.readFileSync(path.join(__dirname, "..", "static", "workout.js"), "utf8");
+  const card = js.slice(js.indexOf("function dayCard"), js.indexOf("function exerciseRow"));
+  assert.match(card, /el\("button", \{ type: "button", className: "day-toggle"/, "the row is a real button");
+  assert.match(card, /setAttribute\("aria-expanded"/, "it says whether the day is open");
+  assert.match(card, /setAttribute\("aria-controls"/, "it points at the details it opens");
+  assert.match(card, /className: "day-body"/, "the details sit in their own part");
+  assert.match(card, /\.hidden = !open/, "folded days hide their details");
+  assert.match(js, /openDays/, "open days are remembered while the page is open");
+  const css = fs.readFileSync(path.join(__dirname, "..", "static", "styles.css"), "utf8");
+  assert.match(css, /\.day-toggle\[aria-expanded="true"\] \.day-chev\s*\{[^}]*rotate/, "the arrow turns when open");
+  assert.match(css, /prefers-reduced-motion: reduce\)\s*\{[^}]*\.day-chev/, "reduced motion: no turn animation");
+});

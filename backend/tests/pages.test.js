@@ -103,8 +103,13 @@ test("the message box floats, glows, shimmers and brings words in one by one; re
   }
   assert.match(css, /\.coach-word\s*\{[^}]*animation:[^}]*word-in/, "each word animates in");
   assert.match(css, /\.coach-word\s*\{[^}]*animation-delay:\s*var\(--d/, "words use their own delay");
-  const bubbleReduced = css.match(/@media \(prefers-reduced-motion: reduce\)\s*\{[^@]*\.coach-bubble[^@]*\}/);
-  assert.ok(bubbleReduced && /\.coach-word/.test(bubbleReduced[0]), "reduced motion stills the bubble and the words");
+  // Each reduced-motion block, read to its closing brace
+  const reducedBlocks = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{/g)].map((m) => {
+    let depth = 0, i = m.index + m[0].length - 1;
+    do { if (css[i] === "{") depth++; else if (css[i] === "}") depth--; i++; } while (depth > 0 && i < css.length);
+    return css.slice(m.index, i);
+  });
+  assert.ok(reducedBlocks.some((b) => /\.coach-bubble/.test(b) && /\.coach-word/.test(b)), "reduced motion stills the bubble and the words");
   const js = fs.readFileSync(path.join(STATIC, "app.js"), "utf8");
   assert.match(js, /wordDelays\(/, "app.js uses wordDelays");
   assert.doesNotMatch(js, /coach-text[^\n]*innerHTML/, "words are built as elements, not HTML strings");
@@ -132,7 +137,7 @@ test("phones: the meals list hides behind a summary button that opens a slide-up
   assert.match(js, /mealSummary\(/);
 });
 
-test("every Close is a round × button with a spoken name, and every Cancel is a modern outlined button", () => {
+test("every Close and Cancel is a round × button with a spoken name", () => {
   const closes = {
     "index.html": ["meals-close", "log-close", "photo-view-close"],
     "progress.html": ["compare-close", "photo-dialog-close"],
@@ -158,11 +163,13 @@ test("every Close is a round × button with a spoken name, and every Cancel is a
   const cancels = [["index.html", 'value="cancel"'], ["progress.html", 'id="weight-cancel"'], ["workout.html", 'id="builder-cancel"']];
   for (const [page, marker] of cancels) {
     const html = fs.readFileSync(path.join(STATIC, page), "utf8");
-    assert.match(html, new RegExp(`<button class="btn btn-soft"[^>]*${marker}`), `${page} Cancel`);
+    const btn = html.match(new RegExp(`<button class="icon-round icon-close"[^>]*${marker}[^>]*>[\\s\\S]*?</button>`));
+    assert.ok(btn, `${page} Cancel is a round ×`);
+    assert.match(btn[0], /aria-label="Cancel"/, `${page} Cancel is still read out as Cancel`);
+    assert.match(btn[0], /<svg[^>]*aria-hidden="true"/);
   }
   const css = fs.readFileSync(path.join(STATIC, "styles.css"), "utf8");
-  assert.match(css, /\.btn-soft\s*\{[^}]*border:\s*1px solid/, "Cancel is an outlined pill");
-  assert.equal((css.match(/^\.btn-soft\s*\{/gm) || []).length, 1, "one .btn-soft rule, so no other style overrides it");
+  assert.doesNotMatch(css, /\.btn-soft/, "the outlined Cancel style is gone");
   assert.match(css, /\.icon-close svg\s*\{/, "the × has its own size");
 });
 
