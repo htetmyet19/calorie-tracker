@@ -104,3 +104,11 @@ test("wordDelays: reduced motion shows every word at once; extra spaces are igno
   assert.deepEqual(wordDelays("  Hi   there ", true), [{ word: "Hi", delay: 0 }, { word: "there", delay: 0 }]);
   assert.deepEqual(wordDelays("", false), []);
 });
+
+test("the open box fits only when its top clears the macros by a small gap", () => {
+  const { bubbleFits } = require("../static/coach.js");
+  assert.equal(bubbleFits(560, 540), true);   // 20 px clear
+  assert.equal(bubbleFits(546, 540), true);   // exactly the 6 px gap
+  assert.equal(bubbleFits(545, 540), false);  // 5 px: too tight
+  assert.equal(bubbleFits(500, 540), false);  // would cover the macros
+});

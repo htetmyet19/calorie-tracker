@@ -262,12 +262,19 @@ function renderCoach() {
   const action = $("coach-action");
   if (msg.action) { action.textContent = msg.action.label; action.href = msg.action.href; }
   coachHasAction = !!msg.action;
-  if (msg.text !== coachLine) sayCoach(msg.text, bubbleStartsOpen(msg.text, foldedLine(), isoDate(now)));
+  if (msg.text !== coachLine) {
+    let open = bubbleStartsOpen(msg.text, foldedLine(), isoDate(now));
+    // On short phones a box with no room starts folded; once the user has tapped Ollie it always opens.
+    coachRoomFolded = open && !coachAsked && !bubbleHasRoom(msg.text);
+    sayCoach(msg.text, open && !coachRoomFolded);
+  }
   else if (!coachTyping) action.hidden = !msg.action;
 }
 
 let coachLine = "";        // the line being shown or typed
 let coachHasAction = false;
+let coachAsked = false;    // the user has tapped Ollie on this page, so the box opens even without room
+let coachRoomFolded = false; // folded only for lack of room (not by the user); opens if room appears
 let coachTyping = 0;       // the pending timer while the dots show
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -275,6 +282,35 @@ function setBubbleOpen(open) {
   $("coach").dataset.open = String(open);
   $("coach-otter").setAttribute("aria-label", open ? "Coach Ollie: tap for another message" : "Coach Ollie: show message");
 }
+
+// Is there room for the open box without covering the macros? Measured with the line in place and
+// the box hidden, just before sayCoach shows it. Wide screens always have room.
+function bubbleHasRoom(text) {
+  const macros = document.querySelector(".macros");
+  if (!macros || window.matchMedia("(min-width: 900px)").matches) return true;
+  const card = $("coach"), bubble = $("coach-bubble"), action = $("coach-action");
+  const wasOpen = card.dataset.open;
+  card.dataset.open = "true";
+  bubble.classList.remove("is-pop", "is-typing"); // the pop scales it; sayCoach adds these again
+  bubble.style.visibility = "hidden";
+  $("coach-text").textContent = text;
+  action.hidden = !coachHasAction;
+  const top = Math.min(bubble.getBoundingClientRect().top, bubble.querySelector(".coach-name").getBoundingClientRect().top); // the tag may sit on the edge
+  bubble.style.visibility = "";
+  card.dataset.open = wasOpen;
+  return bubbleFits(top, macros.getBoundingClientRect().bottom);
+}
+
+// Room can appear after the first check: the web font loads (narrower than the stand-in) or the
+// screen turns or grows. Then a box folded only for lack of room opens.
+function recheckCoachRoom() {
+  if (!coachRoomFolded || coachAsked || $("coach").hidden) return;
+  if (bubbleHasRoom(coachLine)) { coachRoomFolded = false; sayCoach(coachLine, true); }
+  else $("coach-text").textContent = coachLine; // the measure left the line in place; keep it whole
+}
+if (document.fonts) document.fonts.ready.then(recheckCoachRoom);
+let coachResizeTimer = 0;
+window.addEventListener("resize", () => { clearTimeout(coachResizeTimer); coachResizeTimer = setTimeout(recheckCoachRoom, 200); });
 
 // Show a line. Open: the bubble pops in, "…" dots type for a moment, then the text fades in.
 // Folded: the text is set quietly, ready for when Ollie is tapped.
@@ -354,6 +390,8 @@ function scheduleCoachMix() {
 }
 
 $("coach-otter").addEventListener("click", () => {
+  coachAsked = true;
+  coachRoomFolded = false;
   playCoachMove("cheer", CHEER_MS);
   if ($("coach").dataset.open !== "true") {
     try { localStorage.removeItem(COACH_FOLD_KEY); } catch (e) { /* blocked */ }

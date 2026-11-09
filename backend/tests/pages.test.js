@@ -165,3 +165,18 @@ test("every Close is a round × button with a spoken name, and every Cancel is a
   assert.equal((css.match(/^\.btn-soft\s*\{/gm) || []).length, 1, "one .btn-soft rule, so no other style overrides it");
   assert.match(css, /\.icon-close svg\s*\{/, "the × has its own size");
 });
+
+test("short phones: the name tag sits on the box's edge, the ring shrinks, and a box with no room starts folded", () => {
+  const css = fs.readFileSync(path.join(STATIC, "styles.css"), "utf8");
+  const mid = css.slice(css.indexOf("@media (max-width: 899px) and (max-height: 820px)"));
+  assert.ok(css.includes("@media (max-width: 899px) and (max-height: 820px)"), "a block for phones up to 820 px tall");
+  assert.match(mid, /\.app-today \.plate\s*\{[^}]*26dvh/, "a smaller ring under 820 px");
+  assert.match(mid, /\.coach-name\s*\{[^}]*position:\s*absolute/, "the name tag moves onto the edge, so the box is shorter");
+  const short = css.slice(css.indexOf("@media (max-width: 899px) and (max-height: 720px)"));
+  assert.match(short, /\.app-today \.plate\s*\{[^}]*22dvh/, "a smaller ring still under 720 px");
+  assert.match(css, /\.app-today \.zone-label, \.app-today \.goal-line\s*\{\s*white-space:\s*nowrap/, "the zone label stays on one line inside the smaller ring");
+  const js = fs.readFileSync(path.join(STATIC, "app.js"), "utf8");
+  assert.match(js, /bubbleFits\(/, "app.js checks the box fits before opening it");
+  const room = js.slice(js.indexOf("function bubbleHasRoom"), js.indexOf("}\n", js.indexOf("function bubbleHasRoom")));
+  assert.doesNotMatch(room, /localStorage/, "folding for lack of room is not saved as the user's own fold");
+});

@@ -111,8 +111,15 @@ the top and the tab bar. To make room on phones:
   element moves into the card and back. With no meals the button is hidden and the "Nothing
   logged" note shows. Wide screens keep the list beside the ring.
 
-- The ring is at most 30% of the screen height (25% when the screen is under 720 px tall), and
-  the text inside it scales with the ring.
+- The ring is at most 30% of the screen height (26% under 820 px tall, 22% under 720 px; revised
+  2026-11-09), and the text inside it scales with the ring and stays on one line (under 150 px the
+  zone dot goes; the ring's colour shows the zone).
+- Ollie's box never covers the macros (revised 2026-11-09). On phones it may span to the left
+  edge so lines wrap less, and the action link follows the end of the line. Under 820 px tall the
+  name tag sits on the box's top edge. Before a new line opens, app.js measures it in place
+  (`bubbleFits`: its top must clear the macros by 6 px); if it doesn't fit it starts folded. That
+  fold isn't saved, it opens by itself if room appears (web font loaded, screen turned), and once
+  the user taps Ollie the box always opens.
 - The breakfast / lunch / dinner legend is hidden: the meals list shows the same split.
 - The protein / carbs / fat boxes are tighter.
 - If something extra (the goal card) makes the top too tall, the page area scrolls as a fallback
