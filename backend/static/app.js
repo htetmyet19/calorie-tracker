@@ -305,7 +305,13 @@ let coachShortTimer = 0;
 let coachExtraTimer = 0;
 
 function showCoachMove() {
-  $("coach-ollie").dataset.action = coachShort || coachAction(coachMood, new Date().getHours());
+  const ollie = $("coach-ollie");
+  const action = coachShort || coachAction(coachMood, new Date().getHours());
+  if (ollie.dataset.action === action) return;
+  ollie.dataset.action = action;
+  ollie.classList.remove("o-pop");
+  void ollie.getBoundingClientRect(); // restart the pop
+  ollie.classList.add("o-pop");
 }
 
 function playCoachMove(action, ms) {
