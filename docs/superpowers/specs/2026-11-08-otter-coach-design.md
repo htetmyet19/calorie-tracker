@@ -57,8 +57,8 @@ Mockup: the "Ollie in the corner (3D look)" screen at the link above (approved).
   show message" (folded). The line is real text in a `role="status"` element.
 - Settings has a **Show coach** switch (default on), stored per device in `localStorage`.
 - 3D look: shaded fur, cream and paws (radial gradients lit from the top left), a shiny nose,
-  eyes and metal whistle, and a slow turn left and right in 3D. He stands on his own small
-  rounded card so he reads clearly over the meals list.
+  eyes and metal whistle, and a slow turn left and right in 3D. No background box: a thin dark
+  outline and a soft shadow keep him readable over the meals list.
 - The card refreshes whenever the day re-renders. The check-in "due" fact is fetched once per
   page load; if that request fails, rule 1 is skipped. Ollie shows only on today.
 
@@ -66,7 +66,10 @@ Mockup: the "Ollie in the corner (3D look)" screen at the link above (approved).
 
 Mockup: the "Ollie's moves (full body)" screen at the link above (approved). Ollie is drawn
 whole (head, body, arms, legs, tail) as parts that animate separately; the svg's `data-action`
-picks the move. Cute touches: hearts float up while he eats, a sweat drop while he works out,
+picks the move. Arms and legs have elbows and knees (shoulder → elbow → paw, hip → knee → foot),
+so he jogs with knees up and arms pumping, his elbows bend in push-ups with his paws on the
+floor, he holds the sushi in both paws, waves from the elbow and curves an arm over his head
+when stretching. His tail wags, jumps squash on landing, and switching moves gives a soft pop. Cute touches: hearts float up while he eats, a sweat drop while he works out,
 sparkles when he cheers. Reduced motion holds him still in the current pose.
 
 | Move | What he does | When |
