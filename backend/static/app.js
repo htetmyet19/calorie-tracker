@@ -295,18 +295,19 @@ function sayCoach(text, open) {
   }, typingMs(text, reducedMotion()));
 }
 
-// ---- What Ollie is doing: the day's main move, with short moves played over it ----
+// ---- What Ollie is doing: a mix of moves that fits the day, with short moves played over it ----
 const EAT_MS = 12000;    // after a meal is saved
-const EXTRA_MS = 5000;   // a random move now and then
 const CHEER_MS = 1400;   // on tap
 let coachMood = "happy";
+let coachTurn = Math.floor(Math.random() * 60); // where in the mix he is; a random start
 let coachShort = null;   // the short move playing now, if any
 let coachShortTimer = 0;
-let coachExtraTimer = 0;
+let coachMixTimer = 0;
 
 function showCoachMove() {
   const ollie = $("coach-ollie");
-  const action = coachShort || coachAction(coachMood, new Date().getHours());
+  const mix = coachPlaylist(coachMood, new Date().getHours());
+  const action = coachShort || mix[coachTurn % mix.length];
   if (ollie.dataset.action === action) return;
   ollie.dataset.action = action;
   ollie.classList.remove("o-pop");
@@ -321,17 +322,17 @@ function playCoachMove(action, ms) {
   coachShortTimer = setTimeout(() => { coachShort = null; showCoachMove(); }, ms);
 }
 
-// Every 15-20 s a short random move, unless Ollie is hidden, the page is in the background,
-// motion is reduced, or another short move is playing.
-function scheduleCoachExtra() {
-  clearTimeout(coachExtraTimer);
-  coachExtraTimer = setTimeout(() => {
+// Every 8-12 s the next move in the mix, unless Ollie is hidden, the page is in the background,
+// motion is reduced (he holds one pose then), or a short move is playing.
+function scheduleCoachMix() {
+  clearTimeout(coachMixTimer);
+  coachMixTimer = setTimeout(() => {
     if (!$("coach").hidden && !document.hidden && !reducedMotion() && !coachShort) {
-      const extra = extraAction(coachAction(coachMood, new Date().getHours()), Math.random());
-      if (extra) playCoachMove(extra, EXTRA_MS);
+      coachTurn += 1;
+      showCoachMove();
     }
-    scheduleCoachExtra();
-  }, 15000 + Math.random() * 5000);
+    scheduleCoachMix();
+  }, 8000 + Math.random() * 4000);
 }
 
 $("coach-otter").addEventListener("click", () => {
@@ -901,7 +902,7 @@ async function start() {
   $("goal").value = savedGoal;
   setDate(isoDate(new Date()));
   loadCheckinDue();
-  scheduleCoachExtra();
+  scheduleCoachMix();
 }
 
 initNav("today");

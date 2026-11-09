@@ -72,19 +72,22 @@ floor, he holds the sushi in both paws, waves from the elbow and curves an arm o
 when stretching. His tail wags, jumps squash on landing, and switching moves gives a soft pop. Cute touches: hearts float up while he eats, a sweat drop while he works out,
 sparkles when he cheers. Reduced motion holds him still in the current pose.
 
-| Move | What he does | When |
-|---|---|---|
-| `wave` | One arm up waving, big smile | Check-in day (beats everything) |
-| `sleep` | Curled up, breathing, z's | 22:00–05:00, or a morning with nothing logged |
-| `yoga` | Tree pose, palms together, eyes closed, slow sway | Over the goal (calm, never a telling-off), and on-track evenings from 19:00 |
-| `run` | Running on the spot, dust puffs, sweat drop | On track during the day |
-| `stretch` | Side stretches, one arm over his head | Near the goal, or nothing logged yet after 11:00 |
-| `eat` | Sits and eats a salmon nigiri, puffed cheeks, hearts | For 12 s after a meal is saved |
-| `cheer` | Arms up, quick hops, sparkles | For 1.4 s on each tap, before the next line |
-| `jacks`, `pushup`, plus `stretch`/`run` | Short random extras | Every 15–20 s, for 5 s, a different move from the main one; never while he sleeps, does yoga or waves; skipped when the page is in the background or motion is reduced |
+He goes through a mix of moves that fits the day (revised 2026-11-09: one main move made him
+run most of an on-track day). `coachPlaylist(mood, hour)` gives the mix; app.js shows each move for
+8–12 s and starts at a random point. The mix doesn't advance in the background or with reduced
+motion (he holds one pose then).
 
-`coachAction(mood, hour)` picks the main move and `extraAction(main, rand)` the extra
-(`static/coach.js`, tested).
+| Situation | Mix |
+|---|---|
+| Check-in day (beats everything) | wave, stretch, wave, jumping jacks |
+| 22:00–05:00, or a morning with nothing logged | sleep |
+| Over the goal (calm, never a telling-off) | yoga, stretch |
+| On track, daytime | run, stretch, jumping jacks, yoga, push-ups |
+| On track, from 19:00 | yoga, stretch |
+| Near the goal, or nothing logged yet after 11:00 | stretch, run, yoga, jumping jacks |
+
+Played over the mix: `eat` (a salmon nigiri, puffed cheeks, hearts) for 12 s after a meal is
+saved, and `cheer` (arms up, hops, sparkles) for 1.4 s on each tap.
 
 ## Today fits the phone screen
 
@@ -107,7 +110,7 @@ Wide screens keep the two-column layout.
   `coachMessage({ total, goal, goalType, mealCount, hour, checkinDue, dayOfMonth, flip })`
   → `{ mood, text, action }` where `action` is `null` or `{ label, href }`.
   Copy lives here as constants.
-- `static/coach.js` also has `typingMs`, `bubbleStartsOpen`, `coachAction`, `extraAction` and
+- `static/coach.js` also has `typingMs`, `bubbleStartsOpen`, `coachPlaylist` and
   `ACTIONS`.
 - `static/index.html`: the corner markup with the full-body otter SVG; `coach.js?v=2` loads
   before `app.js`.
