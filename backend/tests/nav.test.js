@@ -135,7 +135,7 @@ test("Settings, Close and Log out are modern icon buttons with spoken names", ()
   assert.match(src, /open\.innerHTML = `<svg class="gear"/);
   assert.doesNotMatch(src, /open\.textContent = "Settings"/, "no plain text link any more");
   // Close: a round ×
-  assert.match(src, /<button class="icon-round" type="button" id="settings-close" aria-label="Close settings">/);
+  assert.match(src, /<button class="icon-round icon-close" type="button" id="settings-close" aria-label="Close settings">/);
   // Log out: soft red, exit icon, second tap confirms
   assert.match(src, /<button class="btn settings-logout" type="button" id="logout">\s*<svg/);
   assert.match(src, /Tap again to log out/);
