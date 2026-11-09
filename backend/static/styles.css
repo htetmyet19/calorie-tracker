@@ -1169,37 +1169,23 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
   pointer-events: auto;
   position: relative;
   flex: none;
-  width: 84px;
-  height: 96px;
+  width: 104px;
+  height: 98px;
   padding: 0;
-  border: 0;
-  border-radius: 20px;
-  background: none;
+  /* His own little stage, so he stands out from the meals list behind him */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 28px;
+  background: radial-gradient(120% 90% at 50% 100%, #233039, var(--surface) 70%);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4);
   cursor: pointer;
   perspective: 420px;
 }
 .coach-otter:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.coach-float { position: absolute; inset: 0 0 6px; display: block; transform-style: preserve-3d; }
+.coach-float { position: absolute; inset: 4px 2px 0; display: block; transform-style: preserve-3d; }
 .coach-otter svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.45)); }
-.coach-shadow {
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: 0;
-  height: 10px;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0));
-}
 /* Folded: a soft ring pulses around Ollie to say there's a message. */
 .coach-pulse { position: absolute; inset: 14px 8px 10px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; }
 .coach[data-open="false"] .coach-pulse { animation: coach-pulse 1.8s ease-out infinite; }
-/* Each otter part lists the moods it shows in. */
-.coach [data-show] { display: none; }
-.coach[data-mood="happy"] [data-show~="happy"],
-.coach[data-mood="open"] [data-show~="open"],
-.coach[data-mood="calm"] [data-show~="calm"],
-.coach[data-mood="sleepy"] [data-show~="sleepy"],
-.coach[data-mood="wave"] [data-show~="wave"] { display: inline; }
 .coach-bubble {
   pointer-events: auto;
   position: relative;
@@ -1237,50 +1223,10 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 /* Room for the last meal to scroll out from under Ollie on wide screens. */
 .app-today .layout { padding-bottom: 150px; }
 /* The 3D look: Ollie slowly turns while he floats, and his shadow shrinks as he rises. */
-.coach-float { animation: coach-float 4.2s ease-in-out infinite; }
-.coach-shadow { animation: coach-shadow 4.2s ease-in-out infinite; }
-@keyframes coach-float {
-  0%, 100% { transform: translateY(0) rotateY(-14deg) rotateX(4deg); }
-  50% { transform: translateY(-6px) rotateY(14deg) rotateX(-2deg); }
-}
-@keyframes coach-shadow { 0%, 100% { transform: scale(1); opacity: 0.55; } 50% { transform: scale(0.82); opacity: 0.35; } }
+/* The 3D look: he slowly turns a little left and right while he does his moves. */
+.coach-float { animation: coach-float 6s ease-in-out infinite; }
+@keyframes coach-float { 0%, 100% { transform: rotateY(-12deg); } 50% { transform: rotateY(12deg); } }
 @keyframes coach-pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(1.35); opacity: 0; } }
-/* Ollie's motion. The whole otter (.otter-bob) moves by mood; parts animate on their own. */
-.otter-bob { transform-box: view-box; transform-origin: 60px 130px; animation: otter-bob 2.8s ease-in-out infinite; }
-.coach[data-mood="happy"] .otter-bob { animation: otter-hop 2.6s ease-in-out infinite; }
-.coach[data-mood="sleepy"] .otter-bob { animation: otter-sway 4.5s ease-in-out infinite; }
-.coach[data-mood="calm"] .otter-bob { animation: otter-breathe 4s ease-in-out infinite; }
-.otter-wave { transform-box: view-box; transform-origin: 78px 92px; animation: otter-wave 0.9s ease-in-out infinite; }
-.otter-eyes { transform-box: fill-box; transform-origin: center; animation: otter-blink 4.6s infinite; }
-.otter-z { transform-box: fill-box; transform-origin: center; animation: otter-z 2.6s ease-out infinite; }
-.otter-whistle { transform-box: fill-box; transform-origin: center; }
-.coach-otter svg { transform-origin: 50% 100%; }
-.coach-otter.is-tapped svg { animation: otter-tap 0.55s cubic-bezier(0.3, 1.6, 0.5, 1); }
-.coach-otter.is-tapped .otter-whistle { animation: otter-spin 0.55s ease-out; }
-
-@keyframes otter-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-@keyframes otter-hop {
-  0%, 60%, 100% { transform: translateY(0) scale(1, 1); }
-  66% { transform: translateY(0) scale(1.06, 0.94); }
-  76% { transform: translateY(-9px) scale(0.97, 1.04); }
-  86% { transform: translateY(0) scale(1.04, 0.96); }
-}
-@keyframes otter-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
-@keyframes otter-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025); } }
-@keyframes otter-wave { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-18deg); } }
-@keyframes otter-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
-@keyframes otter-z {
-  0% { transform: translate(0, 4px) scale(0.7); opacity: 0; }
-  30% { opacity: 1; }
-  100% { transform: translate(6px, -10px) scale(1.15); opacity: 0; }
-}
-@keyframes otter-tap {
-  0% { transform: scale(1, 1); }
-  25% { transform: scale(1.12, 0.86); }
-  55% { transform: translateY(-10px) scale(0.94, 1.08); }
-  100% { transform: translateY(0) scale(1, 1); }
-}
-@keyframes otter-spin { to { transform: rotate(360deg); } }
 
 /* The bubble pops in from Ollie's side, shows typing dots, then the text fades in. */
 .coach-bubble { transform-origin: 100% 100%; }
@@ -1301,14 +1247,162 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 @keyframes text-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .otter-bob, .coach[data-mood] .otter-bob, .otter-wave, .otter-eyes, .otter-z,
-  .coach-otter.is-tapped svg, .coach-otter.is-tapped .otter-whistle,
   .coach-bubble.is-pop, .coach-typing i, .coach-text, .coach-action:not([hidden]),
-  .coach-float, .coach-shadow, .coach[data-open="false"] .coach-pulse { animation: none; }
+  .coach-float, .coach[data-open="false"] .coach-pulse { animation: none; }
   .coach[data-open="false"] .coach-pulse { opacity: 0.6; }
 }
 .settings-coach { margin-top: 18px; }
 .settings-coach .hint { margin: 8px 0 0; }
+
+/* ---------- Full-body Ollie (coach.js ACTIONS). Still, in his pose, under reduced motion. ---------- */
+/* Full-body Ollie. data-action on the svg picks the pose and its loop:
+   run | jacks | pushup | sleep | eat */
+.ollie .pose { display: none; }
+.ollie[data-action="run"] .pose-stand,
+.ollie[data-action="jacks"] .pose-stand,
+.ollie[data-action="yoga"] .pose-stand,
+.ollie[data-action="stretch"] .pose-stand,
+.ollie[data-action="wave"] .pose-stand,
+.ollie[data-action="cheer"] .pose-stand,
+.ollie[data-action="pushup"] .pose-pushup,
+.ollie[data-action="sleep"] .pose-sleep,
+.ollie[data-action="eat"] .pose-eat { display: inline; }
+
+/* Rest angles; each action animates from here */
+.o-arm-l { transform: rotate(12deg); }
+.o-arm-r { transform: rotate(-12deg); }
+.o-dust { opacity: 0; }
+
+/* Blinking (open eyes) */
+.o-blink { transform-box: fill-box; transform-origin: center; animation: o-blink 4.6s infinite; }
+@keyframes o-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+
+/* Run: legs and arms swing in opposition, body bobs, dust puffs behind */
+.ollie[data-action="run"] .o-body { animation: o-bob 0.25s ease-in-out infinite alternate; }
+.ollie[data-action="run"] .o-leg-l { animation: o-swing 0.5s ease-in-out infinite alternate; }
+.ollie[data-action="run"] .o-leg-r { animation: o-swing 0.5s ease-in-out infinite alternate-reverse; }
+.ollie[data-action="run"] .o-arm-l { animation: o-arm-l-swing 0.5s ease-in-out infinite alternate; }
+.ollie[data-action="run"] .o-arm-r { animation: o-arm-r-swing 0.5s ease-in-out infinite alternate; }
+.ollie[data-action="run"] .o-dust { opacity: 1; }
+.ollie[data-action="run"] .o-dust circle { transform-box: fill-box; transform-origin: center; animation: o-dust 0.5s ease-out infinite; }
+.ollie[data-action="run"] .o-dust .d2 { animation-delay: 0.15s; }
+.ollie[data-action="run"] .o-dust .d3 { animation-delay: 0.3s; }
+@keyframes o-bob { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+@keyframes o-swing { from { transform: rotate(35deg); } to { transform: rotate(-35deg); } }
+/* Out on one side while in on the other, so the arms pump in opposition */
+@keyframes o-arm-l-swing { from { transform: rotate(40deg); } to { transform: rotate(-10deg); } }
+@keyframes o-arm-r-swing { from { transform: rotate(10deg); } to { transform: rotate(-40deg); } }
+@keyframes o-dust { 0% { transform: translateX(0) scale(0.4); opacity: 0.8; } 100% { transform: translateX(-10px) scale(1.4); opacity: 0; } }
+
+/* Jumping jacks: arms up and out, legs apart, a little hop */
+.ollie[data-action="jacks"] .o-body { animation: o-jump 0.9s ease-in-out infinite; }
+.ollie[data-action="jacks"] .o-arm-l { animation: o-jack-arm-l 0.9s ease-in-out infinite; }
+.ollie[data-action="jacks"] .o-arm-r { animation: o-jack-arm-r 0.9s ease-in-out infinite; }
+.ollie[data-action="jacks"] .o-leg-l { animation: o-jack-leg-l 0.9s ease-in-out infinite; }
+.ollie[data-action="jacks"] .o-leg-r { animation: o-jack-leg-r 0.9s ease-in-out infinite; }
+@keyframes o-jump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes o-jack-arm-l { 0%, 100% { transform: rotate(14deg); } 50% { transform: rotate(155deg); } }
+@keyframes o-jack-arm-r { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(-155deg); } }
+@keyframes o-jack-leg-l { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(24deg); } }
+@keyframes o-jack-leg-r { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-24deg); } }
+
+/* Faces on the standing pose: open and puffing for workouts, eyes closed for yoga, a big
+   happy smile for waving and cheering */
+.o-face-calm, .o-face-happy { display: none; }
+.ollie[data-action="yoga"] .o-face-open,
+.ollie[data-action="wave"] .o-face-open,
+.ollie[data-action="cheer"] .o-face-open { display: none; }
+.ollie[data-action="yoga"] .o-face-calm,
+.ollie[data-action="wave"] .o-face-happy,
+.ollie[data-action="cheer"] .o-face-happy { display: inline; }
+
+/* Cute extras: a sweat drop while working out, hearts while eating, sparkles for a cheer */
+.o-sweat, .o-hearts, .o-sparkles { opacity: 0; }
+.o-sweat use, .o-hearts use, .o-sparkles use { transform-box: fill-box; transform-origin: center; }
+.ollie[data-action="run"] .o-sweat, .ollie[data-action="jacks"] .o-sweat,
+.ollie[data-action="pushup"] .o-sweat { opacity: 1; }
+.ollie[data-action="run"] .o-sweat use, .ollie[data-action="jacks"] .o-sweat use,
+.ollie[data-action="pushup"] .o-sweat use { animation: o-sweat 1.4s ease-in infinite; }
+.ollie[data-action="eat"] .o-hearts { opacity: 1; }
+.ollie[data-action="eat"] .o-hearts use { animation: o-heart 2s ease-out infinite; }
+.ollie[data-action="eat"] .o-hearts .h2 { animation-delay: 0.3s; }
+.ollie[data-action="cheer"] .o-sparkles { opacity: 1; }
+.ollie[data-action="cheer"] .o-sparkles use { animation: o-twinkle 0.7s ease-in-out infinite alternate; }
+.ollie[data-action="cheer"] .o-sparkles .s2 { animation-delay: 0.2s; }
+.ollie[data-action="cheer"] .o-sparkles .s3 { animation-delay: 0.4s; }
+.ollie[data-action="cheer"] .o-sparkles .s4 { animation-delay: 0.1s; }
+@keyframes o-sweat { 0% { transform: translateY(-2px) scale(0.6); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(9px) scale(1); opacity: 0; } }
+@keyframes o-heart { 0%, 40% { transform: translateY(4px) scale(0.4); opacity: 0; } 55% { opacity: 1; } 100% { transform: translateY(-10px) scale(1.1); opacity: 0; } }
+@keyframes o-twinkle { from { transform: scale(0.4) rotate(0deg); opacity: 0.4; } to { transform: scale(1.2) rotate(45deg); opacity: 1; } }
+
+/* Wave (check-in day): one arm up, waving */
+.ollie[data-action="wave"] .o-arm-r { animation: o-wave 0.8s ease-in-out infinite alternate; }
+.ollie[data-action="wave"] .o-body { animation: o-bob 1.2s ease-in-out infinite alternate; }
+@keyframes o-wave { from { transform: rotate(-150deg); } to { transform: rotate(-118deg); } }
+
+/* Cheer (on tap): both arms up, wiggling, quick hops */
+.ollie[data-action="cheer"] .o-body { animation: o-hop 0.35s ease-out infinite alternate; }
+.ollie[data-action="cheer"] .o-arm-l { animation: o-cheer-l 0.35s ease-in-out infinite alternate; }
+.ollie[data-action="cheer"] .o-arm-r { animation: o-cheer-r 0.35s ease-in-out infinite alternate; }
+@keyframes o-hop { from { transform: translateY(0); } to { transform: translateY(-7px); } }
+@keyframes o-cheer-l { from { transform: rotate(140deg); } to { transform: rotate(160deg); } }
+@keyframes o-cheer-r { from { transform: rotate(-140deg); } to { transform: rotate(-160deg); } }
+
+/* Yoga, tree pose: on one leg, the other foot at the knee, palms together at the chest, a slow sway */
+.o-body { transform-origin: 0 138px; }
+.ollie[data-action="yoga"] .o-arm-l { transform: rotate(-62deg); }
+.ollie[data-action="yoga"] .o-arm-r { transform: rotate(62deg); }
+.ollie[data-action="yoga"] .o-leg-r { transform: rotate(62deg) translate(-2px, -3px); }
+.ollie[data-action="yoga"] .o-body { animation: o-yoga 4s ease-in-out infinite; }
+@keyframes o-yoga { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+
+/* Stretching: lean to one side with the other arm over the head, then the other side */
+.ollie[data-action="stretch"] .o-leg-l { transform: rotate(8deg); }
+.ollie[data-action="stretch"] .o-leg-r { transform: rotate(-8deg); }
+.ollie[data-action="stretch"] .o-body { animation: o-stretch 4.4s ease-in-out infinite; }
+.ollie[data-action="stretch"] .o-arm-l { animation: o-stretch-arm-l 4.4s ease-in-out infinite; }
+.ollie[data-action="stretch"] .o-arm-r { animation: o-stretch-arm-r 4.4s ease-in-out infinite; }
+@keyframes o-stretch { 0%, 8%, 50%, 58%, 100% { transform: rotate(0deg); } 22%, 40% { transform: rotate(-12deg); } 72%, 90% { transform: rotate(12deg); } }
+@keyframes o-stretch-arm-l { 0%, 50%, 100% { transform: rotate(12deg); } 58%, 92% { transform: rotate(165deg); } }
+@keyframes o-stretch-arm-r { 0%, 8%, 50%, 100% { transform: rotate(-12deg); } 16%, 42% { transform: rotate(-165deg); } }
+
+/* Push-ups: the body pivots on the feet and the arms bend */
+.o-pu-body { transform-origin: 42px 138px; }
+.o-pu-arm { transform-origin: 0 22px; }
+.ollie[data-action="pushup"] .o-pu-body { animation: o-pu-body 1.2s ease-in-out infinite; }
+.ollie[data-action="pushup"] .o-pu-arm { animation: o-pu-arm 1.2s ease-in-out infinite; }
+@keyframes o-pu-body { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(8deg); } }
+@keyframes o-pu-arm { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.55); } }
+
+/* Sleep: slow breathing, z's float up */
+.ollie[data-action="sleep"] .o-breathe { animation: o-breathe 3.2s ease-in-out infinite; }
+.o-zzz text { transform-box: fill-box; transform-origin: center; opacity: 0; }
+.ollie[data-action="sleep"] .o-zzz text { animation: o-z 3s ease-out infinite; }
+.ollie[data-action="sleep"] .o-zzz .z2 { animation-delay: 1s; }
+.ollie[data-action="sleep"] .o-zzz .z3 { animation-delay: 2s; }
+@keyframes o-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05, 1.08); } }
+@keyframes o-z { 0% { transform: translate(-6px, 8px) scale(0.6); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(4px, -8px) scale(1.1); opacity: 0; } }
+
+/* Eating: lift the apple to the mouth, chew with puffed cheeks, lower it */
+.o-eat-arm-l { transform: rotate(-55deg); }
+.o-eat-arm-r { transform: rotate(55deg); }
+.o-chew, .o-puff { transform-box: fill-box; transform-origin: center; }
+.ollie[data-action="eat"] .o-eat-arm-l { animation: o-eat-arm-l 2s ease-in-out infinite; }
+.ollie[data-action="eat"] .o-eat-arm-r { animation: o-eat-arm-r 2s ease-in-out infinite; }
+.ollie[data-action="eat"] .o-food { animation: o-food 2s ease-in-out infinite; }
+.ollie[data-action="eat"] .o-chew { animation: o-chew 2s ease-in-out infinite; }
+.ollie[data-action="eat"] .o-puff { animation: o-puff 2s ease-in-out infinite; }
+.ollie[data-action="eat"] .o-eat-head { animation: o-nod 2s ease-in-out infinite; }
+@keyframes o-eat-arm-l { 0%, 15%, 85%, 100% { transform: rotate(-55deg); } 35%, 65% { transform: rotate(-95deg); } }
+@keyframes o-eat-arm-r { 0%, 15%, 85%, 100% { transform: rotate(55deg); } 35%, 65% { transform: rotate(95deg); } }
+@keyframes o-food { 0%, 15%, 85%, 100% { transform: translateY(0); } 35%, 65% { transform: translateY(-13px); } }
+@keyframes o-chew { 0%, 35%, 100% { transform: scaleY(1); } 42%, 56% { transform: scaleY(0.3); } 49%, 63% { transform: scaleY(1.2); } }
+@keyframes o-puff { 0%, 35%, 75%, 100% { transform: scale(1); } 45%, 65% { transform: scale(1.35); } }
+@keyframes o-nod { 0%, 30%, 70%, 100% { transform: translateY(0); } 45%, 60% { transform: translateY(2px); } }
+
+/* The move rules above are more specific than a plain reset, so reduced motion needs !important
+   to hold Ollie still in his pose. */
+@media (prefers-reduced-motion: reduce) { .ollie * { animation: none !important; } }
 
 /* ---------- Today on phones: one screen, no page scroll ----------
    The page fits between the top and the tab bar; the ring shrinks on short screens and only the

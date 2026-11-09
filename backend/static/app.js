@@ -254,6 +254,8 @@ function renderCoach() {
     dayOfMonth: now.getDate(), flip: coachFlip,
   });
   card.dataset.mood = msg.mood;
+  coachMood = msg.mood;
+  showCoachMove();
   const action = $("coach-action");
   if (msg.action) { action.textContent = msg.action.label; action.href = msg.action.href; }
   coachHasAction = !!msg.action;
@@ -293,11 +295,41 @@ function sayCoach(text, open) {
   }, typingMs(text, reducedMotion()));
 }
 
+// ---- What Ollie is doing: the day's main move, with short moves played over it ----
+const EAT_MS = 12000;    // after a meal is saved
+const EXTRA_MS = 5000;   // a random move now and then
+const CHEER_MS = 1400;   // on tap
+let coachMood = "happy";
+let coachShort = null;   // the short move playing now, if any
+let coachShortTimer = 0;
+let coachExtraTimer = 0;
+
+function showCoachMove() {
+  $("coach-ollie").dataset.action = coachShort || coachAction(coachMood, new Date().getHours());
+}
+
+function playCoachMove(action, ms) {
+  clearTimeout(coachShortTimer);
+  coachShort = action;
+  showCoachMove();
+  coachShortTimer = setTimeout(() => { coachShort = null; showCoachMove(); }, ms);
+}
+
+// Every 15-20 s a short random move, unless Ollie is hidden, the page is in the background,
+// motion is reduced, or another short move is playing.
+function scheduleCoachExtra() {
+  clearTimeout(coachExtraTimer);
+  coachExtraTimer = setTimeout(() => {
+    if (!$("coach").hidden && !document.hidden && !reducedMotion() && !coachShort) {
+      const extra = extraAction(coachAction(coachMood, new Date().getHours()), Math.random());
+      if (extra) playCoachMove(extra, EXTRA_MS);
+    }
+    scheduleCoachExtra();
+  }, 15000 + Math.random() * 5000);
+}
+
 $("coach-otter").addEventListener("click", () => {
-  const otter = $("coach-otter");
-  otter.classList.remove("is-tapped");
-  void otter.offsetWidth; // restart the bounce on quick repeat taps
-  otter.classList.add("is-tapped");
+  playCoachMove("cheer", CHEER_MS);
   if ($("coach").dataset.open !== "true") {
     try { localStorage.removeItem(COACH_FOLD_KEY); } catch (e) { /* blocked */ }
     sayCoach(coachLine, true); // folded: bring the same line back
@@ -305,9 +337,6 @@ $("coach-otter").addEventListener("click", () => {
   }
   coachFlip = !coachFlip;
   renderCoach();
-});
-$("coach-otter").addEventListener("animationend", (e) => {
-  if (e.animationName === "otter-tap") $("coach-otter").classList.remove("is-tapped");
 });
 $("coach-fold").addEventListener("click", () => {
   try { localStorage.setItem(COACH_FOLD_KEY, JSON.stringify({ date: isoDate(new Date()), text: coachLine })); } catch (e) { /* blocked */ }
@@ -786,6 +815,7 @@ $("save").addEventListener("click", async () => {
     data = await res.json();
     if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Couldn't save the meal. Check the numbers and try again.");
     justSavedId = data.id;
+    playCoachMove("eat", EAT_MS); // Ollie has a bite too
     resetLogger();
     $("log-sheet").close(); // the saved message below goes to the page
     setStatus(`Saved ${MEAL_LABEL[meal_type].toLowerCase()}, ${fmt(data.total_calories)} kcal.`);
@@ -865,6 +895,7 @@ async function start() {
   $("goal").value = savedGoal;
   setDate(isoDate(new Date()));
   loadCheckinDue();
+  scheduleCoachExtra();
 }
 
 initNav("today");

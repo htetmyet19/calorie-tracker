@@ -58,7 +58,7 @@ Take a photo or pick one from the gallery. A vision model names each food, estim
 #### 🍩 Your day at a glance
 A ring shows calories eaten against your goal as a gradient that runs from green through yellow to red past the goal, so the tip shows where you are. Under the number, the zone is named: green while there's room (under 85%), yellow near the goal, red once over it. Weight-gain goals stay green up to 110% and turn red only past 125%. The zone is also named in words. The split into breakfast, lunch, dinner and snacks is listed below the ring, with protein, carbs and fat.
 
-Under the ring, Coach Ollie (an otter) says one short thing about today: check-in day, a nudge to log the first meal, or how much room is left, worded for your goal and never shaming when you're over. The lines are fixed copy picked by rules, not AI. He floats in the bottom-right corner with a 3D look; his bubble opens for each new line and × folds it away (tap him to open it again or to get another line). Settings › Show coach turns him off on that device. On phones the Today page fits one screen: only the meals list scrolls. It shows only on today, not past days.
+Under the ring, Coach Ollie (an otter) says one short thing about today: check-in day, a nudge to log the first meal, or how much room is left, worded for your goal and never shaming when you're over. The lines are fixed copy picked by rules, not AI. He lives in the bottom-right corner as a full-body otter who matches your day: running when you're on track, yoga when you're over (calm, never a telling-off), sleeping at night, waving on check-in day, eating sushi right after you log a meal, with a random push-up, jumping-jack or stretch break now and then. A tap makes him cheer; his bubble opens for each new line and × folds it away (tap him to open it again or to get another line). Settings › Show coach turns him off on that device. On phones the Today page fits one screen: only the meals list scrolls. It shows only on today, not past days.
 
 </td>
 <td width="33%" valign="top">
@@ -161,7 +161,7 @@ If the main Gemini model is overloaded or out of quota, the backend retries and 
 - **Private photo buckets.** Photos are stored per user and served only through signed access.
 - **The service-role key never reaches the browser.** Only the daily job (`app/cron.py`) may read it, and a unit test enforces that.
 - **Data minimisation.** No phone number, national ID or location is collected.
-- **Tested at two layers.** 389 unit tests and 130 frontend tests run without a database; 81 integration tests run against a real local Supabase and check that one user cannot read another's data.
+- **Tested at two layers.** 389 unit tests and 133 frontend tests run without a database; 81 integration tests run against a real local Supabase and check that one user cannot read another's data.
 
 ## 🚀 Run it locally
 

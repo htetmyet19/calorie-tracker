@@ -57,10 +57,31 @@ Mockup: the "Ollie in the corner (3D look)" screen at the link above (approved).
   show message" (folded). The line is real text in a `role="status"` element.
 - Settings has a **Show coach** switch (default on), stored per device in `localStorage`.
 - 3D look: shaded fur, cream and paws (radial gradients lit from the top left), a shiny nose,
-  eyes and metal whistle, a drop shadow, and a slow float that turns him left and right in 3D
-  while his ground shadow shrinks as he rises.
+  eyes and metal whistle, and a slow turn left and right in 3D. He stands on his own small
+  rounded card so he reads clearly over the meals list.
 - The card refreshes whenever the day re-renders. The check-in "due" fact is fetched once per
   page load; if that request fails, rule 1 is skipped. Ollie shows only on today.
+
+## Full-body Ollie and his moves (revised 2026-11-09)
+
+Mockup: the "Ollie's moves (full body)" screen at the link above (approved). Ollie is drawn
+whole (head, body, arms, legs, tail) as parts that animate separately; the svg's `data-action`
+picks the move. Cute touches: hearts float up while he eats, a sweat drop while he works out,
+sparkles when he cheers. Reduced motion holds him still in the current pose.
+
+| Move | What he does | When |
+|---|---|---|
+| `wave` | One arm up waving, big smile | Check-in day (beats everything) |
+| `sleep` | Curled up, breathing, z's | 22:00–05:00, or a morning with nothing logged |
+| `yoga` | Tree pose, palms together, eyes closed, slow sway | Over the goal (calm, never a telling-off), and on-track evenings from 19:00 |
+| `run` | Running on the spot, dust puffs, sweat drop | On track during the day |
+| `stretch` | Side stretches, one arm over his head | Near the goal, or nothing logged yet after 11:00 |
+| `eat` | Sits and eats a salmon nigiri, puffed cheeks, hearts | For 12 s after a meal is saved |
+| `cheer` | Arms up, quick hops, sparkles | For 1.4 s on each tap, before the next line |
+| `jacks`, `pushup`, plus `stretch`/`run` | Short random extras | Every 15–20 s, for 5 s, a different move from the main one; never while he sleeps, does yoga or waves; skipped when the page is in the background or motion is reduced |
+
+`coachAction(mood, hour)` picks the main move and `extraAction(main, rand)` the extra
+(`static/coach.js`, tested).
 
 ## Today fits the phone screen
 
@@ -83,17 +104,21 @@ Wide screens keep the two-column layout.
   `coachMessage({ total, goal, goalType, mealCount, hour, checkinDue, dayOfMonth, flip })`
   → `{ mood, text, action }` where `action` is `null` or `{ label, href }`.
   Copy lives here as constants.
-- `static/index.html`: the card markup with the otter SVG; `coach.js?v=2` loads before `app.js`.
+- `static/coach.js` also has `typingMs`, `bubbleStartsOpen`, `coachAction`, `extraAction` and
+  `ACTIONS`.
+- `static/index.html`: the corner markup with the full-body otter SVG; `coach.js?v=2` loads
+  before `app.js`.
 - `static/app.js`: gathers the facts, renders the card, wires the tap, ×, and the
   hidden/off checks.
 - `static/nav.js`: the Show coach switch.
-- `static/styles.css`: card, bubble, moods (shown/hidden SVG parts by `data-mood`), motion.
+- `static/styles.css`: the corner, the bubble, and each move (`.ollie[data-action=…]`).
 
 ## Testing
 
 - `tests/coach.test.js`: every rule row above, rule order (check-in beats no-meals beats zones),
   gain vs lose wording, `{left}` formatting, variant by day and by tap.
-- `tests/pages.test.js`: the card exists in `index.html` with the button label, status bubble
-  and hide button; `coach.js` is loaded before `app.js`.
+- `tests/coach.test.js` also covers the main move for each mood and hour, and the random extras.
+- `tests/pages.test.js`: the corner markup (button label, status bubble, fold button), script
+  order, the phone layout, and a pose and style rule for every move in `ACTIONS`.
 - Manual check at phone size on the local app: each mood renders, × hides until tomorrow, the
   switch turns it off, nothing shows on past days.

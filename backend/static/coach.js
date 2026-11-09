@@ -49,4 +49,29 @@ function bubbleStartsOpen(text, folded, today) {
   return !(folded && folded.date === today && folded.text === text);
 }
 
-if (typeof module !== "undefined") module.exports = { coachMessage, COACH_LINES, typingMs, bubbleStartsOpen };
+// ---------- What Ollie is doing ----------
+// Every move the full-body drawing has (index.html .ollie, data-action).
+const ACTIONS = ["run", "jacks", "pushup", "sleep", "eat", "yoga", "stretch", "wave", "cheer"];
+const NIGHT_FROM = 22, NIGHT_TO = 5, EVENING_FROM = 19;
+const EXTRAS = ["jacks", "pushup", "stretch", "run"];
+
+// The main move for the day's mood (from coachMessage) and the local hour.
+function coachAction(mood, hour) {
+  if (mood === "wave") return "wave";                        // check-in day
+  if (hour >= NIGHT_FROM || hour < NIGHT_TO) return "sleep";
+  if (mood === "sleepy") return "sleep";                     // morning, nothing logged
+  if (mood === "calm") return "yoga";                        // over the goal: calm, never a telling-off
+  if (mood === "happy") return hour >= EVENING_FROM ? "yoga" : "run";
+  return "stretch";                                          // near the goal, or nothing logged yet
+}
+
+// A short random move now and then (rand in [0, 1)); none while sleeping, calm or waving.
+function extraAction(main, rand) {
+  if (main === "sleep" || main === "yoga" || main === "wave") return null;
+  const pool = EXTRAS.filter((a) => a !== main);
+  return pool[Math.min(pool.length - 1, Math.floor(rand * pool.length))];
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { coachMessage, COACH_LINES, typingMs, bubbleStartsOpen, coachAction, extraAction, ACTIONS };
+}
