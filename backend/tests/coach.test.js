@@ -1,7 +1,7 @@
 // Run from backend/: node --test "tests/*.test.js"
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { coachMessage, COACH_LINES, typingMs, bubbleStartsOpen } = require("../static/coach.js");
+const { coachMessage, COACH_LINES, typingMs, bubbleStartsOpen, coachAction, extraAction, ACTIONS } = require("../static/coach.js");
 
 // A day with an even day of month shows variant A first.
 const base = { total: 1240, goal: 1800, goalType: "lose", mealCount: 2, hour: 14, checkinDue: false, dayOfMonth: 8, flip: false };
@@ -65,4 +65,27 @@ test("the bubble opens for a new line, but a line folded away today stays folded
   assert.equal(bubbleStartsOpen("180 kcal left. Fruit or yogurt fits nicely.", folded, "2026-11-08"), true);
   assert.equal(bubbleStartsOpen("560 kcal left. Nice pace!", folded, "2026-11-09"), true);
   assert.equal(bubbleStartsOpen("560 kcal left. Nice pace!", null, "2026-11-08"), true);
+});
+
+test("Ollie's main move follows the day", () => {
+  assert.equal(coachAction("wave", 23), "wave", "check-in day waves, even late");
+  assert.equal(coachAction("happy", 23), "sleep", "late at night he sleeps");
+  assert.equal(coachAction("happy", 4), "sleep");
+  assert.equal(coachAction("sleepy", 9), "sleep", "morning with nothing logged");
+  assert.equal(coachAction("calm", 14), "yoga", "over the goal: calm yoga, never a telling-off");
+  assert.equal(coachAction("happy", 14), "run", "on track: running");
+  assert.equal(coachAction("happy", 20), "yoga", "evening wind-down");
+  assert.equal(coachAction("open", 14), "stretch", "near the goal or nothing logged yet");
+});
+
+test("a random extra move now and then, never while sleeping, calm or waving", () => {
+  for (const main of ["sleep", "yoga", "wave"]) assert.equal(extraAction(main, 0.5), null, main);
+  const seen = new Set();
+  for (let r = 0; r < 1; r += 0.05) {
+    const extra = extraAction("run", r);
+    assert.notEqual(extra, "run", "a different move from the main one");
+    seen.add(extra);
+  }
+  assert.deepEqual([...seen].sort(), ["jacks", "pushup", "stretch"]);
+  assert.ok(ACTIONS.includes("cheer") && ACTIONS.includes("eat"));
 });

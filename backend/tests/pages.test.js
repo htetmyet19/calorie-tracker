@@ -63,3 +63,13 @@ test("on phones the Today page fits the screen: only the meals list scrolls, and
   assert.match(phone, /\.app-today \.meals-section\s*\{[^}]*overflow-y:\s*auto/);
   assert.match(css, /\.coach\s*\{[^}]*position:\s*fixed/);
 });
+
+test("full-body Ollie: every move in coach.js has a pose in the page and a rule in the styles", () => {
+  const { ACTIONS } = require("../static/coach.js");
+  const html = fs.readFileSync(path.join(STATIC, "index.html"), "utf8");
+  assert.match(html, /<svg class="ollie" id="coach-ollie" data-action="[a-z]+"/);
+  for (const pose of ["pose-stand", "pose-pushup", "pose-sleep", "pose-eat"]) assert.ok(html.includes(`class="pose ${pose}"`), pose);
+  const css = fs.readFileSync(path.join(STATIC, "styles.css"), "utf8");
+  for (const a of ACTIONS) assert.match(css, new RegExp(`\\.ollie\\[data-action="${a}"\\] \\.pose-`), a);
+  assert.match(css, /prefers-reduced-motion: reduce\) \{ \.ollie \* \{ animation: none !important; \} \}/);
+});
