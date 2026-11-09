@@ -132,7 +132,7 @@ test("phones: the meals list hides behind a summary button that opens a slide-up
   assert.match(js, /mealSummary\(/);
 });
 
-test("every Close is a round × button with a spoken name, and every Cancel is a modern outlined button", () => {
+test("every Close and Cancel is a round × button with a spoken name", () => {
   const closes = {
     "index.html": ["meals-close", "log-close", "photo-view-close"],
     "progress.html": ["compare-close", "photo-dialog-close"],
@@ -158,10 +158,12 @@ test("every Close is a round × button with a spoken name, and every Cancel is a
   const cancels = [["index.html", 'value="cancel"'], ["progress.html", 'id="weight-cancel"'], ["workout.html", 'id="builder-cancel"']];
   for (const [page, marker] of cancels) {
     const html = fs.readFileSync(path.join(STATIC, page), "utf8");
-    assert.match(html, new RegExp(`<button class="btn btn-soft"[^>]*${marker}`), `${page} Cancel`);
+    const btn = html.match(new RegExp(`<button class="icon-round icon-close"[^>]*${marker}[^>]*>[\\s\\S]*?</button>`));
+    assert.ok(btn, `${page} Cancel is a round ×`);
+    assert.match(btn[0], /aria-label="Cancel"/, `${page} Cancel is still read out as Cancel`);
+    assert.match(btn[0], /<svg[^>]*aria-hidden="true"/);
   }
   const css = fs.readFileSync(path.join(STATIC, "styles.css"), "utf8");
-  assert.match(css, /\.btn-soft\s*\{[^}]*border:\s*1px solid/, "Cancel is an outlined pill");
-  assert.equal((css.match(/^\.btn-soft\s*\{/gm) || []).length, 1, "one .btn-soft rule, so no other style overrides it");
+  assert.doesNotMatch(css, /\.btn-soft/, "the outlined Cancel style is gone");
   assert.match(css, /\.icon-close svg\s*\{/, "the × has its own size");
 });
