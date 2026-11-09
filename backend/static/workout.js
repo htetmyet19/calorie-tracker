@@ -36,6 +36,13 @@ function embedUrl(youtubeId) {
   return `https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0`;
 }
 
+// Which day starts open: the first one not ticked this week, or null when all are done.
+function firstOpenDay(days, done) {
+  const ticked = new Set(done.map((d) => d.day_index));
+  const day = days.find((d) => !ticked.has(d.index));
+  return day ? day.index : null;
+}
+
 function builderDefaults(routine) {
   if (!routine) return { ...DEFAULT_INPUTS };
   return Object.fromEntries(INPUT_NAMES.map((k) => [k, routine[k]]));
@@ -51,6 +58,8 @@ const TICK_ERROR = "Couldn't save that. Check your connection and try again.";
 let routine = null;   // the active routine, or null
 let done = [];        // this week's ticks
 let building = false;
+let openDays = new Set();  // days shown open; kept while the page is open
+let openFor = null;        // the routine openDays belongs to
 
 const today = () => isoDate(new Date());
 
@@ -91,21 +100,44 @@ function render() {
   setMsg("week-done", weekText(done, routine.days.length));
   $("routine-note").hidden = !routine.note;
   setMsg("routine-note", routine.note || "");
+  if (openFor !== routine.id) {
+    openFor = routine.id;
+    const first = firstOpenDay(routine.days, done);
+    openDays = new Set(first === null ? [] : [first]);
+  }
   for (const day of routine.days) list.append(dayCard(day));
 }
 
 function dayCard(day) {
   const doneOn = doneDate(done, day.index);
   const isDone = doneOn !== null;
-  const head = el("div", { className: "card-head" },
-    el("h3", { className: "day-title" }, `Day ${day.index + 1} · ${day.title}`),
-    el("span", { className: "day-est" }, `~${day.est_min} min`));
+  const open = openDays.has(day.index);
+  // Folded, a day is one row: name, time and done. Tapping it shows the details.
+  const toggle = el("button", { type: "button", className: "day-toggle" },
+    el("span", { className: "day-head-text" },
+      el("span", { className: "day-title" }, `Day ${day.index + 1} · ${day.title}`),
+      el("span", { className: "day-meta" },
+        el("span", { className: "day-est" }, `~${day.est_min} min`),
+        ...(isDone ? [el("span", { className: "day-tick" }, doneLabel(doneOn, today()))] : []))),
+    el("span", { className: "day-chev", ariaHidden: "true" }));
+  toggle.setAttribute("aria-expanded", String(open));
+  toggle.setAttribute("aria-controls", `day-body-${day.index}`);
   const items = el("ol", { className: "exercises" }, ...day.items.map(exerciseRow));
   const tick = el("button", { type: "button", className: isDone ? "btn btn-outline day-done is-done" : "btn btn-primary day-done",
     ariaPressed: String(isDone) }, isDone ? doneLabel(doneOn, today()) : `Mark Day ${day.index + 1} done`);
   // Tapping a done day removes that tick, whichever day this week it was made.
   tick.addEventListener("click", () => toggleDone(day.index, isDone ? doneOn : today(), !isDone, tick));
-  return el("li", { className: "card workout-day" }, head, el("p", { className: "day-why" }, day.why), items, tick);
+  const body = el("div", { className: "day-body", id: `day-body-${day.index}` },
+    el("p", { className: "day-why" }, day.why), items, tick);
+  body.hidden = !open;
+  toggle.addEventListener("click", () => {
+    const nowOpen = !openDays.has(day.index);
+    if (nowOpen) openDays.add(day.index); else openDays.delete(day.index);
+    toggle.setAttribute("aria-expanded", String(nowOpen));
+    body.hidden = !nowOpen;
+  });
+  return el("li", { className: isDone ? "card workout-day is-done" : "card workout-day" },
+    el("h3", { className: "day-heading" }, toggle), body);
 }
 
 function exerciseRow(item) {
@@ -257,7 +289,7 @@ async function start() {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { itemText, weekText, doneDate, doneLabel, embedUrl, builderDefaults, SAFETY_STOP, UNAVAILABLE, REPLACE_CONFIRM };
+  module.exports = { itemText, weekText, doneDate, doneLabel, embedUrl, firstOpenDay, builderDefaults, SAFETY_STOP, UNAVAILABLE, REPLACE_CONFIRM };
 } else {
   initNav("workout");
   wire();

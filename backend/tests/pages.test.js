@@ -103,8 +103,13 @@ test("the message box floats, glows, shimmers and brings words in one by one; re
   }
   assert.match(css, /\.coach-word\s*\{[^}]*animation:[^}]*word-in/, "each word animates in");
   assert.match(css, /\.coach-word\s*\{[^}]*animation-delay:\s*var\(--d/, "words use their own delay");
-  const bubbleReduced = css.match(/@media \(prefers-reduced-motion: reduce\)\s*\{[^@]*\.coach-bubble[^@]*\}/);
-  assert.ok(bubbleReduced && /\.coach-word/.test(bubbleReduced[0]), "reduced motion stills the bubble and the words");
+  // Each reduced-motion block, read to its closing brace
+  const reducedBlocks = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{/g)].map((m) => {
+    let depth = 0, i = m.index + m[0].length - 1;
+    do { if (css[i] === "{") depth++; else if (css[i] === "}") depth--; i++; } while (depth > 0 && i < css.length);
+    return css.slice(m.index, i);
+  });
+  assert.ok(reducedBlocks.some((b) => /\.coach-bubble/.test(b) && /\.coach-word/.test(b)), "reduced motion stills the bubble and the words");
   const js = fs.readFileSync(path.join(STATIC, "app.js"), "utf8");
   assert.match(js, /wordDelays\(/, "app.js uses wordDelays");
   assert.doesNotMatch(js, /coach-text[^\n]*innerHTML/, "words are built as elements, not HTML strings");
