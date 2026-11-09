@@ -75,6 +75,12 @@ function coachPlaylist(mood, hour) {
   return ["stretch", "run", "yoga", "jacks"];                              // near the goal, or nothing logged yet
 }
 
+// Does the open box fit? Its top must clear the bottom of the macros by a small gap.
+const BUBBLE_GAP = 6;
+function bubbleFits(bubbleTop, macrosBottom) {
+  return bubbleTop - macrosBottom >= BUBBLE_GAP;
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { coachMessage, COACH_LINES, typingMs, bubbleStartsOpen, coachPlaylist, ACTIONS, wordDelays };
+  module.exports = { coachMessage, COACH_LINES, typingMs, bubbleStartsOpen, coachPlaylist, ACTIONS, wordDelays, bubbleFits };
 }

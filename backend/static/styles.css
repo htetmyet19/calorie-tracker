@@ -1699,7 +1699,10 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
   /* The text in the ring scales with the ring, so it stays inside on short screens. */
   .app-today .eaten { font-size: clamp(1.6rem, 17cqi, 4rem); }
   .app-today .goal-line { font-size: clamp(0.75rem, 5.6cqi, 1rem); margin-top: clamp(2px, 1.8cqi, 6px); }
-  .app-today .remaining, .app-today .zone-label { font-size: clamp(0.7rem, 4.6cqi, 0.8125rem); }
+  .app-today .remaining, .app-today .zone-label { font-size: clamp(0.625rem, 4.6cqi, 0.8125rem); }
+  /* In a small ring the lines stay whole; under 150 px the zone dot goes (the ring's colour shows the zone) */
+  .app-today .zone-label, .app-today .goal-line { white-space: nowrap; }
+  @container (max-width: 150px) { .app-today .zone-label::before { display: none; } }
   .app-today .remaining { margin-top: clamp(2px, 3cqi, 10px); }
   .app-today .snap { margin-top: 10px; }
   .app-today .calc-open { margin-top: 8px; }
@@ -1710,13 +1713,37 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
   /* It sits at the bottom left, beside Ollie and under his bubble, so neither covers it. */
   .app-today .meals-section { flex: none; margin-top: auto; }
   body.app-today:has(#coach:not([hidden])) .meals-section { padding-right: 118px; }
+  /* Ollie's box may use the width up to the left edge, so lines wrap less and the box stays short */
+  .coach-bubble { max-width: min(340px, calc(100vw - 74px)); }
+  /* The action (Start check-in) follows the end of the line when it fits, instead of its own row */
+  .coach-bubble:not(.is-typing) .coach-text { display: inline; }
+  .coach-action { margin: 6px 0 0 8px; vertical-align: middle; }
+  .coach-action.btn { padding: 6px 14px; }
   .app-today .meals-section > .meals { display: none; }
   .app-today #meals-heading { display: none; }
   .app-today .meals-section .empty { padding: 14px; }
 }
-/* Short phones (iPhone SE, Safari with its bars showing): a slightly smaller ring and meals box. */
+/* Phones up to 820 px tall: a smaller ring, and Ollie's name tag sits on the box's top edge, so the
+   box fits between the macros and the Meals button. If it still doesn't fit, app.js starts it folded. */
+@media (max-width: 899px) and (max-height: 820px) {
+  .app-today .plate { width: min(100%, 340px, 26dvh); }
+  .coach-bubble { padding: 9px 14px 9px; font-size: 0.875rem; }
+  .coach-name {
+    position: absolute;
+    top: -9px;
+    left: 12px;
+    margin: 0;
+    padding: 2px 7px;
+    border: 1px solid rgba(198, 243, 107, 0.35);
+    border-radius: 999px;
+    background: rgb(16, 23, 27);
+    font-size: 0.625rem;
+    line-height: 1.2;
+  }
+}
+/* Short phones (iPhone SE, Safari with its bars showing): a smaller ring still and a smaller meals box. */
 @media (max-width: 899px) and (max-height: 720px) {
-  .app-today .plate { width: min(100%, 340px, 25dvh); }
+  .app-today .plate { width: min(100%, 340px, 22dvh); }
   .app-today .day-nav { margin-bottom: 2px; }
   .app-today .layout { gap: 8px; padding-top: 4px; }
   .app-today .snap { padding-block: 12px; }
