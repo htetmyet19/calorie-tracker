@@ -720,8 +720,63 @@ button { cursor: pointer; }
 .switch:checked::after { transform: translateX(18px); }
 .settings-reminders .hint { margin: 8px 0 0; }
 .settings .status:empty { min-height: 0; }
-.settings-logout { width: 100%; margin-top: 18px; padding: 13px 18px; }
-.settings-btn { border-radius: 999px; }
+/* Round glass icon buttons: Settings (gear) in the masthead, Close (×) in the panel */
+.icon-round {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02));
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: var(--ink);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+}
+.icon-round svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.icon-round:hover { border-color: rgba(198, 243, 107, 0.45); background: rgba(198, 243, 107, 0.08); }
+.icon-round:active { transform: scale(0.92); }
+.icon-round:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+#settings-close svg { width: 16px; height: 16px; stroke-width: 2.2; }
+/* The gear turns a little on hover and when tapped */
+.settings-open .gear { transition: transform 0.45s cubic-bezier(0.3, 1.4, 0.5, 1); }
+.settings-open:hover .gear, .settings-open[aria-expanded="true"] .gear, .settings-open:active .gear { transform: rotate(60deg); }
+.settings-head { align-items: center; }
+
+/* Log out: soft red, with an exit icon; the first tap asks again */
+.settings-logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 22px;
+  padding: 13px 18px;
+  border: 1px solid rgba(239, 122, 108, 0.35);
+  border-radius: 16px;
+  background: rgba(239, 122, 108, 0.1);
+  color: var(--chili);
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s;
+}
+.settings-logout svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.settings-logout:hover:not(:disabled) { background: rgba(239, 122, 108, 0.18); }
+.settings-logout:active:not(:disabled) { transform: scale(0.98); }
+.settings-logout.is-confirming, .settings-logout.is-confirming:hover:not(:disabled) {
+  background: var(--chili);
+  border-color: var(--chili);
+  color: #1a0d0b;
+  animation: logout-nudge 0.35s ease-out;
+}
+@keyframes logout-nudge { 0%, 100% { translate: 0 0; } 25% { translate: -4px 0; } 75% { translate: 4px 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .settings-open .gear, .settings-logout.is-confirming { transition: none; animation: none; }
+}
 
 /* ---------- Bottom bar ---------- */
 body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }

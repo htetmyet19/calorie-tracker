@@ -124,3 +124,24 @@ test("old browser settings with nothing valid left are removed without a request
   assert.deepEqual(store, {});
   delete global.api; delete global.localStorage;
 });
+
+test("Settings, Close and Log out are modern icon buttons with spoken names", () => {
+  const fs = require("node:fs"), path = require("node:path");
+  const src = fs.readFileSync(path.join(__dirname, "../static/nav.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "../static/styles.css"), "utf8");
+  // Settings: a round glass gear button, named for screen readers
+  assert.match(src, /open\.className = "icon-round settings-open"/);
+  assert.match(src, /open\.setAttribute\("aria-label", "Settings"\)/);
+  assert.match(src, /open\.innerHTML = `<svg class="gear"/);
+  assert.doesNotMatch(src, /open\.textContent = "Settings"/, "no plain text link any more");
+  // Close: a round ×
+  assert.match(src, /<button class="icon-round" type="button" id="settings-close" aria-label="Close settings">/);
+  // Log out: soft red, exit icon, second tap confirms
+  assert.match(src, /<button class="btn settings-logout" type="button" id="logout">\s*<svg/);
+  assert.match(src, /Tap again to log out/);
+  assert.match(css, /\.icon-round\s*\{[^}]*border-radius:\s*50%/);
+  assert.match(css, /\.icon-round\s*\{[^}]*width:\s*4[0-4]px/, "a finger-sized target");
+  assert.match(css, /\.settings-logout\s*\{[^}]*color:\s*var\(--chili\)/);
+  assert.match(css, /\.settings-logout\.is-confirming\s*\{/);
+  assert.match(css, /prefers-reduced-motion: reduce\)\s*\{[^}]*\.gear/, "the gear doesn't spin under reduced motion");
+});
