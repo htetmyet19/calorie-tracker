@@ -72,3 +72,14 @@ def test_one_open_link_per_client(make_user, link):
     link(client, t1, "requested")
     with pytest.raises(AssertionError, match="409"):
         link(client, t2, "requested")
+
+
+@pytest.mark.parametrize("fn,body", [
+    ("is_active_trainer_of", {"client": "00000000-0000-0000-0000-000000000000"}),
+    ("enforce_advice_limit", {}),
+    ("enforce_routine_limit", {}),
+])
+def test_internal_functions_are_not_api_endpoints(make_user, rest, fn, body):
+    # SECURITY DEFINER helpers run inside policies and triggers only.
+    r = rest(make_user("client").token).post(f"/rpc/{fn}", json=body)
+    assert r.status_code in (403, 404), r.text
