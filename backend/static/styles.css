@@ -1188,9 +1188,6 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
   overflow: visible;
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 3px rgba(0, 0, 0, 0.7)) drop-shadow(0 6px 8px rgba(0, 0, 0, 0.45));
 }
-/* Folded: a soft ring pulses around Ollie to say there's a message. */
-.coach-pulse { position: absolute; inset: 14px 8px 10px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; }
-.coach[data-open="false"] .coach-pulse { animation: coach-pulse 1.8s ease-out infinite; }
 .coach-bubble {
   pointer-events: auto;
   position: relative;
@@ -1231,7 +1228,6 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 /* The 3D look: he slowly turns a little left and right while he does his moves. */
 .coach-float { animation: coach-float 6s ease-in-out infinite; }
 @keyframes coach-float { 0%, 100% { transform: rotateY(-12deg); } 50% { transform: rotateY(12deg); } }
-@keyframes coach-pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(1.35); opacity: 0; } }
 
 /* The bubble pops in from Ollie's side, shows typing dots, then the text fades in. */
 .coach-bubble { transform-origin: 100% 100%; }
@@ -1253,8 +1249,7 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 
 @media (prefers-reduced-motion: reduce) {
   .coach-bubble.is-pop, .coach-typing i, .coach-text, .coach-action:not([hidden]),
-  .coach-float, .coach[data-open="false"] .coach-pulse { animation: none; }
-  .coach[data-open="false"] .coach-pulse { opacity: 0.6; }
+  .coach-float { animation: none; }
 }
 .settings-coach { margin-top: 18px; }
 .settings-coach .hint { margin: 8px 0 0; }

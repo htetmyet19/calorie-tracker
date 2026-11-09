@@ -74,3 +74,10 @@ test("full-body Ollie: every move in coach.js has a pose in the page and a rule 
   assert.match(css, /prefers-reduced-motion: reduce\) \{ \.ollie, \.ollie \* \{ animation: none !important; \} \}/);
   for (const joint of ["s-fore-l", "s-shin-r", "p-fore-n", "e-fore-r"]) assert.ok(html.includes(`class="${joint}"`), joint);
 });
+
+test("no pulsing ring around Ollie when his message is folded away", () => {
+  const html = fs.readFileSync(path.join(STATIC, "index.html"), "utf8");
+  const css = fs.readFileSync(path.join(STATIC, "styles.css"), "utf8");
+  assert.doesNotMatch(html, /coach-pulse/);
+  assert.doesNotMatch(css, /coach-pulse/);
+});
