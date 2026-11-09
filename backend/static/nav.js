@@ -196,7 +196,9 @@ const INSTALL_HINTS = {
 const SETTINGS_HTML = `
   <div class="settings-head">
     <h2 id="settings-title" class="section-title">Settings</h2>
-    <button class="btn btn-quiet" type="button" id="settings-close">Close</button>
+    <button class="icon-round" type="button" id="settings-close" aria-label="Close settings">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+    </button>
   </div>
   <fieldset class="meal-type settings-unit">
     <legend>Weight unit</legend>
@@ -227,7 +229,10 @@ const SETTINGS_HTML = `
     <p class="hint" id="install-hint"></p>
   </div>
   <p class="status" id="settings-status" role="status" aria-live="polite"></p>
-  <button class="btn btn-outline settings-logout" type="button" id="logout">Log out</button>`;
+  <button class="btn settings-logout" type="button" id="logout">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 16l-4-4 4-4M6 12h10"/></svg>
+    <span id="logout-label">Log out</span>
+  </button>`;
 
 // Coach Ollie on/off is per device; blocked storage means "on".
 const COACH_OFF_KEY = "coach-off";
@@ -323,7 +328,26 @@ function renderSettingsPanel() {
       }
     });
   });
-  dialog.querySelector("#logout").addEventListener("click", async () => {
+  // Log out asks once: the first tap turns the button into "Tap again to log out" for 3 s.
+  const logoutBtn = dialog.querySelector("#logout");
+  const logoutLabel = dialog.querySelector("#logout-label");
+  let logoutTimer = 0;
+  const resetLogout = () => {
+    clearTimeout(logoutTimer);
+    logoutBtn.classList.remove("is-confirming");
+    logoutLabel.textContent = "Log out";
+  };
+  dialog.addEventListener("close", resetLogout);
+  logoutBtn.addEventListener("click", async () => {
+    if (!logoutBtn.classList.contains("is-confirming")) {
+      logoutBtn.classList.add("is-confirming");
+      logoutLabel.textContent = "Tap again to log out";
+      logoutTimer = setTimeout(resetLogout, 3000);
+      return;
+    }
+    clearTimeout(logoutTimer);
+    logoutBtn.disabled = true;
+    logoutLabel.textContent = "Logging out…";
     // While still logged in: stop this browser's reminders (account setting untouched).
     if (typeof forgetThisDevice === "function") await forgetThisDevice();
     try { await logout(); } catch (e) { /* logout clears what it can; leave either way */ }
@@ -331,15 +355,19 @@ function renderSettingsPanel() {
   });
 
   const open = document.createElement("button");
-  open.className = "btn btn-quiet";
+  open.className = "icon-round settings-open";
   open.type = "button";
   open.id = "settings-open";
   open.setAttribute("aria-haspopup", "dialog");
-  open.textContent = "Settings";
+  open.setAttribute("aria-label", "Settings");
+  open.setAttribute("aria-expanded", "false");
+  dialog.addEventListener("close", () => open.setAttribute("aria-expanded", "false"));
+  open.innerHTML = `<svg class="gear" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
   open.addEventListener("click", async () => {
     setPanelStatus("");
     showInstall();
     dialog.showModal();
+    open.setAttribute("aria-expanded", "true");
     if (typeof preloadPushKey === "function" && pushSupported()) preloadPushKey().catch(() => {});
     try {
       const settings = await loadSettings();
