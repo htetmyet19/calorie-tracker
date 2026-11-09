@@ -81,3 +81,13 @@ test("no pulsing ring around Ollie when his message is folded away", () => {
   assert.doesNotMatch(html, /coach-pulse/);
   assert.doesNotMatch(css, /coach-pulse/);
 });
+
+test("Ollie's message is a cream speech bubble with a tail; tapping it folds it", () => {
+  const html = fs.readFileSync(path.join(STATIC, "index.html"), "utf8");
+  const bubble = html.slice(html.indexOf('id="coach-bubble"'), html.indexOf('id="coach-otter"'));
+  assert.doesNotMatch(bubble, /coach-name/, "no header in the bubble");
+  assert.match(bubble, /<button[^>]*class="coach-fold"[^>]*aria-label="Fold the message away"/);
+  const css = fs.readFileSync(path.join(STATIC, "styles.css"), "utf8");
+  assert.match(css, /\.coach-bubble::after\s*\{/, "a tail pointing at Ollie");
+  assert.match(css, /\.coach-fold\s*\{[^}]*inset:\s*0/, "the fold button covers the whole bubble");
+});

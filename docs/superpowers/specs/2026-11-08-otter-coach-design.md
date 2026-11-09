@@ -47,9 +47,11 @@ order; the first match wins.
 
 Mockup: the "Ollie in the corner (3D look)" screen at the link above (approved).
 
-- Ollie floats bottom-right, just above the tab bar (`position: fixed`). The bubble pops out to
-  his left: the name, the line, an optional action link, and a **×** that folds it away.
-- The bubble opens for each new line. **×** folds it; that exact line stays folded for the rest of
+- Ollie floats bottom-right, just above the tab bar (`position: fixed`). His message is a cream
+  speech bubble (dark text) above him, its tail pointing at his head: just the line and an
+  optional action link, no header and no ×. It grows out of Ollie with a little bounce.
+- The bubble opens for each new line. Tapping the bubble folds it (a "Fold the message away"
+  button covers the whole bubble, so keyboards and screen readers can fold it too); that exact line stays folded for the rest of
   the day, across reloads (`localStorage` `coach-folded` = `{ date, text }`, see
   `bubbleStartsOpen`). Folded, Ollie stays on his own; tapping him opens the line again.
   Tapping him while open shows the other line. "Hide for today" is gone: folding replaces it.
