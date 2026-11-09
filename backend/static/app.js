@@ -282,7 +282,7 @@ function sayCoach(text, open) {
   const bubble = $("coach-bubble"), out = $("coach-text"), action = $("coach-action");
   setBubbleOpen(open);
   bubble.classList.remove("is-pop", "is-typing");
-  if (!open) { out.textContent = text; action.hidden = !coachHasAction; return; }
+  if (!open) { out.textContent = text; action.style.animationDelay = ""; action.hidden = !coachHasAction; return; }
   out.textContent = "";
   action.hidden = true;
   void bubble.offsetWidth; // restart the pop animation
@@ -290,9 +290,24 @@ function sayCoach(text, open) {
   coachTyping = setTimeout(() => {
     coachTyping = 0;
     bubble.classList.remove("is-typing");
-    out.textContent = text; // the live region announces it now
+    const last = showWords(out, text); // the live region announces it now
+    action.style.animationDelay = `${last + 150}ms`; // the link follows the last word
     action.hidden = !coachHasAction;
   }, typingMs(text, reducedMotion()));
+}
+
+// Put the line in as one span per word, each fading up on its own delay. Returns the last delay.
+function showWords(out, text) {
+  const words = wordDelays(text, reducedMotion());
+  out.replaceChildren();
+  words.forEach(({ word, delay }, i) => {
+    const w = document.createElement("span");
+    w.className = "coach-word";
+    w.style.setProperty("--d", `${delay}ms`);
+    w.textContent = word;
+    out.append(w, i < words.length - 1 ? " " : "");
+  });
+  return words.length ? words[words.length - 1].delay : 0;
 }
 
 // ---- What Ollie is doing: a mix of moves that fits the day, with short moves played over it ----

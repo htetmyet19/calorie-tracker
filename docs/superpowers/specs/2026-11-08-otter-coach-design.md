@@ -51,7 +51,11 @@ Mockup: the "Ollie in the corner (3D look)" screen at the link above (approved).
   frosted-glass bubble above him (revised 2026-11-09: dark see-through glass with a blur, a thin
   lime edge and soft glow, light text), its tail pointing at his head. On top is a small lime
   "COACH OLLIE" tag with a softly blinking dot (hidden from screen readers), then the line and an
-  optional action link; no ×. Where the browser can't blur, the glass turns solid. It grows out of Ollie with a little bounce.
+  optional action link; no ×. Where the browser can't blur, the glass turns solid.
+  While open (revised 2026-11-09), the box floats a few pixels with Ollie, its lime edge slowly
+  glows brighter and dimmer, and a soft light sweeps across the glass every 7 s. After the typing
+  dots the line comes in word by word (`wordDelays`: 70 ms a word, the last word within 1 s), and
+  the action link follows the last word. Reduced motion turns all of this off. It grows out of Ollie with a little bounce.
 - The bubble opens for each new line. Tapping the bubble folds it (a "Fold the message away"
   button covers the whole bubble, so keyboards and screen readers can fold it too); that exact line stays folded for the rest of
   the day, across reloads (`localStorage` `coach-folded` = `{ date, text }`, see
