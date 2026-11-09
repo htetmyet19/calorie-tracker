@@ -350,6 +350,38 @@ button { cursor: pointer; }
   text-align: center;
 }
 
+/* ---------- Meals summary button and card (phones) ---------- */
+.meals-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.meals-summary[hidden] { display: none; }
+.meals-summary:hover { background: var(--raised); }
+.meals-summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.meals-summary-main { display: grid; gap: 2px; min-width: 0; }
+.meals-summary-title { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.meals-summary-text { color: var(--muted); font-size: var(--step--1); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.meals-summary-dots { display: inline-flex; gap: 5px; }
+.meals-summary-dots .swatch { width: 9px; height: 9px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+.meals-summary-arrow { flex: none; width: 18px; height: 18px; margin-left: auto; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (min-width: 900px) {
+  .meals-summary { display: none; } /* wide screens keep the list beside the ring */
+}
+.meals-sheet { overflow-y: auto; overscroll-behavior: contain; transition: transform 0.2s ease; }
+.meals-sheet .sheet-head { align-items: flex-start; }
+.meals-sheet-sub { margin: 2px 0 0; color: var(--muted); font-size: var(--step--1); }
+.meals-sheet .status:empty { display: none; }
+
 /* ---------- Logging flow ---------- */
 .log { padding: 0; }
 
@@ -1537,8 +1569,8 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 @media (prefers-reduced-motion: reduce) { .ollie, .ollie * { animation: none !important; } }
 
 /* ---------- Today on phones: one screen, no page scroll ----------
-   The page fits between the top and the tab bar; the ring shrinks on short screens and only the
-   meals list scrolls, in its own box. If something extra (the goal card) makes the top too tall,
+   The page fits between the top and the tab bar; the ring shrinks on short screens and the meals
+   list opens in a slide-up card from a summary button. If something extra (the goal card) makes the top too tall,
    the page area scrolls as a fallback rather than clipping. */
 @media (max-width: 899px) {
   body.app-today {
@@ -1575,19 +1607,18 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
   .app-today .legend { display: none; } /* the meals list below shows the same split */
   .app-today .macros { margin-top: 10px; }
   .app-today .macros > div { padding: 6px 8px; }
-  .app-today .meals-section {
-    flex: 1 0 120px;
-    min-height: 120px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding-bottom: 120px; /* the last meal can scroll out from under Ollie */
-  }
+  /* The list hides behind one summary button; it opens in a slide-up card (#meals-sheet). */
+  /* It sits at the bottom left, beside Ollie and under his bubble, so neither covers it. */
+  .app-today .meals-section { flex: none; margin-top: auto; }
+  body.app-today:has(#coach:not([hidden])) .meals-section { padding-right: 118px; }
+  .app-today .meals-section > .meals { display: none; }
+  .app-today #meals-heading { display: none; }
+  .app-today .meals-section .empty { padding: 14px; }
 }
 /* Short phones (iPhone SE, Safari with its bars showing): a slightly smaller ring and meals box. */
 @media (max-width: 899px) and (max-height: 720px) {
   .app-today .plate { width: min(100%, 340px, 25dvh); }
   .app-today .day-nav { margin-bottom: 2px; }
   .app-today .layout { gap: 8px; padding-top: 4px; }
-  .app-today .meals-section { flex-basis: 90px; min-height: 90px; }
   .app-today .snap { padding-block: 12px; }
 }

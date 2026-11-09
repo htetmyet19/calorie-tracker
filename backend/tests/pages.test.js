@@ -53,14 +53,14 @@ test("settings have a Show coach switch", () => {
   assert.match(nav, /Show coach/);
 });
 
-test("on phones the Today page fits the screen: only the meals list scrolls, and Ollie floats in the corner", () => {
+test("on phones the Today page fits the screen with no scrolling, and Ollie floats in the corner", () => {
   const html = fs.readFileSync(path.join(STATIC, "index.html"), "utf8");
   assert.match(html, /<body[^>]*class="[^"]*\bapp-today\b/);
   const css = fs.readFileSync(path.join(STATIC, "styles.css"), "utf8");
   const phone = css.slice(css.indexOf("@media (max-width: 899px)"));
   assert.ok(css.includes("@media (max-width: 899px)"), "a phone layout block");
   assert.match(phone, /body\.app-today\s*\{[^}]*height:\s*100dvh[^}]*overflow:\s*hidden/);
-  assert.match(phone, /\.app-today \.meals-section\s*\{[^}]*overflow-y:\s*auto/);
+  assert.doesNotMatch(phone, /\.app-today \.meals-section\s*\{[^}]*overflow-y:\s*auto/, "the list lives in a card now, not a scroll box");
   assert.match(css, /\.coach\s*\{[^}]*position:\s*fixed/);
 });
 
@@ -108,4 +108,26 @@ test("the message box floats, glows, shimmers and brings words in one by one; re
   const js = fs.readFileSync(path.join(STATIC, "app.js"), "utf8");
   assert.match(js, /wordDelays\(/, "app.js uses wordDelays");
   assert.doesNotMatch(js, /coach-text[^\n]*innerHTML/, "words are built as elements, not HTML strings");
+});
+
+test("phones: the meals list hides behind a summary button that opens a slide-up card", () => {
+  const html = fs.readFileSync(path.join(STATIC, "index.html"), "utf8");
+  const section = html.slice(html.indexOf('class="meals-section"'), html.indexOf("</section>", html.indexOf('class="meals-section"')));
+  assert.match(section, /<button[^>]*class="meals-summary"[^>]*id="meals-open"[^>]*aria-haspopup="dialog"/, "summary button in the meals section");
+  assert.match(section, /id="meals-summary-text"/);
+  assert.match(section, /id="meals-summary-dots"[^>]*aria-hidden="true"/);
+  assert.match(html, /<dialog class="sheet meals-sheet" id="meals-sheet" aria-labelledby="meals-sheet-title">/);
+  const sheet = html.slice(html.indexOf('id="meals-sheet"'), html.indexOf("</dialog>", html.indexOf('id="meals-sheet"')));
+  assert.match(sheet, /id="meals-close"/, "a close button");
+  assert.match(sheet, /id="meals-status"[^>]*role="status"/, "errors (a failed delete) show inside the card");
+  assert.match(sheet, /id="meals-sheet-body"/, "the list moves in here while open");
+  assert.ok(html.indexOf("/summary.js") > 0 && html.indexOf("/summary.js") < html.indexOf("/app.js"), "summary.js loads before app.js");
+
+  const css = fs.readFileSync(path.join(STATIC, "styles.css"), "utf8");
+  assert.match(css, /@media \(min-width: 900px\)\s*\{[^}]*\.meals-summary[^}]*display:\s*none/, "wide screens keep the list and never show the button");
+  assert.match(css, /\.app-today \.meals-section > \.meals\s*\{\s*display:\s*none/, "on phones the inline list is hidden");
+
+  const js = fs.readFileSync(path.join(STATIC, "app.js"), "utf8");
+  assert.match(js, /\$\("meals-sheet"\)\.open \? \$\("meals-status"\)/, "status messages go to the card while it is open");
+  assert.match(js, /mealSummary\(/);
 });

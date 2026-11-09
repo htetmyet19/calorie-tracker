@@ -100,8 +100,16 @@ saved, and `cheer` (arms up, hops, sparkles) for 1.4 s on each tap.
 ## Today fits the phone screen
 
 Below 900 px wide the Today page is one screen with no page scroll: it fills the height between
-the top and the tab bar, and only the meals list scrolls, in its own box (with room at the bottom
-so the last meal scrolls out from under Ollie). To make room on phones:
+the top and the tab bar. To make room on phones:
+
+- The meals list is hidden behind one summary button (revised 2026-11-09): "Meals" with a
+  coloured dot per logged meal type, "5 meals · 1,730 kcal" (`mealSummary` in `static/summary.js`)
+  and an up arrow. It sits at the bottom left, beside Ollie and below his bubble. Tapping it
+  slides the list up in a card like "Log a meal" (delete and photo taps work there; a failed
+  delete shows its message in the card). The card closes with Close, Escape/back, a tap outside,
+  or a swipe down of more than 90 px; it closes itself when the last meal is deleted. The one list
+  element moves into the card and back. With no meals the button is hidden and the "Nothing
+  logged" note shows. Wide screens keep the list beside the ring.
 
 - The ring is at most 30% of the screen height (25% when the screen is under 720 px tall), and
   the text inside it scales with the ring.
