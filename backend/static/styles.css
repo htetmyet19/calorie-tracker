@@ -1131,7 +1131,9 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 .timeline > li { scroll-snap-align: start; padding: 12px; border-radius: 16px; background: var(--raised); }
 .timeline-date { display: flex; justify-content: space-between; gap: 12px; font-weight: 600; }
 .timeline-weight { color: var(--ink-2); font-weight: 400; font-variant-numeric: tabular-nums; }
-.timeline-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+/* minmax(0, …): the three slots share the card's width instead of growing to
+   their content and spilling past the card's right edge on phones. */
+.timeline-photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
 .thumb-pose { margin: 0; }
 .thumb-pose img, .thumb-missing {
   display: block;
@@ -1155,7 +1157,7 @@ body.has-tabbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 }
 .thumb-add:hover { color: var(--ink); border-color: var(--ink-2); }
 .thumb-missing.is-busy { color: var(--ink-2); }
-.thumb-camera { width: 100%; margin-top: 4px; }
+.thumb-camera { width: 100%; margin-top: 4px; padding-inline: 0; } /* an underlined link look: btn-small's side padding made it 69px */
 @media (hover: hover) and (pointer: fine) { .thumb-camera { display: none; } }
 .thumb-open { display: block; width: 100%; padding: 0; border: 0; border-radius: 8px; background: none; cursor: pointer; }
 .photo-delete { width: 100%; margin-top: 4px; color: var(--chili); }
