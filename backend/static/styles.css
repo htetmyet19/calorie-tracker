@@ -70,6 +70,11 @@ body {
 h1, h2, p, ul, dl, dd, figure, fieldset { margin: 0; padding: 0; }
 ul { list-style: none; }
 button, input { font: inherit; color: inherit; }
+/* iPhone Safari zooms the page in when a field under 16px gets focus (the goal
+   calculator focuses Height as it opens). Fields keep their size if bigger. */
+@media (pointer: coarse) {
+  input, select, textarea { font-size: max(1rem, 1em); }
+}
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
@@ -634,9 +639,10 @@ button { cursor: pointer; }
 .calc .section-title { margin-bottom: 16px; }
 .calc .meal-type { margin-top: 16px; }
 
-.calc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+/* Weight gets the widest column: it holds up to 6 characters (299.99 kg, 661.3 lb). */
+.calc-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); gap: 10px; }
 .calc-grid label, .calc-select { display: grid; gap: 4px; font-size: var(--step--1); color: var(--ink-2); }
-.calc-grid .field { display: flex; }
+.calc-grid .field { display: flex; padding-inline: 6px; }
 .calc-grid .field input { width: 100%; }
 
 .calc-select { margin-top: 16px; }
