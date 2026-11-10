@@ -58,11 +58,12 @@ function showStep(i) {
 
 function renderWeight() {
   const input = $("ci-weight");
-  const { min, max } = weightRange(unit);
+  const { min, max, step } = weightRange(unit);
   $("ci-unit").textContent = unit;
   $("ci-unit-label").textContent = unit;
   input.min = min;
   input.max = max;
+  input.step = step;
   document.querySelector(`input[name="ci-unit"][value="${unit}"]`).checked = true;
   const saved = !!checkin;
   // The check-in exists: its weight can't be changed here any more.
@@ -70,7 +71,7 @@ function renderWeight() {
   document.querySelectorAll('input[name="ci-unit"]').forEach((r) => { r.disabled = saved; });
   $("ci-weight-skip").hidden = saved;
   if (saved) {
-    input.value = checkin.weight_kg == null ? "" : fromKg(checkin.weight_kg, unit).toFixed(1);
+    input.value = checkin.weight_kg == null ? "" : String(fromKg(checkin.weight_kg, unit));
     $("ci-weight-hint").textContent = checkin.weight_kg == null
       ? "Saved without a weight." : "Saved with this check-in.";
   } else {
@@ -83,7 +84,7 @@ function changeUnit(next) {
   const input = $("ci-weight");
   const v = Number(input.value);
   if (input.value.trim() !== "" && Number.isFinite(v)) {
-    input.value = fromKg(toKg(v, unit), next).toFixed(1);
+    input.value = String(fromKg(toKg(v, unit), next));
   }
   unit = next;
   fieldError(input, "");

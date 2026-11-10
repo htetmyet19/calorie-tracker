@@ -388,6 +388,7 @@ function openWeightDialog() {
   date.max = t;
   value.min = range.min;
   value.max = range.max;
+  value.step = range.step;
   value.value = "";
   if (weights && weights.length) value.placeholder = String(fromKg(weights[weights.length - 1].weight_kg, unit));
   setMsg("w-unit", unit);
