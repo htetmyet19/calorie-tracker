@@ -637,6 +637,11 @@ button { cursor: pointer; }
 
 .calc-select { margin-top: 16px; }
 .calc-select select {
+  /* A select is as wide as its longest option ("Athlete: …"); without this it
+     ran past the dialog on phones and the whole calculator scrolled sideways. */
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
   font: inherit;
   color: var(--ink);
   font-size: var(--step-0);
