@@ -38,6 +38,10 @@
 
 /* ---------- Base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
+/* No visible scrollbars on any page, dialog or list; scrolling still works by
+   touch, wheel, trackpad and keyboard. Firefox / Chrome 121+, then older WebKit. */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
 
 body {
   margin: 0;
