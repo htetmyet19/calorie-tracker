@@ -116,6 +116,7 @@ function setCalcUnit(unit) {
   const range = weightRange(unit);
   input.min = range.min;
   input.max = range.max;
+  input.step = range.step;
   $("c-weight-unit").textContent = unit;
   renderCalc();
 }
