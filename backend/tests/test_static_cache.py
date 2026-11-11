@@ -24,7 +24,7 @@ def test_pages_load_scripts_and_styles_at_versioned_addresses():
     pages = sorted(pathlib.Path("static").glob("*.html"))
     assert pages
     for page in pages:
-        refs = re.findall(r'(?:src|href)="(/[^"]+\.(?:js|css)[^"]*)"', page.read_text())
+        refs = re.findall(r'(?:src|href)="(/[^"]+\.(?:js|css)[^"]*)"', page.read_text(encoding="utf-8"))
         assert refs, page.name
         for ref in refs:
             assert ref.endswith(f"?v={ASSET_VERSION}"), (page.name, ref)

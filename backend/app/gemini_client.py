@@ -15,6 +15,10 @@ log = logging.getLogger(__name__)
 _TRANSIENT = {500, 503, 504}
 # 429 = quota for this model used up; quotas are per model, so another model may still work.
 _TRY_NEXT_MODEL = _TRANSIENT | {429}
+# Don't start an attempt with less time than this left. asyncio may fire a timer up to one clock
+# tick early (about 15.6 ms on Windows), so the deadline can look "not quite reached" right after
+# it passed, and no model answers in a few milliseconds anyway.
+_MIN_ATTEMPT_SECONDS = 0.05
 
 _client: genai.Client | None = None
 
@@ -59,7 +63,7 @@ async def generate(image: bytes, prompt: str) -> MealAnalysis:
     for model in _models():
         for attempt in range(config.GEMINI_RETRIES + 1):
             remaining = deadline - loop.time()
-            if remaining <= 0:
+            if remaining <= _MIN_ATTEMPT_SECONDS:
                 timed_out = True
                 break
             try:
@@ -85,7 +89,7 @@ async def generate(image: bytes, prompt: str) -> MealAnalysis:
             if not isinstance(analysis, MealAnalysis):
                 raise AnalysisError("Gemini returned a response that didn't match the expected format. Try again.")
             return analysis
-        if deadline - loop.time() <= 0:
+        if deadline - loop.time() <= _MIN_ATTEMPT_SECONDS:
             timed_out = True
             break
 

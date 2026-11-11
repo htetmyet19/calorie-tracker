@@ -33,7 +33,7 @@ def test_duplicate_ids():
 
 
 def test_repo_library_file_is_valid():
-    assert validate_entries(json.loads(DEFAULT_PATH.read_text())) == []
+    assert validate_entries(json.loads(DEFAULT_PATH.read_text(encoding="utf-8"))) == []
 
 
 def test_coverage_is_cumulative():

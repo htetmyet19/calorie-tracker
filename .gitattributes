@@ -1,0 +1,13 @@
+# Keep LF line endings on every OS. Some tests (e.g. backend/tests/pages.test.js) match source
+# text with patterns that expect LF, and a Windows checkout would otherwise get CRLF.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
