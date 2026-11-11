@@ -9,7 +9,7 @@
 <p>
   <a href="https://calorie-tracker-indol-theta.vercel.app"><img src="https://img.shields.io/badge/Live%20app-open-c6f36b?style=for-the-badge&logo=vercel&logoColor=black&labelColor=0b0f14" alt="Live app"></a>
   <img src="https://img.shields.io/badge/status-trial-f5a524?style=for-the-badge&labelColor=0b0f14" alt="Status: trial">
-  <img src="https://img.shields.io/badge/tests-310%20passing-3fb950?style=for-the-badge&labelColor=0b0f14" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-630-3fb950?style=for-the-badge&labelColor=0b0f14" alt="Tests">
 </p>
 
 <p>
@@ -161,7 +161,7 @@ If the main Gemini model is overloaded or out of quota, the backend retries and 
 - **Private photo buckets.** Photos are stored per user and served only through signed access.
 - **The service-role key never reaches the browser.** Only the daily job (`app/cron.py`) may read it, and a unit test enforces that.
 - **Data minimisation.** No phone number, national ID or location is collected.
-- **Tested at two layers.** 389 unit tests and 156 frontend tests run without a database; 84 integration tests run against a real local Supabase and check that one user cannot read another's data.
+- **Tested at two layers.** 389 unit tests and 157 frontend tests run without a database; 84 integration tests run against a real local Supabase and check that one user cannot read another's data.
 
 ## 🚀 Run it locally
 
