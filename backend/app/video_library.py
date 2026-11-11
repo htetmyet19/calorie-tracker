@@ -60,7 +60,7 @@ def validate_entries(entries: list[dict]) -> list[str]:
 
 
 def load_library(path: Path = DEFAULT_PATH) -> list[dict]:
-    entries = json.loads(path.read_text())
+    entries = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(entries, list):
         raise ValueError("the library file must hold a JSON list")
     errors = validate_entries(entries)
